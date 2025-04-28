@@ -30,7 +30,7 @@ class OpenAI(TestCase):
         self.admin_user = User.objects.create_superuser( username='admin', email='admin@example.com', password='adminpass')
         self.client.login(username='admin', password='adminpass')
 
-    def notest_create_and_delete_file_object(self):
+    def test_create_and_delete_file_object(self):
         url = reverse('admin:sidecar_openai_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
         url = reverse('admin:sidecar_openai_openaifile_add')  # use your app and model name
@@ -65,7 +65,7 @@ class OpenAI(TestCase):
 
 
 
-    def notest_create_and_delete_two_openai_file_objects(self):
+    def test_create_and_delete_two_openai_file_objects(self):
         url = reverse('admin:sidecar_openai_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
         print(f"RESPONSE = {response}")
@@ -102,7 +102,7 @@ class OpenAI(TestCase):
 
 
 
-    def notest_create_and_delete_vector_store_object(self):
+    def test_create_and_delete_vector_store_object(self):
         url = reverse('admin:sidecar_openai_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
         print(f"RESPONSE = {response}")
@@ -123,19 +123,6 @@ class OpenAI(TestCase):
         vs.files.add(t2); # REDUNDANT ADD
         vs.save()
         print(f"NTOKENS OF VS = {vs.ntokens()}")
-
-        def ckfiles( vs ):
-            file_ids = vs.file_ids()
-            print(f"FILE_IDS = {file_ids}")
-            vector_store_id = vs.vector_store_id
-            vector_store =  client.vector_stores.retrieve(vector_store_id)
-            vector_store_files = client.vector_stores.files.list( vector_store_id=vector_store.id)
-            remote_ids = []
-            for f in vector_store_files:
-                remote_ids.append( f.id)
-            print(f"REMOTE_IDS = {remote_ids}")
-            return set( file_ids) == set( remote_ids) 
-
         assert vs.files_ok( ), "TWO FILES NOT OK"
         vs.files.remove( t1  )
         print(f"AFTER REMOVE t1 {vs.file_ids}")
@@ -147,7 +134,7 @@ class OpenAI(TestCase):
         t1.delete()
 
 
-    def notest_create_and_delete_assistant_object(self):
+    def test_create_and_delete_assistant_object(self):
         url = reverse('admin:sidecar_openai_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
         print(f"RESPONSE = {response}")

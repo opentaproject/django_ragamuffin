@@ -408,7 +408,7 @@ def handle_assistants_changed(sender, instance, action, **kwargs):
 @receiver(m2m_changed, sender=VectorStore.files.through)
 def handle_files_changed(sender, instance, action, **kwargs):
     print(f"HANDLE_SENDER_VECTOR_STORE action={action} ")
-    if True or action == "post_add":
+    if action == "post_add" or action == 'post_remove' :
         if getattr(instance, '_updating_from_m2m', False):
             return
         instance._updating_from_m2m = True
@@ -444,17 +444,19 @@ def handle_files_changed(sender, instance, action, **kwargs):
             client.vector_stores.files.create( vector_store_id=vector_store_id, file_id=file_id,  )
         while True:
             file_list = client.vector_stores.files.list(vector_store_id=vector_store_id)
+            print(f"FILE_LIST = {file_list}")
             statuses = [file.status for file in file_list.data]
+            print(f"STATUSES = {statuses}")
             if all(status == "completed" for status in statuses):
                 print("✅ All files processed and ready!")
                 break
             elif any(status == "failed" for status in statuses):
-                raise Exception("❌ Some files failed to process!")
+                raise Exception(f"❌ Some files failed to process! {statuses}")
             else:
                 print(f"⏳ Current statuses: {statuses} - Waiting...")
                 time.sleep(5)  # Wait before polling again
-        time.sleep(20)
-        
+        time.sleep(5)
+
 
 
 
@@ -469,18 +471,18 @@ def handle_files_changed(sender, instance, action, **kwargs):
         npks =  list( OpenAIFile.objects.filter(file_id__in=ids).values_list('pk',flat=True)  )
         print(f"IDS = {ids} PKS = {pks}")
         del instance._updating_from_m2m
-        try :
-            files = client.vector_stores.files.list(vector_store_id=vector_store_id)
-        except :
-            files = []
+        #try :
+        #    files = client.vector_stores.files.list(vector_store_id=vector_store_id)
+        #except :
+        #    files = []
 
-        is_done = False;
-        i = 0;
-        while not is_done  and i < 20 :
-            is_done = True
-            i = i + 1;
-            for f in files:
-                if f.status == 'in_progress' :
-                    is_done = False 
-            time.sleep(1)
+        #is_done = False;
+        #i = 0;
+        #while not is_done  and i < 20 :
+        #    is_done = True
+        #    i = i + 1;
+        #    for f in files:
+        #        if f.status == 'in_progress' :
+        #            is_done = False 
+        #    time.sleep(1)
 

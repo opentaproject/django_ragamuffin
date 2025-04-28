@@ -1,6 +1,6 @@
 # django_openailite
 ## Instructions
-### Install
+### Install this github project only
     - cd django;
     - python3.11 -m venv env
     - source env/bin/activate
