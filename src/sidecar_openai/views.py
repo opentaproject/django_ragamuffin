@@ -8,6 +8,9 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.conf import settings
 import shutil
 import os
+import markdown
+from django.utils.safestring import mark_safe
+
 
 
 
@@ -27,9 +30,11 @@ def query_view(request):
     if request.method == 'POST':
         form = QueryForm(request.POST)
         if form.is_valid():
-            query_text = form.cleaned_data['query']
+            query = form.cleaned_data['query']
+            txt = thread.run_query(  query=query )
+            html = mark_safe(markdown.markdown(txt)) 
             # simple response logic
-            response = f"Received your query: {query_text}"
+            response = f"{query} {html} "
     else:
         form = QueryForm()
     return render(request, 'sidecar_openai/query_form.html', {'form': form, 'response': response})

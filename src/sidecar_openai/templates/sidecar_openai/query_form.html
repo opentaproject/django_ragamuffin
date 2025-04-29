@@ -13,7 +13,7 @@
 
     {% if response %}
         <h2>Response:</h2>
-        <p>{{ response }}</p>
+        <p>{{ response| safe }}</p>
     {% endif %}
 </body>
 </html>
