@@ -4,7 +4,7 @@
     <title>Query Interface</title>
 </head>
 <body>
-    <h1>Enter Your Query</h1>
+	<h1> Hello {{ request.user }} </h1><h1> Enter Your Query</h1>
     <form method="post">
         {% csrf_token %}
         {{ form.as_p }}
