@@ -238,6 +238,10 @@ class Assistant( models.Model ):
     assistant_id = models.CharField(max_length=255,blank=True)
     json_field = models.JSONField( default=dict ,  blank=True, null=True)
 
+    def __str__(self):
+        return f"{self.name}"
+
+
     def save( self, *args, **kwargs ):
         is_new = self._state.adding and not self.pk
         if self.pk :
