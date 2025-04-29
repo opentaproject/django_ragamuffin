@@ -1,13 +1,13 @@
 # django_openailite
 ## Instructions
 ### Install this github project only
-    - cd django;
-    - python3.11 -m venv env
-    - source env/bin/activate
-    - pip install --upgrade pip
-    - pip install -r requirements.txt
-    - *Note that openai==1.73.0 is with model gpt-4o-mini* Other combinations may fail since the assistants api seems to change daily. 
- ### Get OPENAI_API_KEY
+   - cd django;
+   - python3.11 -m venv env
+   - source env/bin/activate
+   - pip install --upgrade pip
+   - pip install -r requirements.txt
+   - Note that **openai==1.73.0** is with model **gpt-4o-mini** is used. *Other combinations may fail since the assistants api seems to change daily.*
+ ## Get OPENAI_API_KEY
    - Visit https://openai.com , establis an account, and login to the API platform
    - You do not need a **ChatGPT** account, but you must have a paid openai account. It is pay as you go and putting $10 in will allow you to test
    - Create an API key, copy it and create the environment variable
