@@ -40,7 +40,7 @@ def create_or_retrieve_vector_store( name , files) :
         vs = vs[0]
     return vs
 
-def create_or_retrieve_assistant( name , vs ) :
+def create_or_retrieve_assistant( name , vs ):
     assistants  = Assistant.objects.filter(name=name)
     if not assistants :
         assistant = Assistant(name=name)
@@ -236,17 +236,30 @@ class Assistant( models.Model ):
 
     def save( self, *args, **kwargs ):
         is_new = self._state.adding and not self.pk
+        if self.pk :
+            old = Assistant.objects.get(pk=self.pk)
+            old_instructions = old.instructions
+        else :
+            old_instructions = ''
+        temperature = self.json_field.get('temperature', 0.2 )
+        instructions = self.instructions
         super().save(*args,**kwargs)
-        temperature = self.json_field.get('temperature', 1.0 )
+        print(f"ASSISTANT_SAVE INSTRUCTIONS = {instructions}")
         if is_new :
             print(f"SETTING TEMPPERATUR TO {temperature}")
+            print(f"SETTING INSTRUCTIONS TO {instructions}")
             assistant = client.beta.assistants.create( name=self.name,
-                instructions=self.instructions, 
+                instructions=instructions, 
                 model=settings.AI_MODEL, 
                 temperature=temperature,
                 tools=[{"type": "file_search"}],metadata={"api_key": settings.AI_KEY[-8:] } )
             self.assistant_id = assistant.id
             super().save(*args,**kwargs)
+        else :
+            if not old_instructions  ==  self.instructions :
+                print(f"REVISE INSTRUCTIONS")
+                assistant_id = self.assistant_id
+                client.beta.assistants.update(assistant_id, instructions=instructions)
 
 
 

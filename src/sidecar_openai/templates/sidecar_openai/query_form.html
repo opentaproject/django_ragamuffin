@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
     <title>Query Interface</title>
 </head>
-<body>
+<body style="display: flex; justify-content: center;  height: 100vh; margin: 0;">
+<div style="margin: 10 auto; max-width: 600px; padding: 1rem;  ">
 	<h1> Hello {{ request.user }} </h1><h1> Enter Your Query</h1>
     <form method="post">
         {% csrf_token %}
@@ -15,5 +17,6 @@
         <h2>Response:</h2>
         <p>{{ response| safe }}</p>
     {% endif %}
+</div>
 </body>
 </html>
