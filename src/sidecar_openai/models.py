@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, AnonymousUser
 import shutil
 
 from django.db import transaction, IntegrityError
@@ -52,6 +52,10 @@ def create_or_retrieve_assistant( name , vs ):
     return assistant
 
 def create_or_retrieve_thread( assistant, name, user ) :
+    if user.pk :
+        threads = Thread.objects.filter(name=name,user=user)
+    else :
+        user = None
     threads = Thread.objects.filter(name=name,user=user)
     if not threads :
         thread = Thread(name=name,user=user)
@@ -328,7 +332,7 @@ class Assistant( models.Model ):
 
 
 class Thread(models.Model) :
-    name = models.CharField(max_length=255,unique=True)
+    name = models.CharField(max_length=255)
     date = models.DateTimeField(auto_now=True)
     thread_id = models.CharField(max_length=255,blank=True)
     messages = models.JSONField( default=dict ,  blank=True, null=True)
