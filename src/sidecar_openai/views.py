@@ -3,6 +3,8 @@ from .forms import QueryForm
 
 def query_view(request):
     response = None
+    user = request.user
+    print(f"USER = {user}")
     if request.method == 'POST':
         form = QueryForm(request.POST)
         if form.is_valid():

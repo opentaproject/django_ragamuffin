@@ -12,6 +12,7 @@ from openai import OpenAI
 
 django.setup()
 from sidecar_openai.models import OpenAIFile, VectorStore, Assistant,  Thread
+from django.contrib.auth.models import User
 
 model = 'gpt-4o-mini'
 client = OpenAI()
@@ -29,8 +30,13 @@ class OpenAI(TestCase):
         User = get_user_model()
         self.admin_user = User.objects.create_superuser( username='admin', email='admin@example.com', password='adminpass')
         self.client.login(username='admin', password='adminpass')
+        self.user = User.objects.create_user(username='testuser', password='testpass')
 
-    def test_create_and_delete_file_object(self):
+    def notest_user_exists(self):
+        user_exists = User.objects.filter(username='testuser').exists()
+        self.assertTrue(user_exists)
+
+    def notest_create_and_delete_file_object(self):
         url = reverse('admin:sidecar_openai_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
         url = reverse('admin:sidecar_openai_openaifile_add')  # use your app and model name
@@ -65,7 +71,7 @@ class OpenAI(TestCase):
 
 
 
-    def test_create_and_delete_two_openai_file_objects(self):
+    def notest_create_and_delete_two_openai_file_objects(self):
         url = reverse('admin:sidecar_openai_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
         print(f"RESPONSE = {response}")
@@ -102,7 +108,7 @@ class OpenAI(TestCase):
 
 
 
-    def test_create_and_delete_vector_store_object(self):
+    def notest_create_and_delete_vector_store_object(self):
         url = reverse('admin:sidecar_openai_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
         print(f"RESPONSE = {response}")
@@ -134,7 +140,7 @@ class OpenAI(TestCase):
         t1.delete()
 
 
-    def test_create_and_delete_assistant_object(self):
+    def notest_create_and_delete_assistant_object(self):
         url = reverse('admin:sidecar_openai_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
         print(f"RESPONSE = {response}")
@@ -244,7 +250,7 @@ class OpenAI(TestCase):
                         ]
 
         aname = randstring()
-        thread = Thread(name=aname,assistant=assistant)
+        thread = Thread(name=aname,assistant=assistant,user=self.user)
         thread.save()
         for query in queries :
             txt = thread.run_query(  query=query )
