@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+import shutil
 
 from django.db import transaction, IntegrityError
 import logging
@@ -28,6 +29,62 @@ def hashed_upload_to(instance, filename):
     ext = os.path.splitext(filename)[1]
     return f'{file_hash}{ext}'
 
+def create_or_retrieve_vector_store( name , files) :
+    vs = VectorStore.objects.filter(name=name)
+    if not vs :
+        vs = VectorStore(name=name)
+        vs.save();
+        vs.files.set(files)
+        vs.save()
+    else :
+        vs = vs[0]
+    return vs
+
+def create_or_retrieve_assistant( name , vs ) :
+    assistants  = Assistant.objects.filter(name=name)
+    if not assistants :
+        assistant = Assistant(name=name)
+        assistant.save()
+        assistant.vector_stores.add(vs)
+        assistant.save();
+    else :
+        assistant = assistants[0]
+    return assistant
+
+def create_or_retrieve_thread( assistant, name, user ) :
+    threads = Thread.objects.filter(name=name,user=user)
+    if not threads :
+        thread = Thread(name=name,user=user)
+        thread.save()
+        thread.assistant = assistant
+        thread.save()
+    else :
+        thread = threads[0]
+    return thread
+
+
+
+
+
+
+
+def upload_or_retrieve_openai_file( src ):
+    dst = os.path.join(settings.OPENAI_UPLOAD_STORAGE, 'README.md')
+    ts = OpenAIFile.objects.filter(original_file_name=dst)
+    if not ts :
+        print(f"DST = {dst}")
+        print(f"FILE NEEDST TO BE CREATED")
+        shutil.copy2(src, dst)
+        t1 = OpenAIFile(file=dst)
+        t1.save()
+    else :
+        print(f"FILE EXISTS")
+        t1 = ts[0]
+    return t1
+
+
+
+
 class OpenAIFile(models.Model) :
     date = models.DateTimeField(auto_now=True)
     checksum = models.CharField(blank=True, max_length=255)
@@ -43,13 +100,19 @@ class OpenAIFile(models.Model) :
 
 
 
-
     def save( self, *args, **kwargs ):
         is_new = self._state.adding  and not self.pk
-        self.original_file_name = self.file.name
-        self.path = self.file.path
         super().save(*args, **kwargs)  # Save first, so file is processed
+        print(f"SAVE FILE {self.file}")
         if is_new and self.file:
+            fn = hashed_upload_to(self , self.file.name )
+            print(f"FN = {fn}")
+            self.original_file_name = self.file.name
+            src = self.file.path
+            dst = os.path.join(settings.OPENAI_UPLOAD_STORAGE, fn )
+            shutil.move(src,dst)
+            self.file = dst
+            print(f"FN = {fn}")
             data = self.file.read()
             self.checksum = hashlib.md5(data).hexdigest()
             print(f"FILE_PATH = {self.file.path}")
@@ -68,29 +131,26 @@ class OpenAIFile(models.Model) :
 def custom_delete_openaifile(sender, instance, **kwargs):
     print(f"CUSTOM_DELETE_OPENAIFILE")
     pk = instance.pk
-    file_id = instance.file_id 
     try :
         os.remove(instance.path)
     except Exception as e:
         logger.error(f" FILE/ {instance.path} DOES NOT EXIST")
+        return
     vst = VectorStore.objects.filter(files=instance)
-    for vs in vst.all() :
-        vector_store_id = vs.vector_store_id
-        try  :
-            client.vector_stores.files.delete(vector_store_id=vector_store_id,file_id=file_id)
-        except  openai.NotFoundError as e: 
+    if hasattr( instance, "file_id") :
+        file_id = instance.file_id 
+        for vs in vst.all() :
+            vector_store_id = vs.vector_store_id
+            try  :
+                client.vector_stores.files.delete(vector_store_id=vector_store_id,file_id=file_id)
+            except  openai.NotFoundError as e: 
+             pass
+        try :
+            client.files.delete(file_id)
+            print(f"DELETED {instance.original_file_name}")
+        except openai.NotFoundError as e:
+            print(f"ERROR DELETING {instance.original_file_name}")
             pass
-    #
-    #
-    # When the  file is deleted, the vector stores are updated
-    #
-
-    try :
-        client.files.delete(file_id)
-        print(f"DELETED {instance.original_file_name}")
-    except openai.NotFoundError as e:
-        print(f"ERROR DELETING {instance.original_file_name}")
-        pass
 
 class VectorStore( models.Model ):
     checksum = models.CharField(blank=True, max_length=255)
@@ -261,6 +321,11 @@ class Thread(models.Model) :
     messages = models.JSONField( default=dict ,  blank=True, null=True)
     assistant = models.ForeignKey(Assistant, on_delete=models.SET_NULL, null=True, related_name="threads")
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['name', 'user'], name='unique_thread')
+        ]
     
 
     def __str__(self):
