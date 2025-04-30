@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from sidecar_openai.models import OpenAIFile, VectorStore, Assistant,  Thread, hashed_upload_to, upload_or_retrieve_openai_file
+import time
 from sidecar_openai.models import create_or_retrieve_vector_store, create_or_retrieve_assistant, create_or_retrieve_thread
 from .forms import QueryForm
 from django.contrib.auth.models import User
@@ -13,9 +14,13 @@ from django.utils.safestring import mark_safe
 
 import openai 
 from openai import OpenAI
+from django.views.decorators.csrf import csrf_exempt
+import asyncio
+
 
 
 FILENAME = "../README.md"
+@csrf_exempt
 def query_view(request):
     response = None
     user = request.user
@@ -26,6 +31,7 @@ def query_view(request):
     assistant = create_or_retrieve_assistant( src, vs )
     assistant.instructions = instructions
     assistant.save()
+    d = {'status' : 'pending' , 'result' : 'RESULT' }
     thread = create_or_retrieve_thread( assistant, src, user )
     if request.method == 'POST':
         form = QueryForm(request.POST)
@@ -36,8 +42,19 @@ def query_view(request):
             #print("Instructions:\n", ass.instructions)
             query = form.cleaned_data['query']
             txt = thread.run_query(  query=query )
+            #txt = f'{d}'
+            #i = 0;
+            #while d['status'] == 'pending' :
+            #    time.sleep(1)
+            #    if i > 4 :
+            #         d.update({'status': 'done', 'result': 'Task completed!'})
+            #    i = i + 1 
+
+            #txt = f'{d}'
             html = mark_safe(markdown.markdown(txt)) 
-            response = f"{query} {html} "
+            response = f" <h4> Query: </h4>  {query}  <h4> Response: </h4> {html} "
     else:
         form = QueryForm()
-    return render(request, 'sidecar_openai/query_form.html', {'form': form, 'response': response})
+    response = render(request, 'sidecar_openai/query_form.html', {'form': form, 'response': response})
+    response.set_cookie('busy' , 'false')
+    return response

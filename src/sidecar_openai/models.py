@@ -379,7 +379,10 @@ class Thread(models.Model) :
         print(f"QUERY_ID = {assistant_id} RUN_QUERY ")
     
         encoding = tiktoken.encoding_for_model(settings.AI_MODEL)
-        openai.beta.threads.messages.create( thread_id=thread_id,  role="user", content=query )
+        try :
+            openai.beta.threads.messages.create( thread_id=thread_id,  role="user", content=query )
+        except Exception as err :
+            return 'Error in thread'
         if last_messages == None :
             run = openai.beta.threads.runs.create( thread_id=thread_id, assistant_id=assistant_id )
         else :

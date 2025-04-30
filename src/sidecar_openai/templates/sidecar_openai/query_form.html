@@ -1,22 +1,56 @@
-<!DOCTYPE html>
 <html>
 <head>
+
    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
-    <title>Query Interface</title>
+
+   
+   
+ <title>Query Interface</title>
 </head>
 <body style="display: flex; justify-content: center;  height: 100vh; margin: 0;">
 <div style="margin: 10 auto; max-width: 600px; padding: 1rem;  ">
 	<h1> Hello {{ request.user }} </h1><h1> Enter Your Query</h1>
     <form method="post">
         {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Submit</button>
+	{{ form.as_p }}
+	<button id='submitBtn' type='submit'> Submit</button>
     </form>
 
+    <div style="border: 1px dashed gray; background-color: #f9f9f9; padding: 1rem;">
     {% if response %}
-        <h2>Response:</h2>
         <p>{{ response| safe }}</p>
     {% endif %}
+    </div>
 </div>
 </body>
+<script>
+document.getElementById('submitBtn').addEventListener('click', function () {
+    document.cookie = "busy=true; max-age=3600; path=/";
+});
+
+function getCookie(name) {
+    const cookieString = document.cookie;
+    const cookies = cookieString.split(';');
+    for (let cookie of cookies) {
+        cookie = cookie.trim();
+        if (cookie.startsWith(name + '=')) {
+            return cookie.substring(name.length + 1);
+        }
+    }
+    return null;
+}
+
+// Poll every 1 second
+setInterval(() => {
+    const busy = getCookie('busy');
+    var btn = document.getElementById('submitBtn')
+    if ( busy == 'true' ){
+	    btn.type = 'button'
+	    btn.textContent = 'Wait ... '
+    } else {
+           btn.type = 'submit';
+	   btn.textContent = 'Submit '
+    }
+    }, 1000);
+</script>
 </html>
