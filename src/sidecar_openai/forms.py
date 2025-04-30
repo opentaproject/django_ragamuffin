@@ -5,7 +5,7 @@ class QueryForm(forms.Form):
         label='',
         widget=forms.Textarea(attrs={
             'rows': 2,
-            'style': 'width: 300;',
+            'cols' : 60,
             'placeholder': 'Enter your query...'
         })
     )
