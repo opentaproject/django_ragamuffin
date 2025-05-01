@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User, AnonymousUser
 import shutil
 
@@ -14,20 +15,28 @@ import openai
 from openai import OpenAI
 from django.db.models.signals import m2m_changed, pre_delete
 from django.dispatch import receiver
+import re
 
 import os
 logger = logging.getLogger(__name__)
 client = openai.OpenAI(api_key=settings.AI_KEY)
-upload_storage = FileSystemStorage(settings.OPENAI_UPLOAD_STORAGE, base_url="/")
+
+upload_storage = FileSystemStorage(settings.OPENAI_UPLOAD_STORAGE, base_url="/" )
+
+def validate_file_extension(value):
+    ext = os.path.splitext(value.name)[1].lower()
+    if ext not in ['.md','.txt','.pdf']:
+        raise ValidationError(f"Unsupported file extension '{ext}'.")
 
 def hashed_upload_to(instance, filename):
-    file = instance.file
-    file.open('rb')
-    file_hash = hashlib.md5(file.read()).hexdigest()[0:7]
-    file_hash = file_hash + "_" + settings.AI_KEY[-8:]
-    file.seek(0)  # reset for saving later
-    ext = os.path.splitext(filename)[1]
-    return f'{file_hash}{ext}'
+    print(f"FILE_NAME = {instance.file.name}")
+    #file.open('rb')
+    #file_hash = hashlib.md5(file.read()).hexdigest()[0:7]
+    #file_hash = file_hash + "_" + settings.AI_KEY[-8:]
+    #file.seek(0)  # reset for saving later
+    #ext = os.path.splitext(filename)[1]
+    #return f'{file_hash}{ext}'
+    return instance.file.name
 
 def create_or_retrieve_vector_store( name , files) :
     vs = VectorStore.objects.filter(name=name)
@@ -72,14 +81,19 @@ def create_or_retrieve_thread( assistant, name, user ) :
 
 
 
-def upload_or_retrieve_openai_file( src ):
+def upload_or_retrieve_openai_file( name ,src ):
+    print(f"UPLOAD_OR_RETRIEVE NAME {name}")
+    print(f"UPLOAD_OR_RETRIEVE SRC {src}")
     dst = os.path.join(settings.OPENAI_UPLOAD_STORAGE, 'README.md')
-    ts = OpenAIFile.objects.filter(original_file_name=dst)
+    print(f"UPLOAD_OR_RETRIEV DST {dst}")
+    original_file_name = dst.split('/')[-1];
+    ts = OpenAIFile.objects.filter(original_file_name=name)
     if not ts :
-        print(f"DST = {dst}")
+        print(f" SRC={src} DST = {dst}")
         print(f"FILE NEEDST TO BE CREATED")
         shutil.copy2(src, dst)
         t1 = OpenAIFile(file=dst)
+        t1.original_file_name = name
         t1.save()
     else :
         print(f"FILE EXISTS")
@@ -95,7 +109,7 @@ class OpenAIFile(models.Model) :
     original_file_name = models.CharField(max_length=255,blank=True)
     path = models.CharField(max_length=255,blank=True)
     file_id = models.CharField(max_length=255,blank=True)
-    file = models.FileField( max_length=512, upload_to=hashed_upload_to, storage=upload_storage,)
+    file = models.FileField( max_length=512, upload_to=hashed_upload_to, storage=upload_storage, validators=[validate_file_extension] )
     ntokens = models.IntegerField(default=0,null=True, blank=True)
     
 
@@ -106,16 +120,50 @@ class OpenAIFile(models.Model) :
 
     def save( self, *args, **kwargs ):
         is_new = self._state.adding  and not self.pk
+        print(f"SAVE FILE ORIG {self.file}")
+        original_file_name = f"{self.file}".split('/')[-1]
         super().save(*args, **kwargs)  # Save first, so file is processed
-        print(f"SAVE FILE {self.file}")
+        print(f"SAVE FILE AFTER SUPER {self.file}")
         if is_new and self.file:
-            fn = hashed_upload_to(self , self.file.name )
+            print(f"SELF.FILE.NAME = { self.file.name}")
+            #fn = hashed_upload_to(self , self.file.name )
+            fn = self.file.name 
             print(f"FN = {fn}")
-            self.original_file_name = self.file.name
+            self.original_file_name = self.file.name.split('/')[-1]
             src = self.file.path
-            dst = os.path.join(settings.OPENAI_UPLOAD_STORAGE, fn )
-            shutil.move(src,dst)
-            self.file = dst
+            mmd_text = ( open(src,'rb').read() ).decode('utf-8')
+
+
+            def chunk_mmd(lines):
+                chunks = []
+                current_chunk = []
+                current_heading = None
+            
+                for line in lines:
+                    if re.match(r'^#{1,6} ', line):
+                        if current_chunk:
+                            chunks.append({
+                                "heading": current_heading,
+                                "content": ''.join(current_chunk).strip()
+                            })
+                        current_heading = line.strip()
+                        current_chunk = []
+                    else:
+                        current_chunk.append(line)
+            
+                if current_chunk:
+                    chunks.append({
+                        "heading": current_heading,
+                        "content": ''.join(current_chunk).strip()
+                    })
+                return chunks
+        
+            chunks = chunk_mmd(mmd_text)
+            print(f"CHUNKS = {chunks}")
+            if chunks :
+                s = ( f"{chunks}" ).encode() 
+                shutil.copy2(src,src + '-orig')
+                open( src, "wb").write( s)
             print(f"FN = {fn}")
             data = self.file.read()
             self.checksum = hashlib.md5(data).hexdigest()
@@ -127,6 +175,8 @@ class OpenAIFile(models.Model) :
             self.ntokens = len( encoding.encode(data.decode('utf-8' )) )
 
             print(f"PATH = { self.path}")
+            print(f"NOW AFTER CHUNKING NAME IS {self.original_file_name}")
+            self.original_file_name = original_file_name
             super().save(*args, **kwargs) # Then update with true hashed path
 
 
@@ -250,6 +300,8 @@ class Assistant( models.Model ):
         else :
             old_instructions = ''
         temperature = self.json_field.get('temperature', 0.2 )
+        if self.instructions== '' :
+            self.instructions = 'Answer only questions about the enclosed document. Do not offer helpful answers to questions that do not refer to the document. Be concise. If the question is irrelevant, answer with "That is not a question that is relevant to the document."'
         instructions = self.instructions
         super().save(*args,**kwargs)
         print(f"ASSISTANT_SAVE INSTRUCTIONS = {instructions}")
@@ -404,9 +456,12 @@ class Thread(models.Model) :
             if msg.role == "assistant":
                 res = msg
         txt =   str( msg.content[0].text.value )
+        txt = re.sub(r"【\d+:\d+†[^】]+】", "", txt)
+        ntokens = len( encoding.encode(txt ) )
+        txt = txt + f"<p/> *[{ntokens} tokens]*"
         tokens = encoding.encode(txt)
         print(f"RETGURN TOKENS = {len(tokens)} REPLY = {txt}")
-        thread.messages.append({'user' : query, 'assistant' : txt}) 
+        thread.messages.append({'user' : query, 'assistant' : txt, 'ntokens' : ntokens }) 
         thread.save()
         return txt
 

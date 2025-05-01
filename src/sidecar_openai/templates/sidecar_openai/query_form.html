@@ -1,32 +1,107 @@
+{% load static %}
 <html>
 <head>
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)'],['\\[','\\]']]
+  }
+};
+</script>
+<script id="MathJax-script" async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+</script>
 
    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
+       <style>
+        .container {
+            display: flex;
+	    width: 100%;
+        }
+        .left {
+            width: 30%;
+            padding: 1rem;
+            background-color: #f0f0f0;
+        }
+        .right {
+            width: 70%;
+            padding: 1rem;
+            background-color: #e0e0e0;
+        }
+    </style>
 
    
    
  <title>Query Interface</title>
 </head>
 <body style="display: flex; justify-content: center;  height: 100vh; margin: 0;">
-<div style="margin: 10 auto; max-width: 600px; padding: 1rem;  ">
-	<h1> Hello {{ request.user }} </h1><h1> Enter Your Query</h1>
-    <form method="post">
+<div class='container'>
+	<div class="left">
+		<div style="margin: 10 auto; padding: 1rem;  ">
+
+	<h3> History </h3>
+    {% if messages %}
+    	{% for m in messages %}
+	<button style="width: 100% ; text-align: left; " name='oldquery' value="{{m.user}}">{{ m.index }}: <div class="innerDiv" style="display: none"> {{m.assistant | safe }} </div>  {{m.user|truncatechars:30}} </button> 
+    	{% endfor %}
+     {% endif %}
+		</div>
+</div>
+<div class="right">
+<div style="margin: 10 auto; padding: 1rem;  ">
+	<h3> Hello {{ request.user }} </h3><h4> Enter Your Query</h4>
+    <form method="post" style="width: 100%" >
         {% csrf_token %}
 	{{ form.as_p }}
 	<button id='submitBtn' type='submit'> Submit</button>
     </form>
 
     <div style="border: 1px dashed gray; background-color: #f9f9f9; padding: 1rem;">
-    {% if response %}
-        <p>{{ response| safe }}</p>
-    {% endif %}
+    <p><div id='response'> {{ response| safe }}</div></p>
     </div>
+</div>
+</div>
 </div>
 </body>
 <script>
 document.getElementById('submitBtn').addEventListener('click', function () {
     document.cookie = "busy=true; max-age=3600; path=/";
+    let count = 0;
+    setInterval(() => {
+    	const busy = getCookie('busy');
+	count = count + 1 ;
+	if ( count > 80 ){ var patience = ' be patient! It has \'only\' been ' + ( Math.floor( count / 5  ) ).toString() + ' s'  } 
+	else if ( count > 40 ){ var patience = ' be patient! Give it up to a minute !' } 
+	else if( count > 20 ){ var patience = ' be patient!' } 
+	else { var patience = '' }
+    	var btn = document.getElementById('submitBtn')
+    	if ( busy == 'true' ){
+	    btn.type = 'button'
+	    btn.textContent = 'Wait ... ' + patience
+    	} else {
+           btn.type = 'submit';
+	   btn.textContent = 'Submit '
+    	} }, 200);
 });
+
+
+function handleClick(event) {
+    var txt = event.target.value;
+    const textarea = document.getElementById('id_query');
+    textarea.value = txt
+    var innerDiv = event.target.querySelector(".innerDiv");
+    var content = innerDiv.innerHTML; 
+    const response_area = document.getElementById('response');
+    response_area.innerHTML = content
+    document.cookie = "busy=false ; max-age=3600; path=/";
+
+    //document.getElementById("submitBtn").click()  // THIS WAS OLD WHEN RELOADING FROM SERVER
+
+}
+document.querySelectorAll('button[name="oldquery"]').forEach(btn => {
+    btn.addEventListener('click', handleClick);
+});
+
 
 function getCookie(name) {
     const cookieString = document.cookie;
@@ -40,17 +115,5 @@ function getCookie(name) {
     return null;
 }
 
-// Poll every 1 second
-setInterval(() => {
-    const busy = getCookie('busy');
-    var btn = document.getElementById('submitBtn')
-    if ( busy == 'true' ){
-	    btn.type = 'button'
-	    btn.textContent = 'Wait ... '
-    } else {
-           btn.type = 'submit';
-	   btn.textContent = 'Submit '
-    }
-    }, 1000);
 </script>
 </html>
