@@ -30,13 +30,9 @@ def validate_file_extension(value):
 
 def hashed_upload_to(instance, filename):
     print(f"FILE_NAME = {instance.file.name}")
-    #file.open('rb')
-    #file_hash = hashlib.md5(file.read()).hexdigest()[0:7]
-    #file_hash = file_hash + "_" + settings.AI_KEY[-8:]
-    #file.seek(0)  # reset for saving later
-    #ext = os.path.splitext(filename)[1]
-    #return f'{file_hash}{ext}'
-    return instance.file.name
+    dirname = instance.file.name.split('.')[0]
+    os.makedirs(os.path.join( settings.OPENAI_UPLOAD_STORAGE, dirname ) ,  exist_ok=True)
+    return os.path.join( dirname, instance.file.name )
 
 def create_or_retrieve_vector_store( name , files) :
     vs = VectorStore.objects.filter(name=name)
@@ -84,16 +80,17 @@ def create_or_retrieve_thread( assistant, name, user ) :
 def upload_or_retrieve_openai_file( name ,src ):
     print(f"UPLOAD_OR_RETRIEVE NAME {name}")
     print(f"UPLOAD_OR_RETRIEVE SRC {src}")
-    dst = os.path.join(settings.OPENAI_UPLOAD_STORAGE, 'README.md')
+    os.makedirs( os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), exist_ok=True )
+    dst = os.path.join(os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), 'README.md')
     print(f"UPLOAD_OR_RETRIEV DST {dst}")
-    original_file_name = dst.split('/')[-1];
-    ts = OpenAIFile.objects.filter(original_file_name=name)
+    name = dst.split('/')[-1];
+    ts = OpenAIFile.objects.filter(name=name)
     if not ts :
         print(f" SRC={src} DST = {dst}")
         print(f"FILE NEEDST TO BE CREATED")
         shutil.copy2(src, dst)
         t1 = OpenAIFile(file=dst)
-        t1.original_file_name = name
+        t1.name = name
         t1.save()
     else :
         print(f"FILE EXISTS")
@@ -106,7 +103,7 @@ def upload_or_retrieve_openai_file( name ,src ):
 class OpenAIFile(models.Model) :
     date = models.DateTimeField(auto_now=True)
     checksum = models.CharField(blank=True, max_length=255)
-    original_file_name = models.CharField(max_length=255,blank=True)
+    name = models.CharField(max_length=255,blank=True)
     path = models.CharField(max_length=255,blank=True)
     file_id = models.CharField(max_length=255,blank=True)
     file = models.FileField( max_length=512, upload_to=hashed_upload_to, storage=upload_storage, validators=[validate_file_extension] )
@@ -114,14 +111,14 @@ class OpenAIFile(models.Model) :
     
 
     def __str__(self):
-        return f"{self.original_file_name}"
+        return f"{self.name}"
 
 
 
     def save( self, *args, **kwargs ):
         is_new = self._state.adding  and not self.pk
         print(f"SAVE FILE ORIG {self.file}")
-        original_file_name = f"{self.file}".split('/')[-1]
+        name = f"{self.file}".split('/')[-1]
         super().save(*args, **kwargs)  # Save first, so file is processed
         print(f"SAVE FILE AFTER SUPER {self.file}")
         if is_new and self.file:
@@ -129,7 +126,7 @@ class OpenAIFile(models.Model) :
             #fn = hashed_upload_to(self , self.file.name )
             fn = self.file.name 
             print(f"FN = {fn}")
-            self.original_file_name = self.file.name.split('/')[-1]
+            self.name = self.file.name.split('/')[-1]
             src = self.file.path
             mmd_text = ( open(src,'rb').read() ).decode('utf-8')
 
@@ -175,8 +172,8 @@ class OpenAIFile(models.Model) :
             self.ntokens = len( encoding.encode(data.decode('utf-8' )) )
 
             print(f"PATH = { self.path}")
-            print(f"NOW AFTER CHUNKING NAME IS {self.original_file_name}")
-            self.original_file_name = original_file_name
+            print(f"NOW AFTER CHUNKING NAME IS {self.name}")
+            self.name = name
             super().save(*args, **kwargs) # Then update with true hashed path
 
 
@@ -201,9 +198,9 @@ def custom_delete_openaifile(sender, instance, **kwargs):
              pass
         try :
             client.files.delete(file_id)
-            print(f"DELETED {instance.original_file_name}")
+            print(f"DELETED {instance.name}")
         except openai.NotFoundError as e:
-            print(f"ERROR DELETING {instance.original_file_name}")
+            print(f"ERROR DELETING {instance.name}")
             pass
 
 class VectorStore( models.Model ):
@@ -359,7 +356,7 @@ class Assistant( models.Model ):
         f = []
         for v in vs :
             for vf in v.files.all():
-                f.append( vf.original_file_name )
+                f.append( vf.name )
         f = list( set( f) )
         return f
 

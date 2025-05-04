@@ -41,7 +41,7 @@ class OpenAI(TestCase):
         print(f"E")
         for file in OpenAIFile.objects.all() :
             print(f"ALL FILES = {file} {file.path} ")
-        t1 = OpenAIFile.objects.get(original_file_name=name)
+        t1 = OpenAIFile.objects.get(name=name)
         print(f"T1 = {t1}")
         return t1
 
@@ -100,7 +100,7 @@ class OpenAI(TestCase):
         t2 = self.create_testfile_from_string( b"test2_content_here" , "test2.txt")
         for t in [t1,t2] :
             path = t.path
-            original_file_name = t.original_file_name
+            name = t.name
             file_id = t.file_id
             t.delete();
             try :
@@ -115,7 +115,7 @@ class OpenAI(TestCase):
                 exists_locally = True
             except ObjectDoesNotExist as e :
                 exists_locally = False
-                print(f"OK! {original_file_name} is GONE  LOCALLY ")
+                print(f"OK! {name} is GONE  LOCALLY ")
             assert not exists_locally, f"File {file_id} still exists locally"
             assert not os.path.exists(path), f"LOCAL FILE PATH {path} DID NOT GET DELETED"
 
@@ -219,14 +219,14 @@ class OpenAI(TestCase):
         url = reverse('admin:sidecar_openai_openaifile_add')  # use your app and model name
         #test_file1 = SimpleUploadedFile( "test1.txt", b"The dog was black", content_type="text/plain")
         #self.client.post( url ,  {'file': test_file1}, follow=True)
-        #t1 = OpenAIFile.objects.get(original_file_name="test1.txt")
+        #t1 = OpenAIFile.objects.get(name="test1.txt")
         #test_file2 = SimpleUploadedFile( "test2.txt", b"The cat was white.", content_type="text/plain")
         #self.client.post( url ,  {'file': test_file2}, follow=True)
-        #t2 = OpenAIFile.objects.get(original_file_name="test2.txt")
+        #t2 = OpenAIFile.objects.get(name="test2.txt")
 
         #test_file3 = SimpleUploadedFile( "test3.txt", b"The dog barked.", content_type="text/plain")
         #self.client.post( url ,  {'file': test_file3}, follow=True)
-        #t3 = OpenAIFile.objects.get(original_file_name="test3.txt")
+        #t3 = OpenAIFile.objects.get(name="test3.txt")
 
         t1 = self.create_testfile_from_string( b"the dog was black" ,"test1.txt")
         t2 = self.create_testfile_from_string( b"the cat was white" ,"test2.txt")
@@ -270,7 +270,7 @@ class OpenAI(TestCase):
         t3 = self.create_testfile_from_string( b"the cat said miaow" ,"test3.txt")
         #test_file3 = SimpleUploadedFile( "test3.txt", b"The cat said miaow. ", content_type="text/plain")
         #self.client.post( url ,  {'file': test_file3}, follow=True)
-        #t3 = OpenAIFile.objects.get(original_file_name="test3.txt")
+        #t3 = OpenAIFile.objects.get(name="test3.txt")
         vs1.files.add(t3)
         vs1.save()
         file_ids = vs1.file_ids();

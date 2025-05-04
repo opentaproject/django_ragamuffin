@@ -3,8 +3,8 @@ from .models import OpenAIFile  , VectorStore , Assistant, Thread
 
 @admin.register(OpenAIFile)
 class OpenAIFileAdmin(admin.ModelAdmin):
-    list_display = ('pk', 'original_file_name', 'file_id', 'checksum', 'date')
-    readonly_fields = ('checksum','original_file_name','path','file_id')
+    list_display = ('pk', 'name', 'file_id', 'checksum', 'date')
+    readonly_fields = ('checksum','name','path','file_id')
 
 @admin.register(VectorStore)
 class VectorStoreAdmin(admin.ModelAdmin):
@@ -17,7 +17,7 @@ class VectorStoreAdmin(admin.ModelAdmin):
         return self.readonly_fields  # creating a new object
 
     def list_file_ids(self, obj):
-        return ", ".join(str(f.original_file_name) for f in obj.files.all())
+        return ", ".join(str(f.name) for f in obj.files.all())
 
     list_file_ids.short_description = "File Names"
     
