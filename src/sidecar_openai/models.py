@@ -106,6 +106,7 @@ class OpenAIFile(models.Model) :
     name = models.CharField(max_length=255,blank=True)
     path = models.CharField(max_length=255,blank=True)
     file_id = models.CharField(max_length=255,blank=True)
+    file_ids = models.JSONField(default=list, null=True, blank=True)
     file = models.FileField( max_length=512, upload_to=hashed_upload_to, storage=upload_storage, validators=[validate_file_extension] )
     ntokens = models.IntegerField(default=0,null=True, blank=True)
     
@@ -167,6 +168,7 @@ class OpenAIFile(models.Model) :
             print(f"FILE_PATH = {self.file.path}")
             uploaded_file = openai.files.create( file=open( self.file.path, "rb"), purpose="assistants")
             self.file_id = uploaded_file.id
+            self.file_ids = [uploaded_file.id ]
             self.path = self.file.path
             encoding = tiktoken.encoding_for_model(settings.AI_MODEL)
             self.ntokens = len( encoding.encode(data.decode('utf-8' )) )
@@ -188,20 +190,21 @@ def custom_delete_openaifile(sender, instance, **kwargs):
         logger.error(f" FILE/ {instance.path} DOES NOT EXIST")
         return
     vst = VectorStore.objects.filter(files=instance)
-    if hasattr( instance, "file_id") :
-        file_id = instance.file_id 
-        for vs in vst.all() :
-            vector_store_id = vs.vector_store_id
-            try  :
-                client.vector_stores.files.delete(vector_store_id=vector_store_id,file_id=file_id)
-            except  openai.NotFoundError as e: 
-             pass
-        try :
-            client.files.delete(file_id)
-            print(f"DELETED {instance.name}")
-        except openai.NotFoundError as e:
-            print(f"ERROR DELETING {instance.name}")
-            pass
+    if hasattr( instance, "file_ids") :
+        file_ids = instance.file_ids
+        for file_id in file_ids :
+            for vs in vst.all() :
+                vector_store_id = vs.vector_store_id
+                try  :
+                    client.vector_stores.files.delete(vector_store_id=vector_store_id,file_id=file_id)
+                except  openai.NotFoundError as e: 
+                    pass
+            try :
+                client.files.delete(file_id)
+                print(f"DELETED {instance.name}")
+            except openai.NotFoundError as e:
+                print(f"ERROR DELETING {instance.name}")
+                pass
 
 class VectorStore( models.Model ):
     checksum = models.CharField(blank=True, max_length=255)
@@ -216,7 +219,10 @@ class VectorStore( models.Model ):
         files = self.files
         ids = []
         for f in files.all():
-            ids.append(f.file_id)
+            ids.extend( f.file_ids )
+            #for file_id in f.file_ids :
+            #    ids.append(file_id)
+        print(f"IDS IN VECTOR_STORE IS {ids}")
         return ids
 
     def ntokens( self, *args, **kwargs ):
@@ -344,7 +350,8 @@ class Assistant( models.Model ):
         f = []
         for v in vs :
             for vf in v.files.all():
-                f.append( vf.file_id )
+                f.extend( vf.file_ids )
+        print(f"ASSISTANT F = {f}")
         f = list( set( f) )
         return f
 
