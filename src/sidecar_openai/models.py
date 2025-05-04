@@ -157,22 +157,25 @@ class OpenAIFile(models.Model) :
                 return chunks
         
             chunks = chunk_mmd(mmd_text)
-            print(f"CHUNKS = {chunks}")
+            chunkdir = os.path.join( os.path.dirname( src ), 'chunks')
+            os.makedirs( chunkdir, exist_ok=True )
+            dst = os.path.join( chunkdir, os.path.basename( src) )
+            #print(f"CHUNKS = {chunks}")
             if chunks :
                 s = ( f"{chunks}" ).encode() 
-                shutil.copy2(src,src + '-orig')
-                open( src, "wb").write( s)
+                open( dst, "wb").write( s)
+            else :
+                shutil.copy2(src, dst)
             print(f"FN = {fn}")
             data = self.file.read()
             self.checksum = hashlib.md5(data).hexdigest()
             print(f"FILE_PATH = {self.file.path}")
-            uploaded_file = openai.files.create( file=open( self.file.path, "rb"), purpose="assistants")
-            self.file_id = uploaded_file.id
+            uploaded_file = openai.files.create( file=open( dst, "rb"), purpose="assistants")
+            #self.file_id = uploaded_file.id
             self.file_ids = [uploaded_file.id ]
-            self.path = self.file.path
+            self.path = os.path.dirname( self.file.path )
             encoding = tiktoken.encoding_for_model(settings.AI_MODEL)
             self.ntokens = len( encoding.encode(data.decode('utf-8' )) )
-
             print(f"PATH = { self.path}")
             print(f"NOW AFTER CHUNKING NAME IS {self.name}")
             self.name = name
@@ -182,10 +185,10 @@ class OpenAIFile(models.Model) :
 
 @receiver(pre_delete, sender=OpenAIFile)
 def custom_delete_openaifile(sender, instance, **kwargs):
-    print(f"CUSTOM_DELETE_OPENAIFILE")
+    print(f"CUSTOM_DELETE_OPENAIFILE {instance.path} ")
     pk = instance.pk
     try :
-        os.remove(instance.path)
+        shutil.rmtree(instance.path)
     except Exception as e:
         logger.error(f" FILE/ {instance.path} DOES NOT EXIST")
         return
@@ -575,7 +578,7 @@ def handle_files_changed(sender, instance, action, **kwargs):
             #    print(f"FILE ERROR {file_id}")
         new_file_ids = []
         for f in instance.files.all() :
-            new_file_ids.append( f.file_id )
+            new_file_ids.extend( f.file_ids )
         print(f"OLD_FILE_IDS = {old_file_ids} ")
         print(f"NEW_FILE_IDS = {new_file_ids} ")
         pks = [];
@@ -583,7 +586,7 @@ def handle_files_changed(sender, instance, action, **kwargs):
         cksums = []
         for f in instance.files.all() :
             pks.append( f.pk )
-            ids.append( f.file_id );
+            ids.extend( f.file_ids );
             cksums.append( f.checksum)
         added_files = list( set( new_file_ids) - set( old_file_ids ) )
         subtracted_files = list( set( old_file_ids)  - set( new_file_ids) )
