@@ -1,7 +1,10 @@
 from django.db import models
+import base64
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User, AnonymousUser
 import shutil
+import json
+from .mathpix import mathpix
 
 from django.db import transaction, IntegrityError
 import logging
@@ -25,7 +28,7 @@ upload_storage = FileSystemStorage(settings.OPENAI_UPLOAD_STORAGE, base_url="/" 
 
 def validate_file_extension(value):
     ext = os.path.splitext(value.name)[1].lower()
-    if ext not in ['.md','.txt','.pdf']:
+    if ext not in ['.md','.txt','.pdf','.tex']:
         raise ValidationError(f"Unsupported file extension '{ext}'.")
 
 def hashed_upload_to(instance, filename):
@@ -97,6 +100,52 @@ def upload_or_retrieve_openai_file( name ,src ):
         t1 = ts[0]
     return t1
 
+def split_long_chunks(chunks, max_len=800):
+    new_chunks = []
+    for chunk in chunks:
+        words = chunk["content"].split()
+        for i in range(0, len(words), max_len):
+            part = ' '.join(words[i:i+max_len])
+            new_chunks.append({
+                "heading": chunk["heading"],
+                "content": part
+            })
+    return new_chunks
+
+def chunk_mmd(lines):
+    chunks = []
+    current_chunk = []
+    current_heading = None
+
+    for line in lines:
+        if re.match(r'^#{1,6} ', line):
+            if current_chunk:
+                chunks.append({
+                    "heading": current_heading,
+                    "content": ''.join(current_chunk).strip()
+                })
+            current_heading = line.strip()
+            current_chunk = []
+        else:
+            current_chunk.append(line)
+
+    if current_chunk:
+        chunks.append({
+            "heading": current_heading,
+            "content": ''.join(current_chunk).strip()
+        })
+
+    s = f"{chunks}"
+    chunks = split_long_chunks( chunks );
+    #s = ''
+    #i = 0;
+    #for i, chunk in enumerate(chunks ):
+    #    s = s + json.dumps({ "id": f"chunk_{i}", "text": f"{chunk['heading']}\n{chunk['content']}" }) + "\n"
+    #    i = i + 1 ;
+    #    print(f"I = {i}")
+    return s.encode('utf-8')
+
+
 
 
 
@@ -129,41 +178,19 @@ class OpenAIFile(models.Model) :
             print(f"FN = {fn}")
             self.name = self.file.name.split('/')[-1]
             src = self.file.path
-            mmd_text = ( open(src,'rb').read() ).decode('utf-8')
-
-
-            def chunk_mmd(lines):
-                chunks = []
-                current_chunk = []
-                current_heading = None
-            
-                for line in lines:
-                    if re.match(r'^#{1,6} ', line):
-                        if current_chunk:
-                            chunks.append({
-                                "heading": current_heading,
-                                "content": ''.join(current_chunk).strip()
-                            })
-                        current_heading = line.strip()
-                        current_chunk = []
-                    else:
-                        current_chunk.append(line)
-            
-                if current_chunk:
-                    chunks.append({
-                        "heading": current_heading,
-                        "content": ''.join(current_chunk).strip()
-                    })
-                return chunks
-        
-            chunks = chunk_mmd(mmd_text)
+            extension = src.split('.')[-1];
+            if extension == 'pdf' :
+                txt = mathpix( src ,format_out='mmd')
+                print(f"TXT = {txt}")
+            else :
+                txt = ( open(src,'rb').read() ).decode('utf-8')
+            chunks = chunk_mmd(txt)
             chunkdir = os.path.join( os.path.dirname( src ), 'chunks')
             os.makedirs( chunkdir, exist_ok=True )
             dst = os.path.join( chunkdir, os.path.basename( src) )
             #print(f"CHUNKS = {chunks}")
             if chunks :
-                s = ( f"{chunks}" ).encode() 
-                open( dst, "wb").write( s)
+                open( dst, "wb").write( chunks)
             else :
                 shutil.copy2(src, dst)
             print(f"FN = {fn}")
@@ -175,7 +202,7 @@ class OpenAIFile(models.Model) :
             self.file_ids = [uploaded_file.id ]
             self.path = os.path.dirname( self.file.path )
             encoding = tiktoken.encoding_for_model(settings.AI_MODEL)
-            self.ntokens = len( encoding.encode(data.decode('utf-8' )) )
+            #self.ntokens = len( encoding.encode(data.decode('utf-8' )) )
             print(f"PATH = { self.path}")
             print(f"NOW AFTER CHUNKING NAME IS {self.name}")
             self.name = name
