@@ -84,6 +84,7 @@ def mathpix( pdf_path, format_out='mmd' ):
         s = asyncio.run(convert_pdf_file(pdf_path ,format_out ))
     except Exception as e :
         s = f"Conversion error: {str(e)}"
+    print(f"MATPIX S = {s}")
     return s
 # Run it
 #s = asyncio.run(convert_pdf_file('./latex.pdf','tex'))

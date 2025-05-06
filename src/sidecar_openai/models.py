@@ -1,4 +1,5 @@
 from django.db import models
+from pathlib import Path
 import base64
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User, AnonymousUser
@@ -112,13 +113,14 @@ def split_long_chunks(chunks, max_len=800):
             })
     return new_chunks
 
-def chunk_mmd(lines):
+def chunk_mmd(linestring):
     chunks = []
     current_chunk = []
     current_heading = None
+    lines  = linestring.splitlines()
 
     for line in lines:
-        if re.match(r'^#{1,6} ', line):
+        if re.match(r'^#{1,6} ', line) or line == '' :
             if current_chunk:
                 chunks.append({
                     "heading": current_heading,
@@ -143,6 +145,7 @@ def chunk_mmd(lines):
     #    s = s + json.dumps({ "id": f"chunk_{i}", "text": f"{chunk['heading']}\n{chunk['content']}" }) + "\n"
     #    i = i + 1 ;
     #    print(f"I = {i}")
+    s = re.sub(r"},","},\n",s)
     return s.encode('utf-8')
 
 
@@ -180,14 +183,17 @@ class OpenAIFile(models.Model) :
             src = self.file.path
             extension = src.split('.')[-1];
             if extension == 'pdf' :
+                print(f"DOING MATHPIX")
                 txt = mathpix( src ,format_out='mmd')
-                print(f"TXT = {txt}")
             else :
                 txt = ( open(src,'rb').read() ).decode('utf-8')
             chunks = chunk_mmd(txt)
+            print(f"CHUNKS = {chunks}")
             chunkdir = os.path.join( os.path.dirname( src ), 'chunks')
             os.makedirs( chunkdir, exist_ok=True )
-            dst = os.path.join( chunkdir, os.path.basename( src) )
+            srcbase = Path( os.path.basename(src) )
+            jbase = srcbase.with_suffix('.json')
+            dst = os.path.join( chunkdir, jbase )
             #print(f"CHUNKS = {chunks}")
             if chunks :
                 open( dst, "wb").write( chunks)
@@ -201,8 +207,24 @@ class OpenAIFile(models.Model) :
             #self.file_id = uploaded_file.id
             self.file_ids = [uploaded_file.id ]
             self.path = os.path.dirname( self.file.path )
-            encoding = tiktoken.encoding_for_model(settings.AI_MODEL)
-            #self.ntokens = len( encoding.encode(data.decode('utf-8' )) )
+
+            def get_ntokens( file_path):
+                valid_text = ''
+                encoding = tiktoken.encoding_for_model(settings.AI_MODEL)
+                with open(file_path, "rb") as f:
+                    for line in f:
+                        try:
+                            decoded = line.decode("utf-8")
+                            valid_text += decoded
+                        except UnicodeDecodeError:
+                            continue  # Skip invalid lines
+                tokens = encoding.encode(valid_text)
+                print(f"Total tokens: {len(tokens)}")
+                return len( tokens )
+
+
+
+            self.ntokens = get_ntokens( dst )
             print(f"PATH = { self.path}")
             print(f"NOW AFTER CHUNKING NAME IS {self.name}")
             self.name = name
