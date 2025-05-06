@@ -5,7 +5,6 @@ import time
 import string
 import re
 import unicodedata
-import base64
 import os
 import logging
 logger = logging.getLogger(__name__)
@@ -23,49 +22,25 @@ preamble = "\\documentclass{article} \n \
 APP_ID = os.environ.get('APP_ID')
 APP_KEY= os.environ.get('APP_KEY')
 
-#        if is_staff and extension in ("pdf") :
-#            from .mathpix import mathpix
-#            filebase = asset_filename.split(".pdf")[0]
-#            tex_exists = os.path.exists( os.path.join( path, f"{filebase}.tex") )
-#            assert not tex_exists , f'Tex file {filebase}.tex exists and mmd wont be created' 
-#            res = mathpix(file_path,'mmd')
-#            outfile = os.path.join(path,f"mathpix-{filebase}.mmd" )
-#            o = open(outfile,"w")
-#            o.write(res)
-
-
-
 async def convert_pdf_file( pdf_path , format_out='mmd'):
     headers = {
         "app_id": APP_ID,
-        "app_key": APP_KEY,
-        "Content-type": "application/json"
+        "app_key": APP_KEY
     }
 
-    print(f"APP_ID = {APP_ID}, APP_KEY={APP_KEY}")
-    with open(pdf_path , "rb") as f:
-        pdf_data = f.read()
-    encoded_pdf = base64.b64encode(pdf_data).decode("utf-8")
-    data = {
-        "src": f"data:application/pdf;base64,{encoded_pdf}",
-        "formats": ["text","latex"],  # You can adjust these as needed
-        "ocr": ["math", "text"]
-        }
     # Multipart form with file
     filename = pdf_path.split('/')[-1]
-    #files = {
-    #    'file': (filename, open(pdf_path, 'rb'), 'application/pdf'),
-    #    'options_json': (
-    #        None,
-    #        '{"ocr": ["math", "text"], "formats": ["latex_styled"]}',
-    #        'application/json'
-    #    )
-    #}
-    print(f"DATA = {data}")
+    files = {
+        'file': (filename, open(pdf_path, 'rb'), 'application/pdf'),
+        'options_json': (
+            None,
+            '{"ocr": ["math", "text"], "formats": ["latex_styled"]}',
+            'application/json'
+        )
+    }
 
     async with httpx.AsyncClient() as client:
-        #response = await client.post("https://api.mathpix.com/v3/pdf", headers=headers, files=files)
-        response = await client.post("https://api.mathpix.com/v3/text", json=data, headers=headers)
+        response = await client.post("https://api.mathpix.com/v3/pdf", headers=headers, files=files)
 
         if response.status_code == 200:
             job_id = response.json()["pdf_id"]
@@ -105,8 +80,6 @@ async def convert_pdf_file( pdf_path , format_out='mmd'):
         return s
         
 def mathpix( pdf_path, format_out='mmd' ):
-    print(f"APP_ID = {APP_ID}")
-    print(f"APP_KEY = {APP_KEY}")
     try :
         s = asyncio.run(convert_pdf_file(pdf_path ,format_out ))
     except Exception as e :
