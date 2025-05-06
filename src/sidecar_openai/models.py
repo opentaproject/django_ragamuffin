@@ -28,13 +28,14 @@ client = openai.OpenAI(api_key=settings.AI_KEY)
 upload_storage = FileSystemStorage(settings.OPENAI_UPLOAD_STORAGE, base_url="/" )
 
 def validate_file_extension(value):
-    ext = os.path.splitext(value.name)[1].lower()
+    ext = os.path.splitext(value.name)[-1].lower()
     if ext not in ['.md','.txt','.pdf','.tex']:
         raise ValidationError(f"Unsupported file extension '{ext}'.")
 
 def hashed_upload_to(instance, filename):
-    print(f"FILE_NAME = {instance.file.name}")
-    dirname = instance.file.name.split('.')[0]
+    #print(f"FILE_NAME = {instance.file.name}")
+    dirname = '.'.join( instance.file.name.split('.')[:-1] )
+    print(f"DIRNAME = {dirname}")
     os.makedirs(os.path.join( settings.OPENAI_UPLOAD_STORAGE, dirname ) ,  exist_ok=True)
     return os.path.join( dirname, instance.file.name )
 
@@ -82,22 +83,22 @@ def create_or_retrieve_thread( assistant, name, user ) :
 
 
 def upload_or_retrieve_openai_file( name ,src ):
-    print(f"UPLOAD_OR_RETRIEVE NAME {name}")
-    print(f"UPLOAD_OR_RETRIEVE SRC {src}")
+    #print(f"UPLOAD_OR_RETRIEVE NAME {name}")
+    #print(f"UPLOAD_OR_RETRIEVE SRC {src}")
     os.makedirs( os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), exist_ok=True )
     dst = os.path.join(os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), 'README.md')
     print(f"UPLOAD_OR_RETRIEV DST {dst}")
     name = dst.split('/')[-1];
     ts = OpenAIFile.objects.filter(name=name)
     if not ts :
-        print(f" SRC={src} DST = {dst}")
-        print(f"FILE NEEDST TO BE CREATED")
+        #print(f" SRC={src} DST = {dst}")
+        #print(f"FILE NEEDST TO BE CREATED")
         shutil.copy2(src, dst)
         t1 = OpenAIFile(file=dst)
         t1.name = name
         t1.save()
     else :
-        print(f"FILE EXISTS")
+        #print(f"FILE EXISTS")
         t1 = ts[0]
     return t1
 
@@ -116,17 +117,19 @@ def split_long_chunks(chunks, max_len=800):
 def chunk_mmd(linestring):
     chunks = []
     current_chunk = []
-    current_heading = None
+    current_heading = ''
     lines  = linestring.splitlines()
 
     for line in lines:
-        if re.match(r'^#{1,6} ', line) or line == '' :
+        if re.match(r'^#{1,6} ', line) or line == ''  or re.match(r'\\section', line ) :
+            if re.match(r'\\section',line) :
+                current_heading = line.strip() 
             if current_chunk:
                 chunks.append({
                     "heading": current_heading,
                     "content": ''.join(current_chunk).strip()
                 })
-            current_heading = line.strip()
+            #current_heading = line.strip()
             current_chunk = []
         else:
             current_chunk.append(line)
@@ -170,25 +173,28 @@ class OpenAIFile(models.Model) :
 
     def save( self, *args, **kwargs ):
         is_new = self._state.adding  and not self.pk
-        print(f"SAVE FILE ORIG {self.file}")
-        name = f"{self.file}".split('/')[-1]
+        #print(f"SAVE FILE ORIG {self.file}")
+        name =  f"{self.file}".split('/')[-1]
+        print(f"NAME1 = {name}")
+        #print(f"SAVE INITIALLY NAME = {name}")
         super().save(*args, **kwargs)  # Save first, so file is processed
-        print(f"SAVE FILE AFTER SUPER {self.file}")
+        #print(f"SAVE FILE AFTER SUPER {self.file}")
         if is_new and self.file:
-            print(f"SELF.FILE.NAME = { self.file.name}")
+            #print(f"SELF.FILE.NAME = { self.file.name}")
             #fn = hashed_upload_to(self , self.file.name )
             fn = self.file.name 
-            print(f"FN = {fn}")
+            #print(f"FN = {fn}")
             self.name = self.file.name.split('/')[-1]
+            print(f"NAME2 = {self.name}")
             src = self.file.path
             extension = src.split('.')[-1];
             if extension == 'pdf' :
-                print(f"DOING MATHPIX")
+                #print(f"DOING MATHPIX")
                 txt = mathpix( src ,format_out='mmd')
             else :
                 txt = ( open(src,'rb').read() ).decode('utf-8')
             chunks = chunk_mmd(txt)
-            print(f"CHUNKS = {chunks}")
+            #print(f"CHUNKS = {chunks}")
             chunkdir = os.path.join( os.path.dirname( src ), 'chunks')
             os.makedirs( chunkdir, exist_ok=True )
             srcbase = Path( os.path.basename(src) )
@@ -199,10 +205,10 @@ class OpenAIFile(models.Model) :
                 open( dst, "wb").write( chunks)
             else :
                 shutil.copy2(src, dst)
-            print(f"FN = {fn}")
+            #print(f"FN = {fn}")
             data = self.file.read()
             self.checksum = hashlib.md5(data).hexdigest()
-            print(f"FILE_PATH = {self.file.path}")
+            #print(f"FILE_PATH = {self.file.path}")
             uploaded_file = openai.files.create( file=open( dst, "rb"), purpose="assistants")
             #self.file_id = uploaded_file.id
             self.file_ids = [uploaded_file.id ]
@@ -219,22 +225,23 @@ class OpenAIFile(models.Model) :
                         except UnicodeDecodeError:
                             continue  # Skip invalid lines
                 tokens = encoding.encode(valid_text)
-                print(f"Total tokens: {len(tokens)}")
+                #print(f"Total tokens: {len(tokens)}")
                 return len( tokens )
 
 
 
             self.ntokens = get_ntokens( dst )
-            print(f"PATH = { self.path}")
-            print(f"NOW AFTER CHUNKING NAME IS {self.name}")
+            #print(f"PATH = { self.path}")
+            #print(f"NOW AFTER CHUNKING NAME IS {self.name}")
             self.name = name
+            print(f"NAME3 ={self.name}")
             super().save(*args, **kwargs) # Then update with true hashed path
 
 
 
 @receiver(pre_delete, sender=OpenAIFile)
 def custom_delete_openaifile(sender, instance, **kwargs):
-    print(f"CUSTOM_DELETE_OPENAIFILE {instance.path} ")
+    #print(f"CUSTOM_DELETE_OPENAIFILE {instance.path} ")
     pk = instance.pk
     try :
         shutil.rmtree(instance.path)
@@ -253,9 +260,9 @@ def custom_delete_openaifile(sender, instance, **kwargs):
                     pass
             try :
                 client.files.delete(file_id)
-                print(f"DELETED {instance.name}")
+                #print(f"DELETED {instance.name}")
             except openai.NotFoundError as e:
-                print(f"ERROR DELETING {instance.name}")
+                #print(f"ERROR DELETING {instance.name}")
                 pass
 
 class VectorStore( models.Model ):
@@ -274,7 +281,7 @@ class VectorStore( models.Model ):
             ids.extend( f.file_ids )
             #for file_id in f.file_ids :
             #    ids.append(file_id)
-        print(f"IDS IN VECTOR_STORE IS {ids}")
+        #print(f"IDS IN VECTOR_STORE IS {ids}")
         return ids
 
     def ntokens( self, *args, **kwargs ):
@@ -303,14 +310,14 @@ class VectorStore( models.Model ):
     def files_ok( self, *args, **kwargs) :
         vs = self
         file_ids = vs.file_ids()
-        print(f"FILE_IDS = {file_ids}")
+        #print(f"FILE_IDS = {file_ids}")
         vector_store_id = vs.vector_store_id
         vector_store =  client.vector_stores.retrieve(vector_store_id)
         vector_store_files = client.vector_stores.files.list( vector_store_id=vector_store.id)
         remote_ids = []
         for f in vector_store_files:
             remote_ids.append( f.id)
-        print(f"REMOTE_IDS = {remote_ids}")
+        #print(f"REMOTE_IDS = {remote_ids}")
         #assert  set( file_ids) == set( remote_ids) , f"{file_ids} == {remote_ids} is false "
         return set( file_ids) == set( remote_ids) 
 
@@ -318,9 +325,9 @@ class VectorStore( models.Model ):
 
     def save( self, *args, **kwargs ):
         is_new = self._state.adding and not self.pk
-        print(f"IS_NEW = {is_new}")
+        #print(f"IS_NEW = {is_new}")
         super().save(*args,**kwargs)
-        print(f"DID SUPER SAVE")
+        #print(f"DID SUPER SAVE")
         if is_new :
             vector_store = client.vector_stores.create(name=self.name,metadata={"api_key": settings.AI_KEY[-8:] } )
             self.vector_store_id = vector_store.id
@@ -330,7 +337,7 @@ class VectorStore( models.Model ):
 def custom_delete_vector_store(sender, instance, **kwargs):
     try :
         vector_store_id = instance.vector_store_id
-        print(f"DELETE VECTOR_STORE{vector_store_id}")
+        #print(f"DELETE VECTOR_STORE{vector_store_id}")
         client.vector_stores.delete(vector_store_id=vector_store_id)
     except openai.NotFoundError as e:
         pass
@@ -359,10 +366,10 @@ class Assistant( models.Model ):
             self.instructions = 'Answer only questions about the enclosed document. Do not offer helpful answers to questions that do not refer to the document. Be concise. If the question is irrelevant, answer with "That is not a question that is relevant to the document."'
         instructions = self.instructions
         super().save(*args,**kwargs)
-        print(f"ASSISTANT_SAVE INSTRUCTIONS = {instructions}")
+        #print(f"ASSISTANT_SAVE INSTRUCTIONS = {instructions}")
         if is_new :
-            print(f"SETTING TEMPPERATUR TO {temperature}")
-            print(f"SETTING INSTRUCTIONS TO {instructions}")
+            #print(f"SETTING TEMPPERATUR TO {temperature}")
+            #print(f"SETTING INSTRUCTIONS TO {instructions}")
             assistant = client.beta.assistants.create( name=self.name,
                 instructions=instructions, 
                 model=settings.AI_MODEL, 
@@ -372,7 +379,7 @@ class Assistant( models.Model ):
             super().save(*args,**kwargs)
         else :
             if not old_instructions  ==  self.instructions :
-                print(f"REVISE INSTRUCTIONS")
+                #print(f"REVISE INSTRUCTIONS")
                 assistant_id = self.assistant_id
                 client.beta.assistants.update(assistant_id, instructions=instructions)
 
@@ -403,7 +410,7 @@ class Assistant( models.Model ):
         for v in vs :
             for vf in v.files.all():
                 f.extend( vf.file_ids )
-        print(f"ASSISTANT F = {f}")
+        #print(f"ASSISTANT F = {f}")
         f = list( set( f) )
         return f
 
@@ -484,7 +491,7 @@ class Thread(models.Model) :
         assistant_id = assistant.assistant_id
         thread = self
         thread_id = thread.thread_id
-        print(f"QUERY_ID = {assistant_id} RUN_QUERY ")
+        #print(f"QUERY_ID = {assistant_id} RUN_QUERY ")
     
         encoding = tiktoken.encoding_for_model(settings.AI_MODEL)
         try :
@@ -503,7 +510,7 @@ class Thread(models.Model) :
             elif run_status.status == "failed":
                 raise Exception(f"Run failed. {run_status}")
             else:
-                print("Waiting for completion...")
+                #print("Waiting for completion...")
                 time.sleep(1)
         messages = openai.beta.threads.messages.list(thread_id=thread_id)
         i = 0;
@@ -516,7 +523,7 @@ class Thread(models.Model) :
         ntokens = len( encoding.encode(txt ) )
         txt = txt + f"<p/> *[{ntokens} tokens]*"
         tokens = encoding.encode(txt)
-        print(f"RETGURN TOKENS = {len(tokens)} REPLY = {txt}")
+        #print(f"RETGURN TOKENS = {len(tokens)} REPLY = {txt}")
         thread.messages.append({'user' : query, 'assistant' : txt, 'ntokens' : ntokens }) 
         thread.save()
         return txt
@@ -531,15 +538,15 @@ def custom_delete_assistant(sender, instance, **kwargs):
     pk = instance.pk
     assistant_id = instance.assistant_id
     assistant = openai.beta.assistants.retrieve(assistant_id)
-    print(f"DELETE ASSISTANT {assistant}")
+    #print(f"DELETE ASSISTANT {assistant}")
     tool_resources = assistant.tool_resources
-    print(f"TOOL_RESOURCES = {tool_resources}")
+    #print(f"TOOL_RESOURCES = {tool_resources}")
     try :
         vector_store_id = tool_resources.file_search.vector_store_ids[0]
-        print(f"VECTOR_STORES = {vector_store_id}")
+        #print(f"VECTOR_STORES = {vector_store_id}")
         vector_store =  client.vector_stores.retrieve(vector_store_id)
-        print(f"VECTOR_STORE = {vector_store}")
-        print(f"VECTOR_STORE_NAME = {vector_store.name}")
+        #print(f"VECTOR_STORE = {vector_store}")
+        #print(f"VECTOR_STORE_NAME = {vector_store.name}")
         if vector_store.name == assistant_id : # THIS IS HERE BECAUSE MULTIPL VECTOR STORES CAN'T BE USED BY AN ASSISTANT
             client.vector_stores.delete(vector_store_id)
     except :
@@ -549,7 +556,7 @@ def custom_delete_assistant(sender, instance, **kwargs):
 
 @receiver(m2m_changed, sender=Assistant.vector_stores.through)
 def handle_assistants_changed(sender, instance, action, **kwargs):
-    print(f"HANDLE_CHANGE_SENDER_ASSISTANT")
+    #print(f"HANDLE_CHANGE_SENDER_ASSISTANT")
     if getattr(instance, '_updating_from_m2m', False):
         return
     instance._updating_from_m2m = True
@@ -564,9 +571,9 @@ def handle_assistants_changed(sender, instance, action, **kwargs):
             vector_store_id = tool_resources.file_search.vector_store_ids[0]
             vector_store =  client.vector_stores.retrieve(vector_store_id)
             client.vector_stores.delete(vector_store_id)
-            print(f"REMAINING VECTOR_STORES TO BE SET UP {vector_stores}")
+            #print(f"REMAINING VECTOR_STORES TO BE SET UP {vector_stores}")
         except :
-            print(f"ERROR DELTING")
+            #print(f"ERROR DELTING")
             pass
         rebuild = True
         #
@@ -586,7 +593,7 @@ def handle_assistants_changed(sender, instance, action, **kwargs):
         file_ids = list( set( file_ids ) )
         file_ids.sort() 
         file_pks = list( set( file_pks ) )
-        print(f"IDS = {ids}")
+        #print(f"IDS = {ids}")
         if len( ids ) < 2 :
             assistant = client.beta.assistants.update(
                 assistant_id=assistant_id,
@@ -610,7 +617,7 @@ def handle_assistants_changed(sender, instance, action, **kwargs):
 
 @receiver(m2m_changed, sender=VectorStore.files.through)
 def handle_files_changed(sender, instance, action, **kwargs):
-    print(f"HANDLE_SENDER_VECTOR_STORE action={action} ")
+    #print(f"HANDLE_SENDER_VECTOR_STORE action={action} ")
     if action == "post_add" or action == 'post_remove' :
         if getattr(instance, '_updating_from_m2m', False):
             return
@@ -628,8 +635,8 @@ def handle_files_changed(sender, instance, action, **kwargs):
         new_file_ids = []
         for f in instance.files.all() :
             new_file_ids.extend( f.file_ids )
-        print(f"OLD_FILE_IDS = {old_file_ids} ")
-        print(f"NEW_FILE_IDS = {new_file_ids} ")
+        #print(f"OLD_FILE_IDS = {old_file_ids} ")
+        #print(f"NEW_FILE_IDS = {new_file_ids} ")
         pks = [];
         ids = [];
         cksums = []
@@ -639,24 +646,24 @@ def handle_files_changed(sender, instance, action, **kwargs):
             cksums.append( f.checksum)
         added_files = list( set( new_file_ids) - set( old_file_ids ) )
         subtracted_files = list( set( old_file_ids)  - set( new_file_ids) )
-        print(f"ADDED_FILES = {set(added_files)}")
-        print(f"SUBTRACTED_FILES = {set(subtracted_files)}")
+        #print(f"ADDED_FILES = {set(added_files)}")
+        #print(f"SUBTRACTED_FILES = {set(subtracted_files)}")
         for file_id in subtracted_files :
             client.vector_stores.files.delete( vector_store_id=vector_store_id, file_id=file_id)
         for file_id in added_files :
             client.vector_stores.files.create( vector_store_id=vector_store_id, file_id=file_id,  )
         while True:
             file_list = client.vector_stores.files.list(vector_store_id=vector_store_id)
-            print(f"FILE_LIST = {file_list}")
+            #print(f"FILE_LIST = {file_list}")
             statuses = [file.status for file in file_list.data]
-            print(f"STATUSES = {statuses}")
+            #print(f"STATUSES = {statuses}")
             if all(status == "completed" for status in statuses):
-                print("✅ All files processed and ready!")
+                #print("✅ All files processed and ready!")
                 break
             elif any(status == "failed" for status in statuses):
                 raise Exception(f"❌ Some files failed to process! {statuses}")
             else:
-                print(f"⏳ Current statuses: {statuses} - Waiting...")
+                #print(f"⏳ Current statuses: {statuses} - Waiting...")
                 time.sleep(5)  # Wait before polling again
         time.sleep(5)
 
@@ -672,7 +679,7 @@ def handle_files_changed(sender, instance, action, **kwargs):
         instance.checksum = checksum
         #others = VectorStore.objects.filter(checksum=checksum)
         npks =  list( OpenAIFile.objects.filter(file_id__in=ids).values_list('pk',flat=True)  )
-        print(f"IDS = {ids} PKS = {pks}")
+        #print(f"IDS = {ids} PKS = {pks}")
         del instance._updating_from_m2m
         #try :
         #    files = client.vector_stores.files.list(vector_store_id=vector_store_id)

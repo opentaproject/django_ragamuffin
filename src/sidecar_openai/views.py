@@ -37,8 +37,10 @@ def mathfix( txt ):
 
 FILENAME = "../README.md"
 @csrf_exempt
-def query_view(request,name):
-    print(f"THREAD_NAME = {name}")
+def query_view(request,subpath):
+    segments = subpath.split('/')
+    name = '.'.join( segments )
+    #print(f"THREAD_NAME = {name}")
     response = None
     user = request.user
     assistants = Assistant.objects.filter(name=name)
@@ -75,7 +77,7 @@ def query_view(request,name):
             response = f"{html}"
     else:
         form = QueryForm()
-    print(f"REQUEST = {request.POST}")
+    #print(f"REQUEST = {request.POST}")
     f = [ { 'index' : index, 'user' : item['user'] , 'assistant' : mark_safe( mathfix(item['assistant'] ) ) }  for index, item in enumerate( messages ) ]
     response = render(request, 'sidecar_openai/query_form.html', {'form': form, 'response': response,'messages' : f })
     response.set_cookie('busy' , 'false')

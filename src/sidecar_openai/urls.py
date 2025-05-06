@@ -1,6 +1,6 @@
-from django.urls import path
+from django.urls import path, re_path
 from . import views
 
 urlpatterns = [
-        path('query/<str:name>/', views.query_view, name='query'),
+        re_path(r'^query/(?P<subpath>.+)$', views.query_view, name='query'),
 ]
