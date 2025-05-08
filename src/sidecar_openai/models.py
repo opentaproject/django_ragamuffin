@@ -349,6 +349,8 @@ class Assistant( models.Model ):
     vector_stores = models.ManyToManyField( VectorStore )
     assistant_id = models.CharField(max_length=255,blank=True)
     json_field = models.JSONField( default=dict ,  blank=True, null=True)
+    model = models.CharField(max_length=255,blank=True,null=True)
+
 
     def __str__(self):
         return f"{self.name}"
@@ -356,6 +358,8 @@ class Assistant( models.Model ):
 
     def save( self, *args, **kwargs ):
         is_new = self._state.adding and not self.pk
+        if not self.model :
+            self.model = settings.AI_MODEL
         if self.pk :
             old = Assistant.objects.get(pk=self.pk)
             old_instructions = old.instructions
@@ -363,7 +367,7 @@ class Assistant( models.Model ):
             old_instructions = ''
         temperature = self.json_field.get('temperature', 0.2 )
         if self.instructions== '' :
-            self.instructions = 'Answer only questions about the enclosed document. Do not offer helpful answers to questions that do not refer to the document. Be concise. If the question is irrelevant, answer with "That is not a question that is relevant to the document."'
+            self.instructions = 'Answer only questions about the enclosed document. Do not offer helpful answers to questions that do not refer to the document. Be concise. If the question is irrelevant, answer with "That is not a question that is relevant to the document." For images, just silently include the link. Since it is visible, dont  say something like "You can view the picture ... ". If a link does not exist, just say that such an image does not exist. '
         instructions = self.instructions
         super().save(*args,**kwargs)
         #print(f"ASSISTANT_SAVE INSTRUCTIONS = {instructions}")
@@ -372,7 +376,7 @@ class Assistant( models.Model ):
             #print(f"SETTING INSTRUCTIONS TO {instructions}")
             assistant = client.beta.assistants.create( name=self.name,
                 instructions=instructions, 
-                model=settings.AI_MODEL, 
+                model=self.model,
                 temperature=temperature,
                 tools=[{"type": "file_search"}],metadata={"api_key": settings.AI_KEY[-8:] } )
             self.assistant_id = assistant.id
