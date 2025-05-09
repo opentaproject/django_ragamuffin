@@ -25,7 +25,7 @@ SECRET_KEY = "django-insecure-j&#s2gvaj5fi6$4*=#8+o8_^&ohpap2b2=rm-so72-xrzx=_qo
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['testserver','localhost']
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -126,3 +126,4 @@ AI_MODEL = os.environ.get('AI_MODEL','gpt-4o-mini')
 OPENAI_UPLOAD_STORAGE =  os.environ.get("OPENAI_UPLOAD_STORAGE",'/tmp/openaifiles')
 os.makedirs(OPENAI_UPLOAD_STORAGE, exist_ok=True)
 INSTALLED_APPS.append('sidecar_openai')
+STATIC_ROOT = os.path.join(BASE_DIR, "deploystatic")
