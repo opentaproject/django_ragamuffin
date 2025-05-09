@@ -2,8 +2,6 @@ import openai
 import os
 import pprint
 import json
-import chardet
-import fitz
 import shutil
 import string
 import random
@@ -67,7 +65,7 @@ def nuke( delete=False) :
     print("\n✅ Done" )
 
 def main(delete=False): 
-    nuke(delete=True)
+    nuke(delete=False)
     while True :
         nuke(delete=False)
         time.sleep(10)
