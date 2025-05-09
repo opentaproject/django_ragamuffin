@@ -67,7 +67,7 @@ def nuke( delete=False) :
     print("\n✅ Done" )
 
 def main(delete=False): 
-    nuke(delete=False)
+    nuke(delete=True)
     while True :
         nuke(delete=False)
         time.sleep(10)

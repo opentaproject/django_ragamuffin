@@ -9,6 +9,9 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
+import os
+from .util import create_database_if_not_exists
+
 
 from pathlib import Path
 
@@ -72,12 +75,50 @@ WSGI_APPLICATION = "backend.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+#DATABASES = {
+#    "default": {
+#        "ENGINE": "django.db.backends.sqlite3",
+#        "NAME": BASE_DIR / "db.sqlite3",
+#    }
+#}
+
+PGDATABASE = os.environ.get('PGDATABASE')
+PGDATABASE_NAME = os.environ.get('PGDATABASE_NAME','default')
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+SUBDOMAIN = os.environ.get('SUBDOMAIN','query')
+ATOMIC_REQUESTS = False
+PGHOST = os.environ.get("PGHOST", "localhost")
+PGPASSWORD = os.environ.get("PGPASSWORD")
+PGUSER = os.environ.get("PGUSER")
+PGDATABASE = os.environ.get('PGDATABASE')
+PGDATABASE_NAME = os.environ.get('PGDATABASE_NAME','default')
+
+
+
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+     PGDATABASE_NAME : {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": PGDATABASE,
+        "USER": PGUSER,
+        "PASSWORD": PGPASSWORD,
+        "HOST": PGHOST,
+        "PORT": 5432,
+        "ATOMIC_REQUESTS": ATOMIC_REQUESTS,
+    },
 }
+
+db = DATABASES[PGDATABASE_NAME];
+db_name = db['NAME'];
+host = db['HOST'];
+user = db['USER'];
+password = db['PASSWORD']
+superuser = os.environ.get("SUPERUSER", 'super')
+superuser_password = os.environ.get("SUPERUSER_PASSWORD",'')
+SUPERUSER=superuser
+SUPERUSER_PASSWORD=superuser_password
+create_database_if_not_exists(db_name, host,user, password , superuser, superuser_password) 
+
+
 
 
 # Password validation
@@ -127,3 +168,13 @@ OPENAI_UPLOAD_STORAGE =  os.environ.get("OPENAI_UPLOAD_STORAGE",'/tmp/openaifile
 os.makedirs(OPENAI_UPLOAD_STORAGE, exist_ok=True)
 INSTALLED_APPS.append('sidecar_openai')
 STATIC_ROOT = os.path.join(BASE_DIR, "deploystatic")
+STATIC_URL = "deploystatic/"
+
+STATIC_URL = "/static/"
+print(f"STORAGE = {OPENAI_UPLOAD_STORAGE}")
+
+# Default primary key field type
+# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
+
+
+
