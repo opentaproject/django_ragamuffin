@@ -40,7 +40,9 @@ FILENAME = "../README.md"
 def query_view(request,subpath):
     segments = subpath.split('/')
     name = '.'.join( segments )
-    #print(f"THREAD_NAME = {name}")
+    print(f"POST = {request.POST}")
+    print(f"THREAD_NAME = {name}")
+
     response = None
     user = request.user
     assistants = Assistant.objects.filter(name=name)
@@ -57,6 +59,19 @@ def query_view(request,subpath):
         assistant.instructions = instructions
         assistant.save()
     thread = create_or_retrieve_thread( assistant, name , user )
+    data = request.POST;
+    deletes = request.POST.getlist('delete-entry')
+    print(f"deletes= {deletes}")
+    if deletes :
+        messages = thread.messages;
+        ideletes = [int(i) for i in deletes ];
+        print(f"IDELETES = {ideletes}")
+        culled = [x for i,x in enumerate(messages) if i not in ideletes ]
+        print(f"CULLED LENGTH = {len( culled)}")
+        thread.messages= culled
+        thread.save(update_fields=["messages","thread_id"])
+        print(f"THREAD WAS SAVED")
+
     d = {'status' : 'pending' , 'result' : 'RESULT' }
     messages = thread.messages
     if request.method == 'POST':
@@ -69,8 +84,11 @@ def query_view(request,subpath):
                 if query.strip()  == message['user'].strip() :
                     txt = "*You already asked that!*<p/>" + message['assistant']
                     break
-            if txt == None :
-                txt = thread.run_query(  query=query )
+            try :
+                if txt == None :
+                    txt = thread.run_query(  query=query )
+            except Exception as e:
+                txt = str(e);
             txt = mathfix( txt )
             html = mark_safe(txt )
             response = f" <h4> Query: </h4>  {query}  <h4> Response: </h4> {html}  "

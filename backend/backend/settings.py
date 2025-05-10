@@ -172,6 +172,7 @@ STATIC_URL = "deploystatic/"
 
 STATIC_URL = "/static/"
 print(f"STORAGE = {OPENAI_UPLOAD_STORAGE}")
+MAXWAIT = 120 ; # WAIT MAX 120 seconds
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

@@ -58,7 +58,7 @@ class OpenAI(TestCase):
         user_exists = User.objects.filter(username='testuser').exists()
         self.assertTrue(user_exists)
 
-    def notest_create_and_delete_file_object(self):
+    def test_create_and_delete_file_object(self):
         url = reverse('admin:sidecar_openai_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
         url = reverse('admin:sidecar_openai_openaifile_add')  # use your app and model name
@@ -91,7 +91,7 @@ class OpenAI(TestCase):
 
 
 
-    def notest_create_and_delete_two_openai_file_objects(self):
+    def test_create_and_delete_two_openai_file_objects(self):
         url = reverse('admin:sidecar_openai_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
         print(f"RESPONSE = {response}")
@@ -124,7 +124,7 @@ class OpenAI(TestCase):
 
 
 
-    def notest_create_and_delete_vector_store_object(self):
+    def test_create_and_delete_vector_store_object(self):
         url = reverse('admin:sidecar_openai_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
         print(f"RESPONSE = {response}")
@@ -151,7 +151,7 @@ class OpenAI(TestCase):
         t1.delete()
 
 
-    def notest_create_and_delete_assistant_object(self):
+    def test_create_and_delete_assistant_object(self):
         url = reverse('admin:sidecar_openai_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
         print(f"RESPONSE = {response}")

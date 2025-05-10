@@ -9,3 +9,4 @@ class QueryForm(forms.Form):
             'placeholder': 'Enter your query...',
         })
     )
+    query.required = False

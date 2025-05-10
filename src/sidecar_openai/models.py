@@ -476,6 +476,12 @@ class Thread(models.Model) :
 
     def save( self, *args, **kwargs ):
         is_new = self._state.adding  and not self.pk
+        print(f"MESSAGES LENGTH { len( self.messages) }")
+        self.messages = self.messages
+        print(f"SAVE PK = {self.pk}")
+        print(f"SAVE ARGS = {args}")
+        print(f"SAVE KWARGS = {kwargs}")
+        print(f"MSGS = ", self.messages )
         super().save(*args, **kwargs)  # Save first, so file is processed
         if is_new  :
             thread = client.beta.threads.create(); 
@@ -483,6 +489,36 @@ class Thread(models.Model) :
             self.thread_id = thread_id
             self.messages = []
             super().save(*args, **kwargs) # Then update with true hashed path
+        elif 'update_fields' in kwargs :
+            thread_id = self.thread_id
+            print(f"UPDATE_MESSAGES = {self.messages}")
+            old_thread_id = thread_id
+            #client.beta.threads.delete(old_thread_id)
+            print(f"B")
+            new_thread =  client.beta.threads.create(); 
+            print(f"C")
+            print(f"OLD_THREAD_ID = {old_thread_id}")
+            new_thread_id = new_thread.id
+            print(f"NEW_THREAD_ID = {new_thread_id}")
+            print("D")
+            if self.messages :
+                for msg in self.messages:
+                    for role in ['user','assistant'] :
+                        openai.beta.threads.messages.create(
+                            thread_id=new_thread_id,
+                            role=role,
+                            content=msg[role]
+                        )
+                        
+                    print("E")
+            self.thread_id = new_thread_id
+            self.messages = self.messages
+            super().save(*args, **kwargs)
+            print(f"SUPER WAS SAVED")
+
+            #thread = client.beta.threads.create(); 
+
+
 
     def run_query( self, *args, **kwargs  ):
         last_messages = kwargs.get('last_messages',None)
@@ -507,7 +543,10 @@ class Thread(models.Model) :
         else :
             run = openai.beta.threads.runs.create( thread_id=thread_id, assistant_id=assistant_id ,  
                     truncation_strategy={ "type": "last_messages", "last_messages": last_messages })
-        while True:
+        interval = 1;
+        imax = settings.MAXWAIT / interval
+        i = 0;
+        while i < imax :
             run_status = openai.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
             if run_status.status == "completed":
                 break
@@ -516,6 +555,9 @@ class Thread(models.Model) :
             else:
                 #print("Waiting for completion...")
                 time.sleep(1)
+            i = i + 1;
+            print(f"I = {i}")
+        assert i < imax , f"Request timed out after {settings.MAXWAIT} seconds; try again ; try to change the question."
         messages = openai.beta.threads.messages.list(thread_id=thread_id)
         i = 0;
         for msg in messages.data[::-1]:  # newest last
@@ -656,7 +698,10 @@ def handle_files_changed(sender, instance, action, **kwargs):
             client.vector_stores.files.delete( vector_store_id=vector_store_id, file_id=file_id)
         for file_id in added_files :
             client.vector_stores.files.create( vector_store_id=vector_store_id, file_id=file_id,  )
-        while True:
+        interval = 5;
+        imax = settings.MAXWAIT / interval;
+        i = 0;
+        while i < imax :
             file_list = client.vector_stores.files.list(vector_store_id=vector_store_id)
             #print(f"FILE_LIST = {file_list}")
             statuses = [file.status for file in file_list.data]
@@ -669,6 +714,7 @@ def handle_files_changed(sender, instance, action, **kwargs):
             else:
                 #print(f"⏳ Current statuses: {statuses} - Waiting...")
                 time.sleep(5)  # Wait before polling again
+            i = i + 1 ;
         time.sleep(5)
 
 

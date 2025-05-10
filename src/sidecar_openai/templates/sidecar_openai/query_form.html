@@ -28,6 +28,13 @@ MathJax = {
             padding: 1rem;
             background-color: #e0e0e0;
         }
+
+.form-row {
+  display: flex;
+  align-items: center;  /* Aligns vertically */
+  gap: 10px;             /* Space between elements */
+}
+
     </style>
 
    
@@ -36,16 +43,27 @@ MathJax = {
 </head>
 <body style="display: flex; justify-content: center;  height: 100vh; margin: 0;">
 <div class='container'>
+
 	<div class="left">
+<form method="post">
+  {% csrf_token %}
 		<div style="margin: 10 auto; padding: 1rem;  ">
 
 	<h3> History </h3>
     {% if messages %}
+     <div>
+    <input type="checkbox" id="select-all"> Select All
+  </div>
     	{% for m in messages %}
+	<span class="form-row">
+	 <input type="checkbox" name="delete-entry" value="{{ m.index}}" class="choice-box" >
 	<button style="width: 100% ; text-align: left; " name='oldquery' value="{{m.user}}">{{ m.index }}: <div class="innerDiv" style="display: none"> {{m.assistant | safe }} </div>  {{m.user|truncatechars:30}} </button> 
+	</span>
     	{% endfor %}
      {% endif %}
 		</div>
+		<button type="submit">Delete checked entries</button>
+</form>
 </div>
 <div class="right">
 <div style="margin: 10 auto; padding: 1rem;  ">
@@ -67,7 +85,7 @@ MathJax = {
 document.getElementById('submitBtn').addEventListener('click', function () {
     document.cookie = "busy=true; max-age=3600; path=/";
     let count = 0;
-    setInterval(() => {
+    const intervalId = setInterval(() => {
     	const busy = getCookie('busy');
 	count = count + 1 ;
 	if ( count > 80 ){ var patience = ' be patient! It has \'only\' been ' + ( Math.floor( count / 5  ) ).toString() + ' s'  } 
@@ -82,10 +100,15 @@ document.getElementById('submitBtn').addEventListener('click', function () {
            btn.type = 'submit';
 	   btn.textContent = 'Submit '
     	} }, 200);
-});
+	setTimeout(() => {
+  		clearInterval(intervalId);
+  		console.log("Interval stopped");
+		}, 60000);
+	});
 
 
 function handleClick(event) {
+    event.preventDefault() ;
     var txt = event.target.value;
     const textarea = document.getElementById('id_query');
     textarea.value = txt
@@ -114,6 +137,12 @@ function getCookie(name) {
     }
     return null;
 }
+
+  document.getElementById('select-all').addEventListener('change', function () {
+    const checked = this.checked;
+    var btns = document.querySelectorAll('.choice-box');
+    btns.forEach(cb => cb.checked =  checked);
+  });
 
 </script>
 </html>
