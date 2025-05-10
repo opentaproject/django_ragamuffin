@@ -369,10 +369,7 @@ class Assistant( models.Model ):
         if self.temperature :
             temperature = self.temperature
         else :
-            temperature = settings.TEMPERATURE
-            self.temperature = temperature
-        if self.max_tokens :
-            max_tokens = self.max_tokens
+            temperature = settings.DEFAULT_TEMPERATURE
         if self.instructions== '' :
             self.instructions = 'Answer only questions about the enclosed document. Do not offer helpful answers to questions that do not refer to the document. Be concise. If the question is irrelevant, answer with "That is not a question that is relevant to the document." For images, just silently include the link. Since it is visible, dont  say something like "You can view the picture ... ". If a link does not exist, just say that such an image does not exist. '
         instructions = self.instructions
@@ -468,6 +465,7 @@ class Thread(models.Model) :
     messages = models.JSONField( default=dict ,  blank=True, null=True)
     assistant = models.ForeignKey(Assistant, on_delete=models.SET_NULL, null=True, related_name="threads")
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+    max_tokens = models.IntegerField( blank=True, null=True)
 
     class Meta:
         constraints = [
@@ -545,10 +543,15 @@ class Thread(models.Model) :
             openai.beta.threads.messages.create( thread_id=thread_id,  role="user", content=query )
         except Exception as err :
             return 'Error in thread'
-        if last_messages == None :
-            run = openai.beta.threads.runs.create( thread_id=thread_id, assistant_id=assistant_id )
+        if thread.max_tokens :
+            max_tokens = thread.max_tokens
         else :
-            run = openai.beta.threads.runs.create( thread_id=thread_id, assistant_id=assistant_id ,  
+            max_tokens = settings.MAX_TOKENS
+        timeout = settings.MAXWAIT
+        if last_messages == None :
+            run = openai.beta.threads.runs.create( thread_id=thread_id, assistant_id=assistant_id , max_tokens=max_tokens , timeout=timeout)
+        else :
+            run = openai.beta.threads.runs.create( thread_id=thread_id, assistant_id=assistant_id ,  max_tokens=max_tokens,  timeout=timeout, 
                     truncation_strategy={ "type": "last_messages", "last_messages": last_messages })
         interval = 1;
         imax = settings.MAXWAIT / interval
