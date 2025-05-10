@@ -39,7 +39,7 @@ FILENAME = "../README.md"
 @csrf_exempt
 def query_view(request,subpath):
     segments = subpath.split('/')
-    name = '.'.join( segments )
+    name = ( '.'.join( segments ) ).rstrip('.')
     print(f"POST = {request.POST}")
     print(f"THREAD_NAME = {name}")
 
