@@ -78,6 +78,7 @@ def query_view(request,subpath):
         form = QueryForm(request.POST)
         if form.is_valid():
             assistant_id = assistant.assistant_id 
+            print(f"MODEL = {assistant.model}")
             query = form.cleaned_data['query']
             txt = None
             for message in messages :

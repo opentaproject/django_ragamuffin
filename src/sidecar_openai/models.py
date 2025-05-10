@@ -357,6 +357,7 @@ class Assistant( models.Model ):
 
 
     def save( self, *args, **kwargs ):
+        print(f"SAVING ASSISTANT MODEL = {self.model}")
         is_new = self._state.adding and not self.pk
         if not self.model :
             self.model = settings.AI_MODEL
@@ -364,6 +365,7 @@ class Assistant( models.Model ):
             old = Assistant.objects.get(pk=self.pk)
             old_instructions = old.instructions
             old_temperature = old.temperature
+            old_model = self.model
         else :
             old_instructions = ''
         if self.temperature :
@@ -373,6 +375,7 @@ class Assistant( models.Model ):
         if self.instructions== '' :
             self.instructions = 'Answer only questions about the enclosed document. Do not offer helpful answers to questions that do not refer to the document. Be concise. If the question is irrelevant, answer with "That is not a question that is relevant to the document." For images, just silently include the link. Since it is visible, dont  say something like "You can view the picture ... ". If a link does not exist, just say that such an image does not exist. '
         instructions = self.instructions
+        self.model = settings.AI_MODEL
         super().save(*args,**kwargs)
         #print(f"ASSISTANT_SAVE INSTRUCTIONS = {instructions}")
         if is_new :
@@ -393,6 +396,9 @@ class Assistant( models.Model ):
             if not old_temperature ==  temperature :
                 print(f"SET TEMPERATUR TO {temperature}")
                 client.beta.assistants.update(assistant_id, temperature=temperature)
+            if not old_model ==  settings.AI_MODEL :
+                print(f"SET OLD MODEL {old_model}  {self.model}")
+                client.beta.assistants.update(assistant_id, model=self.model)
 
 
 
@@ -489,7 +495,7 @@ class Thread(models.Model) :
         print(f"SAVE PK = {self.pk}")
         print(f"SAVE ARGS = {args}")
         print(f"SAVE KWARGS = {kwargs}")
-        print(f"MSGS = ", self.messages )
+        #print(f"MSGS = ", self.messages )
         super().save(*args, **kwargs)  # Save first, so file is processed
         if is_new  :
             thread = client.beta.threads.create(); 
@@ -534,8 +540,11 @@ class Thread(models.Model) :
     
         """ last_messages is either None for auto or an integer for length of thread history to keep at OpenAI. 
         The entire history is kept in the local database"""
-    
         assistant = self.assistant
+        print(f"ASSISTANT_MODEL = {assistant.model} AI_MODEL = {settings.AI_MODEL}")
+        if not assistant.model == settings.AI_MODEL :
+            assistant.save();
+            print(f"ASSISTANT SAVED")
         assistant_id = assistant.assistant_id
         thread = self
         thread_id = thread.thread_id
