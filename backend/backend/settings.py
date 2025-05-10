@@ -174,7 +174,7 @@ STATIC_URL = "/static/"
 print(f"STORAGE = {OPENAI_UPLOAD_STORAGE}")
 MAXWAIT = 120 ; # WAIT MAX 120 seconds
 DEFAULT_TEMPERATURE = 0.2;
-MAX_TOKENS = 8000
+MAX_TOKENS = 8000 # NOT IMPLMENTED AS OF openai==1.173.0 
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

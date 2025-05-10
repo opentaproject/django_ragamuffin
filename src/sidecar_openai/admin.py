@@ -48,7 +48,7 @@ class MyThreadForm(forms.ModelForm):
         model = Assistant
         fields = '__all__'
         help_texts = {
-            'max_tokens': f"default max_tokens = {settings.MAX_TOKENS}"
+            'max_tokens': f"Not implmented; it is unavailable as of openai 1.73.0 "
         }
 
 @admin.register(Thread)

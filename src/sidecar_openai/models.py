@@ -363,6 +363,7 @@ class Assistant( models.Model ):
         if self.pk :
             old = Assistant.objects.get(pk=self.pk)
             old_instructions = old.instructions
+            old_temperature = old.temperature
         else :
             old_instructions = ''
         if self.temperature :
@@ -385,10 +386,13 @@ class Assistant( models.Model ):
             self.assistant_id = assistant.id
             super().save(*args,**kwargs)
         else :
+            assistant_id = self.assistant_id
             if not old_instructions  ==  self.instructions :
                 #print(f"REVISE INSTRUCTIONS")
-                assistant_id = self.assistant_id
                 client.beta.assistants.update(assistant_id, instructions=instructions)
+            if not old_temperature ==  temperature :
+                print(f"SET TEMPERATUR TO {temperature}")
+                client.beta.assistants.update(assistant_id, temperature=temperature)
 
 
 
@@ -548,9 +552,9 @@ class Thread(models.Model) :
             max_tokens = settings.MAX_TOKENS
         timeout = settings.MAXWAIT
         if last_messages == None :
-            run = openai.beta.threads.runs.create( thread_id=thread_id, assistant_id=assistant_id , max_tokens=max_tokens , timeout=timeout)
+            run = openai.beta.threads.runs.create( thread_id=thread_id, assistant_id=assistant_id ,  timeout=timeout)
         else :
-            run = openai.beta.threads.runs.create( thread_id=thread_id, assistant_id=assistant_id ,  max_tokens=max_tokens,  timeout=timeout, 
+            run = openai.beta.threads.runs.create( thread_id=thread_id, assistant_id=assistant_id ,   timeout=timeout, 
                     truncation_strategy={ "type": "last_messages", "last_messages": last_messages })
         interval = 1;
         imax = settings.MAXWAIT / interval
@@ -737,7 +741,7 @@ def handle_files_changed(sender, instance, action, **kwargs):
         checksum = hashlib.md5(ckstring).hexdigest()
         instance.checksum = checksum
         #others = VectorStore.objects.filter(checksum=checksum)
-        npks =  list( OpenAIFile.objects.filter(file_id__in=ids).values_list('pk',flat=True)  )
+        #npks =  list( OpenAIFile.objects.filter(file_id__in=ids).values_list('pk',flat=True)  )
         #print(f"IDS = {ids} PKS = {pks}")
         del instance._updating_from_m2m
         #try :

@@ -67,7 +67,7 @@ MathJax = {
 </div>
 <div class="right">
 <div style="margin: 10 auto; padding: 1rem;  ">
-	<h3> Hello {{ request.user }} </h3><h4> Enter Your Query</h4>
+	<h3> Hello {{ request.user }} </h3><h4> Enter Your Query for  the assistant name = {{ name }} </h4>
     <form method="post" style="width: 100%" >
         {% csrf_token %}
 	{{ form.as_p }}
