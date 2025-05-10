@@ -160,7 +160,6 @@ class OpenAIFile(models.Model) :
     checksum = models.CharField(blank=True, max_length=255)
     name = models.CharField(max_length=255,blank=True)
     path = models.CharField(max_length=255,blank=True)
-    file_id = models.CharField(max_length=255,blank=True)
     file_ids = models.JSONField(default=list, null=True, blank=True)
     file = models.FileField( max_length=512, upload_to=hashed_upload_to, storage=upload_storage, validators=[validate_file_extension] )
     ntokens = models.IntegerField(default=0,null=True, blank=True)
