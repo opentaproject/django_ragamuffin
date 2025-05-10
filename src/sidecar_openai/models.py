@@ -350,6 +350,7 @@ class Assistant( models.Model ):
     assistant_id = models.CharField(max_length=255,blank=True)
     json_field = models.JSONField( default=dict ,  blank=True, null=True)
     model = models.CharField(max_length=255,blank=True,null=True)
+    temperature = models.FloatField(null=True, blank=True)
 
 
     def __str__(self):
@@ -365,7 +366,13 @@ class Assistant( models.Model ):
             old_instructions = old.instructions
         else :
             old_instructions = ''
-        temperature = self.json_field.get('temperature', 0.2 )
+        if self.temperature :
+            temperature = self.temperature
+        else :
+            temperature = settings.TEMPERATURE
+            self.temperature = temperature
+        if self.max_tokens :
+            max_tokens = self.max_tokens
         if self.instructions== '' :
             self.instructions = 'Answer only questions about the enclosed document. Do not offer helpful answers to questions that do not refer to the document. Be concise. If the question is irrelevant, answer with "That is not a question that is relevant to the document." For images, just silently include the link. Since it is visible, dont  say something like "You can view the picture ... ". If a link does not exist, just say that such an image does not exist. '
         instructions = self.instructions
