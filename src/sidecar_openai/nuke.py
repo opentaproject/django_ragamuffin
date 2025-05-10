@@ -64,7 +64,7 @@ def nuke( delete=False) :
 
     print("\n✅ Done" )
 
-def main(delete=False): 
+def main(delete=True): 
     nuke(delete=False)
     while True :
         nuke(delete=False)
