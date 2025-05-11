@@ -1,6 +1,7 @@
 {% load static %}
 <html>
 <head>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 MathJax = {
   tex: {
@@ -57,7 +58,11 @@ MathJax = {
     	{% for m in messages %}
 	<span class="form-row">
 	 <input type="checkbox" name="delete-entry" value="{{ m.index}}" class="choice-box" >
-	 <button style="width: 100% ; text-align: left; " name='oldquery' value="{{m.user}}">{{ m.index  | stringformat:"02d" }}: [ {{m.ntokens | stringformat:"03d"}}]  <div class="innerDiv" style="display: none"> {{m.assistant | safe }} </div>  {{m.user|truncatechars:30}} <em> {{ m.score }} </em>   </button> 
+	 <button style="width: 100% ; text-align: left; " name='oldquery' value="{{m.user}}">{{ m.index  | stringformat:"02d" }}: [ {{m.ntokens | stringformat:"03d"}}]  <div class="innerDiv" style="display: none"> {{m.assistant | safe }} </div> 
+<div class="mindex" style="display: none"> {{m.index }} </div> 
+
+		 {{m.user|truncatechars:30}} <em> {{ m.score }} </em>   </button> 
+<div class="message_index">{{m.index}}</div>  
 	</span>
     	{% endfor %}
      {% endif %}
@@ -73,10 +78,17 @@ MathJax = {
 	{{ form.as_p }}
 	<button id='submitBtn' type='submit'> Submit</button>
     </form>
-
     <div style="border: 1px dashed gray; background-color: #f9f9f9; padding: 1rem;">
     <p><div id='response'> {{ response| safe }}</div></p>
     </div>
+<form id="myForm">
+  {% csrf_token %}
+  <input type="text" name="message" placeholder="Enter message">
+  <input type="text" name="thread" value="{{request.path}}" />
+  <input type="test" id="newmessage_index" name="newmessage_index" value='{{ messages | length | add:"-1"}}' />
+  <button type="submit">Send</button>
+</form>
+    
 </div>
 </div>
 </div>
@@ -116,6 +128,10 @@ function handleClick(event) {
     var content = innerDiv.innerHTML; 
     const response_area = document.getElementById('response');
     response_area.innerHTML = content
+    const message_index = event.target.querySelector('.mindex').innerHTML
+    console.log("MESSAGE_INDEX = ", message_index );
+    const mindexarea = document.getElementById('newmessage_index');
+    mindexarea.value = message_index
     document.cookie = "busy=false ; max-age=3600; path=/";
 
     //document.getElementById("submitBtn").click()  // THIS WAS OLD WHEN RELOADING FROM SERVER
@@ -144,5 +160,29 @@ function getCookie(name) {
     btns.forEach(cb => cb.checked =  checked);
   });
 
+</script>
+
+<script>
+$(document).ready(function() {
+  $('#myForm').on('submit', function(e) {
+    e.preventDefault();  // Prevent full form submission
+
+    $.ajax({
+      type: 'POST',
+      url: "{% url  'query' subpath='my/custom/path'   %}",
+      data: $(this).serialize(),
+      headers: {
+        'X-CSRFToken': $('input[name=csrfmiddlewaretoken]').val()
+      },
+      success: function(response) {
+        console.log('Success:', response);
+        // Update the DOM here
+      },
+      error: function(xhr, status, error) {
+        console.error('Error:', error);
+      }
+    });
+  });
+});
 </script>
 </html>
