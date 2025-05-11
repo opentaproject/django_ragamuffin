@@ -97,7 +97,7 @@ def query_view(request,subpath):
     else:
         form = QueryForm()
     #print(f"REQUEST = {request.POST}")
-    f = [ { 'index' : index, 'user' : item['user'] , 'assistant' : mark_safe( mathfix(item['assistant'] ) ) }  for index, item in enumerate( messages ) ]
+    f = [ { 'index' : index, 'user' : item['user'] , 'assistant' : mark_safe( mathfix(item['assistant'] ) ), 'ntokens' : item['ntokens'], 'score' : item.get('score',3)  }  for index, item in enumerate( messages ) ]
     response = render(request, 'sidecar_openai/query_form.html', {'form': form, 'response': response,'messages' : f, 'name' : assistant.name })
     response.set_cookie('busy' , 'false')
     return response

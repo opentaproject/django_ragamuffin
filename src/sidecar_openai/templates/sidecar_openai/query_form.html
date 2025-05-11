@@ -52,12 +52,12 @@ MathJax = {
 	<h3> History </h3>
     {% if messages %}
      <div>
-    <input type="checkbox" id="select-all"> Select All
+	     <input type="checkbox" id="select-all"> Select All <em> [ ntokens in brackets ] </em> 
   </div>
     	{% for m in messages %}
 	<span class="form-row">
 	 <input type="checkbox" name="delete-entry" value="{{ m.index}}" class="choice-box" >
-	<button style="width: 100% ; text-align: left; " name='oldquery' value="{{m.user}}">{{ m.index }}: <div class="innerDiv" style="display: none"> {{m.assistant | safe }} </div>  {{m.user|truncatechars:30}} </button> 
+	 <button style="width: 100% ; text-align: left; " name='oldquery' value="{{m.user}}">{{ m.index  | stringformat:"02d" }}: [ {{m.ntokens | stringformat:"03d"}}]  <div class="innerDiv" style="display: none"> {{m.assistant | safe }} </div>  {{m.user|truncatechars:30}} <em> {{ m.score }} </em>   </button> 
 	</span>
     	{% endfor %}
      {% endif %}
@@ -67,7 +67,7 @@ MathJax = {
 </div>
 <div class="right">
 <div style="margin: 10 auto; padding: 1rem;  ">
-	<h3> Hello {{ request.user }} </h3><h4> Enter Your Query for  the assistant name = {{ name }} </h4>
+	<h3> Hello {{ request.user }} </h3><h4> Enter Your Query for  the assistant {{ name }} </h4>
     <form method="post" style="width: 100%" >
         {% csrf_token %}
 	{{ form.as_p }}
