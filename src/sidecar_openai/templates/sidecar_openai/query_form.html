@@ -127,8 +127,8 @@
         function handleClick(event) {
             event.preventDefault() ;
 	    document.getElementById("response-block").style.display = "block";
-
             var txt = event.target.value;
+	    console.log("TTXT = ", txt )
             const textarea = document.getElementById('id_query');
             textarea.value = txt
             var innerDiv = event.target.querySelector(".innerDiv");
@@ -143,6 +143,13 @@
             const message_index = event.target.querySelector('.mindex').innerHTML
             console.log("MESSAGE_INDEX = ", message_index );
             const mindexarea = document.getElementById('newmessage_index');
+	    const comment_text = comment;
+	    if( comment_text == '' ){
+	    	document.getElementById("submitBtn").style.display = "none";
+	    } else {
+		document.getElementById("submitBtn").style.display = "block";
+	    }
+	    console.log("COMMENT_TEXT = ", comment_text )
             mindexarea.value = message_index
             document.cookie = "busy=false ; max-age=3600; path=/";
 
@@ -176,10 +183,19 @@
 
     <script>
         $(document).ready(function() {
+	    (  document.getElementsByName("query")[0]).addEventListener("input", function() {
+		document.getElementById("submitBtn").style.display = "block";
+  		});
+
 	    const textarea = document.getElementById('id_query').innerHTML;
-	    document.getElementById("submitBtn").style.display = "none";
-	    const comment_area = document.getElementById('comment').innerHTML;
+	    try { 
+	    	const comment_area = document.getElementById('comment_area').innerHTML;
+	    } catch { comment_area = ''
+	    }
 	    console.log("READY", comment_area)
+	    if ( comment_area == '' && textarea != '' ){
+			document.getElementById("submitBtn").style.display = "none";
+	    	}
 	    if ( textarea == '' ){
 		    document.getElementById("response-block").style.display = "none";
 		    console.log("TEXTAREA BLANK")
@@ -198,7 +214,8 @@
                         console.log('Success:', response);
 			const mindex = response['index']
 			const mcomment = document.getElementById('comment-' + mindex );
-			mcomment.textContent = response['comment']
+			mcomment.textContent = response['comment'];
+			document.getElementById("submitBtn").style.display = "block";
                     },
                     error: function(xhr, status, error) {
                         console.error('Error:', error);
