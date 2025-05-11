@@ -99,6 +99,7 @@ def query_view(request,subpath):
     d = {'status' : 'pending' , 'result' : 'RESULT' }
     messages = thread.messages
     mindex = 0
+    comment = ''
     if request.method == 'POST':
         form = QueryForm(request.POST)
         if form.is_valid():
@@ -110,6 +111,7 @@ def query_view(request,subpath):
                 mindex = i+1;
                 if query.strip()  == message['user'].strip() :
                     txt = "*You already asked that!*<p/>" + message['assistant']
+                    comment = message.get('comment','')
                     mindex = mindex - 1;
                     break
             try :
@@ -124,8 +126,8 @@ def query_view(request,subpath):
     else:
         form = QueryForm()
     #print(f"REQUEST = {request.POST}")
-    f = [ { 'index' : index, 'user' : item['user'] , 'assistant' : mark_safe( mathfix(item['assistant'] ) ), 'ntokens' : item['ntokens'], 'comment' : item.get('comment',3)  }  for index, item in enumerate( messages ) ];
+    f = [ { 'index' : index, 'user' : item['user'] , 'assistant' : mark_safe( mathfix(item['assistant'] ) ), 'ntokens' : item['ntokens'], 'comment' : item.get('comment','')  }  for index, item in enumerate( messages ) ];
     print(f"MINDEX = {mindex}")
-    response = render(request, 'sidecar_openai/query_form.html', {'form': form, 'response': response,'messages' : f, 'name' : assistant.name , 'mindex' : mindex })
+    response = render(request, 'sidecar_openai/query_form.html', {'form': form, 'response': response,'messages' : f, 'name' : assistant.name , 'mindex' : mindex , 'comment' : comment })
     response.set_cookie('busy' , 'false')
     return response

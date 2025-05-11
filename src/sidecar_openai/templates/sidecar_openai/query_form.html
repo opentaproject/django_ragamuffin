@@ -51,7 +51,6 @@
                     <div style="margin: 10 auto; padding: 1rem;  ">
 
                         <h3> History </h3>
-			<p>Mirror: <span id="mirror"></span></p>
                         {% if messages %}
                             <div>
                                 <input type="checkbox" id="select-all"> Select All <em> [ ntokens in brackets ] </em>
@@ -78,18 +77,23 @@
                     <form method="post" style="width: 100%" >
                         {% csrf_token %}
                         {{ form.as_p }}
-                        <button id='submitBtn' type='submit'> Submit</button>
+			<button id='submitBtn' type='submit'> Submit</button>  
                     </form>
+
+		    <div id='response-block'>
+
                     <div style="border: 1px dashed gray; background-color: #f9f9f9; padding: 1rem;">
                         <p><div id='response'> {{ response| safe }}</div></p>
                     </div>
                     <form id="myForm">
                         {% csrf_token %}
-                        <input type="text" id="comment" name="comment" placeholder="Enter message">
+			<input type="text" id="comment" name="comment" value="{{comment}}" />
                         <input type="text" style="display: none"  name="thread" value="{{request.path}}" />
                         <input type="test" style="display: none" id="newmessage_index" name="newmessage_index" value="{{ mindex }}"  />
                         <button type="submit">Send</button>
                     </form>
+
+		</div>
 
                 </div>
             </div>
@@ -122,6 +126,9 @@
 
         function handleClick(event) {
             event.preventDefault() ;
+	    document.getElementById("response-block").style.display = "block";
+	    document.getElementById("submitBtn").style.display = "block";
+
             var txt = event.target.value;
             const textarea = document.getElementById('id_query');
             textarea.value = txt
@@ -170,6 +177,14 @@
 
     <script>
         $(document).ready(function() {
+	    const textarea = document.getElementById('id_query').innerHTML;
+	    document.getElementById("submitBtn").style.display = "none";
+	    const comment_area = document.getElementById('comment').innerHTML;
+	    console.log("READY", comment_area)
+	    if ( textarea == '' ){
+		    document.getElementById("response-block").style.display = "none";
+		    console.log("TEXTAREA BLANK")
+	    }
             $('#myForm').on('submit', function(e) {
                 e.preventDefault();  // Prevent full form submission
 
@@ -182,8 +197,6 @@
                     },
                     success: function(response) {
                         console.log('Success:', response);
-			const mirrorSpan = document.getElementById('mirror');
-			mirrorSpan.textContent = "Success"
 			const mindex = response['index']
 			const mcomment = document.getElementById('comment-' + mindex );
 			mcomment.textContent = response['comment']
