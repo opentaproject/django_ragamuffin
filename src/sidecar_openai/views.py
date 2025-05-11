@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 import tiktoken
+from django.shortcuts import redirect
 from sidecar_openai.models import OpenAIFile, VectorStore, Assistant,  Thread, hashed_upload_to, upload_or_retrieve_openai_file
 import time
 from sidecar_openai.models import create_or_retrieve_vector_store, create_or_retrieve_assistant, create_or_retrieve_thread
@@ -54,13 +55,16 @@ def query_view(request,subpath):
         threads = Thread.objects.filter(name=thread_name,user=request.user)
         print(f"BB {threads}")
         thread = threads[0]
-        thread.messages[index].update( {'comment': request.POST.getlist('comment')[0] })
+        comment =  request.POST.getlist('comment')[0] 
+        thread.messages[index].update( {'comment': comment })
         print(f"CC")
         msg = thread.messages[index];
         print(f"DD")
         print(f"MSG = {msg.get('comment','')}")
         thread.save();
-        return JsonResponse({"success": True})
+        #print(f"REDIRECT TO query/{thread_name}")
+        #return redirect( f'query/{thread_name}')
+        return JsonResponse({"success": True,'index' : index ,'comment' : comment })
     response = None
     user = request.user
     print(f"ASSISTANT = {name}")

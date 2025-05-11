@@ -51,6 +51,7 @@
                     <div style="margin: 10 auto; padding: 1rem;  ">
 
                         <h3> History </h3>
+			<p>Mirror: <span id="mirror"></span></p>
                         {% if messages %}
                             <div>
                                 <input type="checkbox" id="select-all"> Select All <em> [ ntokens in brackets ] </em>
@@ -62,7 +63,7 @@
                                         [  {{m.ntokens | stringformat:"03d"}}]  <div class="innerDiv" style="display: none"> {{m.assistant | safe }} </div>
                                         <div class="mindex" style="display: none"> {{m.index }} </div>
 
-                                        {{m.user|truncatechars:30}} <em class="innerComment">{{ m.comment }}</em>   </button>
+					{{m.user|truncatechars:30}} <span id="comment-{{m.index}}" class="innerComment">{{ m.comment }}</span>   </button>
                                     <div class="message_index"></div>
                                 </span>
                             {% endfor %}
@@ -119,7 +120,6 @@
             }, 60000);
         });
 
-
         function handleClick(event) {
             event.preventDefault() ;
             var txt = event.target.value;
@@ -129,6 +129,9 @@
             var content = innerDiv.innerHTML;
             var innerComment = event.target.querySelector(".innerComment");
             var comment = innerComment.innerHTML;
+	    const comment_area = document.getElementById('comment');
+	    comment_area.value = comment
+
             const response_area = document.getElementById('response');
             response_area.innerHTML = content
             const message_index = event.target.querySelector('.mindex').innerHTML
@@ -179,7 +182,11 @@
                     },
                     success: function(response) {
                         console.log('Success:', response);
-        // Update the DOM here
+			const mirrorSpan = document.getElementById('mirror');
+			mirrorSpan.textContent = "Success"
+			const mindex = response['index']
+			const mcomment = document.getElementById('comment-' + mindex );
+			mcomment.textContent = response['comment']
                     },
                     error: function(xhr, status, error) {
                         console.error('Error:', error);
