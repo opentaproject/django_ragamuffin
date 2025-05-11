@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.http import JsonResponse
 import tiktoken
 from sidecar_openai.models import OpenAIFile, VectorStore, Assistant,  Thread, hashed_upload_to, upload_or_retrieve_openai_file
 import time
@@ -42,7 +43,9 @@ def query_view(request,subpath):
     name = ( '.'.join( segments ) ).rstrip('.')
     print(f"POST = {request.POST}")
     print(f"THREAD_NAME = {name}")
-
+    if name == '.feedback' :
+        print(f"ONLY RETURNING FEEDBACK")
+        return JsonResponse({"success": True})
     response = None
     user = request.user
     assistants = Assistant.objects.filter(name=name)
@@ -74,6 +77,7 @@ def query_view(request,subpath):
 
     d = {'status' : 'pending' , 'result' : 'RESULT' }
     messages = thread.messages
+    mindex = 0
     if request.method == 'POST':
         form = QueryForm(request.POST)
         if form.is_valid():
@@ -81,9 +85,11 @@ def query_view(request,subpath):
             print(f"MODEL = {assistant.model}")
             query = form.cleaned_data['query']
             txt = None
-            for message in messages :
+            for i,message in enumerate( messages ) :
+                mindex = i+1;
                 if query.strip()  == message['user'].strip() :
                     txt = "*You already asked that!*<p/>" + message['assistant']
+                    mindex = mindex - 1;
                     break
             try :
                 if txt == None :
@@ -97,7 +103,8 @@ def query_view(request,subpath):
     else:
         form = QueryForm()
     #print(f"REQUEST = {request.POST}")
-    f = [ { 'index' : index, 'user' : item['user'] , 'assistant' : mark_safe( mathfix(item['assistant'] ) ), 'ntokens' : item['ntokens'], 'score' : item.get('score',3)  }  for index, item in enumerate( messages ) ]
-    response = render(request, 'sidecar_openai/query_form.html', {'form': form, 'response': response,'messages' : f, 'name' : assistant.name })
+    f = [ { 'index' : index, 'user' : item['user'] , 'assistant' : mark_safe( mathfix(item['assistant'] ) ), 'ntokens' : item['ntokens'], 'score' : item.get('score',3)  }  for index, item in enumerate( messages ) ];
+    print(f"MINDEX = {mindex}")
+    response = render(request, 'sidecar_openai/query_form.html', {'form': form, 'response': response,'messages' : f, 'name' : assistant.name , 'mindex' : mindex })
     response.set_cookie('busy' , 'false')
     return response

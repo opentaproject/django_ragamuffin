@@ -1,188 +1,188 @@
 {% load static %}
 <html>
-<head>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-MathJax = {
-  tex: {
-    inlineMath: [['$', '$'], ['\\(', '\\)'],['\\[','\\]']]
-  }
-};
-</script>
-<script id="MathJax-script" async
-  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
-</script>
+    <head>
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script>
+            MathJax = {
+                tex: {
+                    inlineMath: [['$', '$'], ['\\(', '\\)'],['\\[','\\]']]
+                }
+            };
+        </script>
+        <script id="MathJax-script" async
+                src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+        </script>
 
-   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
-       <style>
-        .container {
-            display: flex;
-	    width: 100%;
-        }
-        .left {
-            width: 30%;
-            padding: 1rem;
-            background-color: #f0f0f0;
-        }
-        .right {
-            width: 70%;
-            padding: 1rem;
-            background-color: #e0e0e0;
-        }
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
+        <style>
+            .container {
+                display: flex;
+                width: 100%;
+            }
+            .left {
+                width: 30%;
+                padding: 1rem;
+                background-color: #f0f0f0;
+            }
+            .right {
+                width: 70%;
+                padding: 1rem;
+                background-color: #e0e0e0;
+            }
 
-.form-row {
-  display: flex;
-  align-items: center;  /* Aligns vertically */
-  gap: 10px;             /* Space between elements */
-}
+            .form-row {
+                display: flex;
+                align-items: center;  /* Aligns vertically */
+                gap: 10px;             /* Space between elements */
+            }
 
-    </style>
-
-   
-   
- <title>Query Interface</title>
-</head>
-<body style="display: flex; justify-content: center;  height: 100vh; margin: 0;">
-<div class='container'>
-
-	<div class="left">
-<form method="post">
-  {% csrf_token %}
-		<div style="margin: 10 auto; padding: 1rem;  ">
-
-	<h3> History </h3>
-    {% if messages %}
-     <div>
-	     <input type="checkbox" id="select-all"> Select All <em> [ ntokens in brackets ] </em> 
-  </div>
-    	{% for m in messages %}
-	<span class="form-row">
-	 <input type="checkbox" name="delete-entry" value="{{ m.index}}" class="choice-box" >
-	 <button style="width: 100% ; text-align: left; " name='oldquery' value="{{m.user}}">{{ m.index  | stringformat:"02d" }}: [ {{m.ntokens | stringformat:"03d"}}]  <div class="innerDiv" style="display: none"> {{m.assistant | safe }} </div> 
-<div class="mindex" style="display: none"> {{m.index }} </div> 
-
-		 {{m.user|truncatechars:30}} <em> {{ m.score }} </em>   </button> 
-<div class="message_index">{{m.index}}</div>  
-	</span>
-    	{% endfor %}
-     {% endif %}
-		</div>
-		<button type="submit">Delete checked entries</button>
-</form>
-</div>
-<div class="right">
-<div style="margin: 10 auto; padding: 1rem;  ">
-	<h3> Hello {{ request.user }} </h3><h4> Enter Your Query for  the assistant {{ name }} </h4>
-    <form method="post" style="width: 100%" >
-        {% csrf_token %}
-	{{ form.as_p }}
-	<button id='submitBtn' type='submit'> Submit</button>
-    </form>
-    <div style="border: 1px dashed gray; background-color: #f9f9f9; padding: 1rem;">
-    <p><div id='response'> {{ response| safe }}</div></p>
-    </div>
-<form id="myForm">
-  {% csrf_token %}
-  <input type="text" name="message" placeholder="Enter message">
-  <input type="text" name="thread" value="{{request.path}}" />
-  <input type="test" id="newmessage_index" name="newmessage_index" value='{{ messages | length | add:"-1"}}' />
-  <button type="submit">Send</button>
-</form>
-    
-</div>
-</div>
-</div>
-</body>
-<script>
-document.getElementById('submitBtn').addEventListener('click', function () {
-    document.cookie = "busy=true; max-age=3600; path=/";
-    let count = 0;
-    const intervalId = setInterval(() => {
-    	const busy = getCookie('busy');
-	count = count + 1 ;
-	if ( count > 80 ){ var patience = ' be patient! It has \'only\' been ' + ( Math.floor( count / 5  ) ).toString() + ' s'  } 
-	else if ( count > 40 ){ var patience = ' be patient! Give it up to a minute !' } 
-	else if( count > 20 ){ var patience = ' be patient!' } 
-	else { var patience = '' }
-    	var btn = document.getElementById('submitBtn')
-    	if ( busy == 'true' ){
-	    btn.type = 'button'
-	    btn.textContent = 'Wait ... ' + patience
-    	} else {
-           btn.type = 'submit';
-	   btn.textContent = 'Submit '
-    	} }, 200);
-	setTimeout(() => {
-  		clearInterval(intervalId);
-  		console.log("Interval stopped");
-		}, 60000);
-	});
+        </style>
 
 
-function handleClick(event) {
-    event.preventDefault() ;
-    var txt = event.target.value;
-    const textarea = document.getElementById('id_query');
-    textarea.value = txt
-    var innerDiv = event.target.querySelector(".innerDiv");
-    var content = innerDiv.innerHTML; 
-    const response_area = document.getElementById('response');
-    response_area.innerHTML = content
-    const message_index = event.target.querySelector('.mindex').innerHTML
-    console.log("MESSAGE_INDEX = ", message_index );
-    const mindexarea = document.getElementById('newmessage_index');
-    mindexarea.value = message_index
-    document.cookie = "busy=false ; max-age=3600; path=/";
+
+        <title>Query Interface</title>
+    </head>
+    <body style="display: flex; justify-content: center;  height: 100vh; margin: 0;">
+        <div class='container'>
+
+            <div class="left">
+                <form method="post">
+                    {% csrf_token %}
+                    <div style="margin: 10 auto; padding: 1rem;  ">
+
+                        <h3> History </h3>
+                        {% if messages %}
+                            <div>
+                                <input type="checkbox" id="select-all"> Select All <em> [ ntokens in brackets ] </em>
+                            </div>
+                            {% for m in messages %}
+                                <span class="form-row">
+                                    <input type="checkbox" name="delete-entry" value="{{ m.index}}" class="choice-box" >
+                                    <button style="width: 100% ; text-align: left; " name='oldquery' value="{{m.user}}">{{ m.index  | stringformat:"02d" }}: [ {{m.ntokens | stringformat:"03d"}}]  <div class="innerDiv" style="display: none"> {{m.assistant | safe }} </div>
+                                        <div class="mindex" style="display: none"> {{m.index }} </div>
+
+                                        {{m.user|truncatechars:30}} <em> {{ m.score }} </em>   </button>
+                                    <div class="message_index"></div>
+                                </span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                    <button type="submit">Delete checked entries</button>
+                </form>
+            </div>
+            <div class="right">
+                <div style="margin: 10 auto; padding: 1rem;  ">
+                    <h3> Hello {{ request.user }} </h3><h4> Enter Your Query for  the assistant {{ name }} </h4>
+                    <form method="post" style="width: 100%" >
+                        {% csrf_token %}
+                        {{ form.as_p }}
+                        <button id='submitBtn' type='submit'> Submit</button>
+                    </form>
+                    <div style="border: 1px dashed gray; background-color: #f9f9f9; padding: 1rem;">
+                        <p><div id='response'> {{ response| safe }}</div></p>
+                    </div>
+                    <form id="myForm">
+                        {% csrf_token %}
+                        <input type="text" name="message" placeholder="Enter message">
+                        <input type="text" style="display: none"  name="thread" value="{{request.path}}" />
+                        <input type="test" style="display: none" id="newmessage_index" name="newmessage_index" value="{{ mindex }}"  />
+                        <button type="submit">Send</button>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </body>
+    <script>
+        document.getElementById('submitBtn').addEventListener('click', function () {
+            document.cookie = "busy=true; max-age=3600; path=/";
+            let count = 0;
+            const intervalId = setInterval(() => {
+                const busy = getCookie('busy');
+                count = count + 1 ;
+                if ( count > 80 ){ var patience = ' be patient! It has \'only\' been ' + ( Math.floor( count / 5  ) ).toString() + ' s'  }
+                else if ( count > 40 ){ var patience = ' be patient! Give it up to a minute !' }
+                else if( count > 20 ){ var patience = ' be patient!' }
+                else { var patience = '' }
+                var btn = document.getElementById('submitBtn')
+                if ( busy == 'true' ){
+                    btn.type = 'button'
+                    btn.textContent = 'Wait ... ' + patience
+                } else {
+                    btn.type = 'submit';
+                    btn.textContent = 'Submit '
+                } }, 200);
+            setTimeout(() => {
+                clearInterval(intervalId);
+                console.log("Interval stopped");
+            }, 60000);
+        });
+
+
+        function handleClick(event) {
+            event.preventDefault() ;
+            var txt = event.target.value;
+            const textarea = document.getElementById('id_query');
+            textarea.value = txt
+            var innerDiv = event.target.querySelector(".innerDiv");
+            var content = innerDiv.innerHTML;
+            const response_area = document.getElementById('response');
+            response_area.innerHTML = content
+            const message_index = event.target.querySelector('.mindex').innerHTML
+            console.log("MESSAGE_INDEX = ", message_index );
+            const mindexarea = document.getElementById('newmessage_index');
+            mindexarea.value = message_index
+            document.cookie = "busy=false ; max-age=3600; path=/";
 
     //document.getElementById("submitBtn").click()  // THIS WAS OLD WHEN RELOADING FROM SERVER
 
-}
-document.querySelectorAll('button[name="oldquery"]').forEach(btn => {
-    btn.addEventListener('click', handleClick);
-});
-
-
-function getCookie(name) {
-    const cookieString = document.cookie;
-    const cookies = cookieString.split(';');
-    for (let cookie of cookies) {
-        cookie = cookie.trim();
-        if (cookie.startsWith(name + '=')) {
-            return cookie.substring(name.length + 1);
         }
-    }
-    return null;
-}
+        document.querySelectorAll('button[name="oldquery"]').forEach(btn => {
+            btn.addEventListener('click', handleClick);
+        });
 
-  document.getElementById('select-all').addEventListener('change', function () {
-    const checked = this.checked;
-    var btns = document.querySelectorAll('.choice-box');
-    btns.forEach(cb => cb.checked =  checked);
-  });
 
-</script>
+        function getCookie(name) {
+            const cookieString = document.cookie;
+            const cookies = cookieString.split(';');
+            for (let cookie of cookies) {
+                cookie = cookie.trim();
+                if (cookie.startsWith(name + '=')) {
+                    return cookie.substring(name.length + 1);
+                }
+            }
+            return null;
+        }
 
-<script>
-$(document).ready(function() {
-  $('#myForm').on('submit', function(e) {
-    e.preventDefault();  // Prevent full form submission
+        document.getElementById('select-all').addEventListener('change', function () {
+            const checked = this.checked;
+            var btns = document.querySelectorAll('.choice-box');
+            btns.forEach(cb => cb.checked =  checked);
+        });
 
-    $.ajax({
-      type: 'POST',
-      url: "{% url  'query' subpath='my/custom/path'   %}",
-      data: $(this).serialize(),
-      headers: {
-        'X-CSRFToken': $('input[name=csrfmiddlewaretoken]').val()
-      },
-      success: function(response) {
-        console.log('Success:', response);
+    </script>
+
+    <script>
+        $(document).ready(function() {
+            $('#myForm').on('submit', function(e) {
+                e.preventDefault();  // Prevent full form submission
+
+                $.ajax({
+                    type: 'POST',
+                    url: "{% url  'query' subpath='/feedback'   %}",
+                    data: $(this).serialize(),
+                    headers: {
+                        'X-CSRFToken': $('input[name=csrfmiddlewaretoken]').val()
+                    },
+                    success: function(response) {
+                        console.log('Success:', response);
         // Update the DOM here
-      },
-      error: function(xhr, status, error) {
-        console.error('Error:', error);
-      }
-    });
-  });
-});
-</script>
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error:', error);
+                    }
+                });
+            });
+        });
+    </script>
 </html>
