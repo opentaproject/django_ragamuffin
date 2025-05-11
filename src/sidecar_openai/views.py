@@ -54,7 +54,7 @@ def query_view(request,subpath):
         threads = Thread.objects.filter(name=thread_name,user=request.user)
         print(f"BB {threads}")
         thread = threads[0]
-        thread.messages[index].update( {'comment': request.POST.getlist('message')[0] })
+        thread.messages[index].update( {'comment': request.POST.getlist('comment')[0] })
         print(f"CC")
         msg = thread.messages[index];
         print(f"DD")

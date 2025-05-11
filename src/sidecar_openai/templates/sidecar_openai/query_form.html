@@ -62,7 +62,7 @@
                                         [  {{m.ntokens | stringformat:"03d"}}]  <div class="innerDiv" style="display: none"> {{m.assistant | safe }} </div>
                                         <div class="mindex" style="display: none"> {{m.index }} </div>
 
-                                        {{m.user|truncatechars:30}} <em>[ {{ m.comment }} ] </em>   </button>
+                                        {{m.user|truncatechars:30}} <em class="innerComment">{{ m.comment }}</em>   </button>
                                     <div class="message_index"></div>
                                 </span>
                             {% endfor %}
@@ -84,7 +84,7 @@
                     </div>
                     <form id="myForm">
                         {% csrf_token %}
-                        <input type="text" name="message" placeholder="Enter message">
+                        <input type="text" id="comment" name="comment" placeholder="Enter message">
                         <input type="text" style="display: none"  name="thread" value="{{request.path}}" />
                         <input type="test" style="display: none" id="newmessage_index" name="newmessage_index" value="{{ mindex }}"  />
                         <button type="submit">Send</button>
@@ -127,6 +127,8 @@
             textarea.value = txt
             var innerDiv = event.target.querySelector(".innerDiv");
             var content = innerDiv.innerHTML;
+            var innerComment = event.target.querySelector(".innerComment");
+            var comment = innerComment.innerHTML;
             const response_area = document.getElementById('response');
             response_area.innerHTML = content
             const message_index = event.target.querySelector('.mindex').innerHTML
