@@ -44,11 +44,28 @@ def query_view(request,subpath):
     print(f"POST = {request.POST}")
     print(f"THREAD_NAME = {name}")
     if name == '.feedback' :
-        print(f"ONLY RETURNING FEEDBACK")
+        print(f"ONLY RETURNING FEEDBACK {request.path} ")
+        #thread = Thread.objects.get(name=name,user=request.user)
+        #messages = thread.messages
+        index = int( request.POST.getlist('newmessage_index')[0] )
+        thread_name = ( '.'.join( ( request.POST.getlist('thread')[0] ).split('/')[2:] ) ).rstrip('.');
+        print(f"THREAD_NAME = {thread_name}")
+        print("AA")
+        threads = Thread.objects.filter(name=thread_name,user=request.user)
+        print(f"BB {threads}")
+        thread = threads[0]
+        thread.messages[index].update( {'comment': request.POST.getlist('message')[0] })
+        print(f"CC")
+        msg = thread.messages[index];
+        print(f"DD")
+        print(f"MSG = {msg.get('comment','')}")
+        thread.save();
         return JsonResponse({"success": True})
     response = None
     user = request.user
+    print(f"ASSISTANT = {name}")
     assistants = Assistant.objects.filter(name=name)
+    print(f"ASSISTANTS = {assistants}")
     if assistants :
         assistant = assistants[0]
         vs = assistant.vector_stores.all()[0]
@@ -103,7 +120,7 @@ def query_view(request,subpath):
     else:
         form = QueryForm()
     #print(f"REQUEST = {request.POST}")
-    f = [ { 'index' : index, 'user' : item['user'] , 'assistant' : mark_safe( mathfix(item['assistant'] ) ), 'ntokens' : item['ntokens'], 'score' : item.get('score',3)  }  for index, item in enumerate( messages ) ];
+    f = [ { 'index' : index, 'user' : item['user'] , 'assistant' : mark_safe( mathfix(item['assistant'] ) ), 'ntokens' : item['ntokens'], 'comment' : item.get('comment',3)  }  for index, item in enumerate( messages ) ];
     print(f"MINDEX = {mindex}")
     response = render(request, 'sidecar_openai/query_form.html', {'form': form, 'response': response,'messages' : f, 'name' : assistant.name , 'mindex' : mindex })
     response.set_cookie('busy' , 'false')

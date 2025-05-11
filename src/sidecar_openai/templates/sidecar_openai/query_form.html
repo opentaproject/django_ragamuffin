@@ -58,10 +58,11 @@
                             {% for m in messages %}
                                 <span class="form-row">
                                     <input type="checkbox" name="delete-entry" value="{{ m.index}}" class="choice-box" >
-                                    <button style="width: 100% ; text-align: left; " name='oldquery' value="{{m.user}}">{{ m.index  | stringformat:"02d" }}: [ {{m.ntokens | stringformat:"03d"}}]  <div class="innerDiv" style="display: none"> {{m.assistant | safe }} </div>
+                                    <button style="width: 100% ; text-align: left; " name='oldquery' value="{{m.user}}">{{ m.index  | stringformat:"02d" }}:
+                                        [  {{m.ntokens | stringformat:"03d"}}]  <div class="innerDiv" style="display: none"> {{m.assistant | safe }} </div>
                                         <div class="mindex" style="display: none"> {{m.index }} </div>
 
-                                        {{m.user|truncatechars:30}} <em> {{ m.score }} </em>   </button>
+                                        {{m.user|truncatechars:30}} <em>[ {{ m.comment }} ] </em>   </button>
                                     <div class="message_index"></div>
                                 </span>
                             {% endfor %}
