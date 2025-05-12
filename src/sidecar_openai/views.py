@@ -44,7 +44,7 @@ def query_view(request,subpath):
     name = ( '.'.join( segments ) ).rstrip('.')
     print(f"POST = {request.POST}")
     print(f"THREAD_NAME = {name}")
-    choices = {0 : 'Unread' ,1 : 'Wrong' , 2 : 'Useless', 3 : "Minor help" , 4 : 'Very useful', }
+    choices = {0 : 'Unread' ,1 : 'Wrong' , 2 : 'Useless(irrelevant)', 3 : 'Useless(incomprehensible)',  4 : "Somewhat helpful" , 5 : 'Very helpful', }
     choice = 0;
     if name == '.feedback' :
         print(f"ONLY RETURNING FEEDBACK {request.path} ")
