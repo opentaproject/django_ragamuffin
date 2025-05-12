@@ -85,7 +85,6 @@
                     <div style="border: 1px dashed gray; background-color: #f9f9f9; padding: 1rem;">
                         <p><div id='response'> {{ response| safe }}</div></p>
                     </div>
-		    choice = <div id='choice'> {{ choice }}  </div> 
                     <form id="myForm">
                         {% csrf_token %}
                         <input type="text" style="display: none"  name="thread" value="{{request.path}}" />
@@ -149,9 +148,9 @@
 
 
             var innerChoice = event.target.querySelector(".innerChoice");
-            var choice = innerChoice.innerHTML;
-	    const choice_area = document.getElementById('choice');
-	    choice_area.innerHTML = choice  
+            var choice = String( innerChoice.innerHTML )
+	    document.querySelectorAll('input[name="option"]').forEach(function(radio) { radio.checked = false; });
+	    document.querySelector(`input[name="option"][value="${choice}"]`).checked = true;
 
 
 

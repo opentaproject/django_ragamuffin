@@ -67,8 +67,7 @@ def query_view(request,subpath):
             print(f"OPTIONS = {options}")
             i = int( options[0] );
             print(f"I = {i}")
-            other = options[1];
-            comment = choices[i];
+            comment = options[1];
             choice = i
             #if other :
             #    comment = comment + ' ' + other
