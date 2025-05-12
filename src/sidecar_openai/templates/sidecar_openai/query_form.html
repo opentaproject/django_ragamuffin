@@ -12,6 +12,7 @@
         <script id="MathJax-script" async
                 src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
         </script>
+	<style> form label { display: inline-block; margin-right: 10px; } </style>
 
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
         <style>
@@ -87,13 +88,21 @@
                     </div>
                     <form id="myForm">
                         {% csrf_token %}
-			<input type="text" id="comment" name="comment" value="{{comment}}" />
                         <input type="text" style="display: none"  name="thread" value="{{request.path}}" />
                         <input type="test" style="display: none" id="newmessage_index" name="newmessage_index" value="{{ mindex }}"  />
+			{% for  i , c   in choices.items %}
+				{% if i == '4' %}
+					<label><input type="radio" name="option" value={{i}}  checked > {{ c }} </label>
+				{% else %}
+					<label><input type="radio" name="option" value={{i}} > {{ c }} </label>
+				{% endif %}
+			{% endfor %}
+			<label> <input type="radio" name="option" value='99'> {{ comment }}</label> Other
+			<input type="text" id="comment" name="option" value="{{comment}}" />
+			<p/>
                         <button type="submit">Send</button>
                     </form>
 
-		</div>
 
                 </div>
             </div>

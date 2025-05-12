@@ -128,6 +128,7 @@ def query_view(request,subpath):
     #print(f"REQUEST = {request.POST}")
     f = [ { 'index' : index, 'user' : item['user'] , 'assistant' : mark_safe( mathfix(item['assistant'] ) ), 'ntokens' : item['ntokens'], 'comment' : item.get('comment','')  }  for index, item in enumerate( messages ) ];
     print(f"MINDEX = {mindex}")
-    response = render(request, 'sidecar_openai/query_form.html', {'form': form, 'response': response,'messages' : f, 'name' : assistant.name , 'mindex' : mindex , 'comment' : comment })
+    choices = {'4' : 'Unread' ,'0' : 'Wrong' , '1' : 'Useless', '2' : "Minor help" , '3' : 'Very useful', }
+    response = render(request, 'sidecar_openai/query_form.html', {'form': form, 'response': response,'messages' : f, 'name' : assistant.name , 'mindex' : mindex , 'comment' : comment, 'choices' : choices  })
     response.set_cookie('busy' , 'false')
     return response
