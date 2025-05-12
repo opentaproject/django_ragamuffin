@@ -44,6 +44,8 @@ def query_view(request,subpath):
     name = ( '.'.join( segments ) ).rstrip('.')
     print(f"POST = {request.POST}")
     print(f"THREAD_NAME = {name}")
+    choices = {0 : 'Unread' ,1 : 'Wrong' , 2 : 'Useless', 3 : "Minor help" , 4 : 'Very useful', }
+    choice = 0;
     if name == '.feedback' :
         print(f"ONLY RETURNING FEEDBACK {request.path} ")
         #thread = Thread.objects.get(name=name,user=request.user)
@@ -57,9 +59,22 @@ def query_view(request,subpath):
         thread = threads[0]
         comment = ''
         comments =  request.POST.getlist('comment')
+        options  =  request.POST.getlist('option' );
+        choice= 0
         if comments :
             comment = comments[0]
-        thread.messages[index].update( {'comment': comment })
+        elif options :
+            print(f"OPTIONS = {options}")
+            i = int( options[0] );
+            print(f"I = {i}")
+            other = options[1];
+            comment = choices[i];
+            choice = i
+            #if other :
+            #    comment = comment + ' ' + other
+            print(f"COMMENT = {comment}")
+            print(f"CHOICE_INDEX = {choice}")
+        thread.messages[index].update( {'comment': comment , 'choice' : choice })
         print(f"CC")
         msg = thread.messages[index];
         print(f"DD")
@@ -67,7 +82,7 @@ def query_view(request,subpath):
         thread.save();
         #print(f"REDIRECT TO query/{thread_name}")
         #return redirect( f'query/{thread_name}')
-        return JsonResponse({"success": True,'index' : index ,'comment' : comment })
+        return JsonResponse({"success": True,'index' : index ,'comment' : comment , 'choice' :choice  })
     response = None
     user = request.user
     print(f"ASSISTANT = {name}")
@@ -115,6 +130,7 @@ def query_view(request,subpath):
                 if query.strip()  == message['user'].strip() :
                     txt = "*You already asked that!*<p/>" + message['assistant']
                     comment = message.get('comment','')
+                    choice = message.get('choice','0')
                     mindex = mindex - 1;
                     break
             try :
@@ -129,9 +145,8 @@ def query_view(request,subpath):
     else:
         form = QueryForm()
     #print(f"REQUEST = {request.POST}")
-    f = [ { 'index' : index, 'user' : item['user'] , 'assistant' : mark_safe( mathfix(item['assistant'] ) ), 'ntokens' : item['ntokens'], 'comment' : item.get('comment','')  }  for index, item in enumerate( messages ) ];
+    f = [ { 'index' : index, 'user' : item['user'] , 'assistant' : mark_safe( mathfix(item['assistant'] ) ), 'ntokens' : item['ntokens'], 'comment' : item.get('comment','') , 'choice' : item.get('choice',0)  }  for index, item in enumerate( messages ) ];
     print(f"MINDEX = {mindex}")
-    choices = {'4' : 'Unread' ,'0' : 'Wrong' , '1' : 'Useless', '2' : "Minor help" , '3' : 'Very useful', }
-    response = render(request, 'sidecar_openai/query_form.html', {'form': form, 'response': response,'messages' : f, 'name' : assistant.name , 'mindex' : mindex , 'comment' : comment, 'choices' : choices  })
+    response = render(request, 'sidecar_openai/query_form.html', {'form': form, 'response': response,'messages' : f, 'name' : assistant.name , 'mindex' : mindex , 'comment' : comment, 'choices' : choices , 'choice' : choice  })
     response.set_cookie('busy' , 'false')
     return response

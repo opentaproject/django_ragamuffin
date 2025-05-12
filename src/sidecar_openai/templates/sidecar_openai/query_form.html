@@ -54,16 +54,15 @@
                         <h3> History </h3>
                         {% if messages %}
                             <div>
-                                <input type="checkbox" id="select-all"> Select All <em> [ ntokens in brackets ] </em>
+                                <input type="checkbox" id="select-all"> Select All <em> [ choice in brackets] </em>
                             </div>
                             {% for m in messages %}
                                 <span class="form-row">
                                     <input type="checkbox" name="delete-entry" value="{{ m.index}}" class="choice-box" >
                                     <button style="width: 100% ; text-align: left; " name='oldquery' value="{{m.user}}">{{ m.index  | stringformat:"02d" }}:
-                                        [  {{m.ntokens | stringformat:"03d"}}]  <div class="innerDiv" style="display: none"> {{m.assistant | safe }} </div>
+					    [  <span class="innerChoice" id="choice-{{m.index}}">{{m.choice}}</span> ]  <div class="innerDiv" style="display: none"> {{m.assistant | safe }} </div>
                                         <div class="mindex" style="display: none"> {{m.index }} </div>
-
-					{{m.user|truncatechars:30}} <span id="comment-{{m.index}}" class="innerComment">{{ m.comment }}</span>   </button>
+					{{m.user|truncatechars:30}} <span id="comment-{{m.index}}" class="innerComment">{{ m.comment}}</span>   </button>
                                     <div class="message_index"></div>
                                 </span>
                             {% endfor %}
@@ -86,18 +85,19 @@
                     <div style="border: 1px dashed gray; background-color: #f9f9f9; padding: 1rem;">
                         <p><div id='response'> {{ response| safe }}</div></p>
                     </div>
+		    choice = <div id='choice'> {{ choice }}  </div> 
                     <form id="myForm">
                         {% csrf_token %}
                         <input type="text" style="display: none"  name="thread" value="{{request.path}}" />
                         <input type="test" style="display: none" id="newmessage_index" name="newmessage_index" value="{{ mindex }}"  />
 			{% for  i , c   in choices.items %}
-				{% if i == '4' %}
-					<label><input type="radio" name="option" value={{i}}  checked > {{ c }} </label>
+			{% if i ==  choice  %}
+			<label><input type="radio" name="option" value={{i}}  checked > {{i}}-{{ c }} </label>
 				{% else %}
-					<label><input type="radio" name="option" value={{i}} > {{ c }} </label>
+				<label><input type="radio" name="option" value={{i}} >{{i}}-{{ c }} </label>
 				{% endif %}
 			{% endfor %}
-			<label> <input type="radio" name="option" value='99'> {{ comment }}</label> Other
+			<label> <input style="display:none" type="radio" name="other"  value='99'> {{ comment }}</label> Further comment?
 			<input type="text" id="comment" name="option" value="{{comment}}" />
 			<p/>
                         <button type="submit">Send</button>
@@ -147,6 +147,14 @@
 	    const comment_area = document.getElementById('comment');
 	    comment_area.value = comment
 
+
+            var innerChoice = event.target.querySelector(".innerChoice");
+            var choice = innerChoice.innerHTML;
+	    const choice_area = document.getElementById('choice');
+	    choice_area.innerHTML = choice  
+
+
+
             const response_area = document.getElementById('response');
             response_area.innerHTML = content
             const message_index = event.target.querySelector('.mindex').innerHTML
@@ -186,7 +194,7 @@
             const checked = this.checked;
             var btns = document.querySelectorAll('.choice-box');
             btns.forEach(cb => cb.checked =  checked);
-        });
+        })
 
     </script>
 
@@ -222,8 +230,12 @@
                     success: function(response) {
                         console.log('Success:', response);
 			const mindex = response['index']
+			const choice = response['choice'];
+			console.log("CHOICE_INDEX = ", choice )
 			const mcomment = document.getElementById('comment-' + mindex );
 			mcomment.textContent = response['comment'];
+			const mchoice = document.getElementById('choice-' + mindex );
+			mchoice.textContent = response['choice'];
 			document.getElementById("submitBtn").style.display = "block";
                     },
                     error: function(xhr, status, error) {
