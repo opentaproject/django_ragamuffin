@@ -60,7 +60,7 @@
                                 <span class="form-row">
                                     <input type="checkbox" name="delete-entry" value="{{ m.index}}" class="choice-box" >
                                     <button style="width: 100% ; text-align: left; " name='oldquery' value="{{m.user}}">{{ m.index  | stringformat:"02d" }}:
-                                        [  <span class="innerChoice" id="choice-{{m.index}}">{{m.choice}}</span> ]  <div class="innerDiv" style="display: none"> {{m.assistant | safe }} </div>
+					    [  <span class="innerChoice" id="choice-{{m.index}}">{{m.choice}}</span> ]  <div class="innerDiv" style="display: none"> {{m.assistant | safe }} {{ m.model }}p </div>
                                         <div class="mindex" style="display: none"> {{m.index }} </div>
                                         {{m.user|truncatechars:30}} <em> <span id="comment-{{m.index}}" class="innerComment">{{ m.comment}}</span> </em>   </button>
                                     <div class="message_index"></div>
@@ -73,17 +73,17 @@
             </div>
             <div class="right">
                 <div style="margin: 10 auto; padding: 1rem;  ">
-                    <h3> Hello {{ request.user }} </h3><h4> Enter Your Query for  the assistant {{ name }} </h4>
+			<h3> Hello {{ request.user }} </h3><h4> Enter Your Query for  the {{ model }} assistant {{ name }} </h4>
                     <form method="post" style="width: 100%" >
                         {% csrf_token %}
                         {{ form.as_p }}
-                        <button id='submitBtn' type='submit'> Submit</button>
+                        <button id='submitBtn' type='submit'> Submit query </button>
                     </form>
 
                     <div id='response-block'>
 
                         <div style="border: 1px dashed gray; background-color: #f9f9f9; padding: 1rem;">
-                            <p><div id='response'> {{ response| safe }}</div></p>
+				<p><div id='response'> {{ response| safe }} {{ model }} </div></p>
                         </div>
 
                         <form id="myForm">
@@ -100,7 +100,7 @@
                             <label> <input style="display:none" type="radio" name="other"  value='99'> {{ comment }}</label> Further comment?
                             <input type="text" id="comment" name="option" value="{{comment}}" />
                             <p/>
-                            <button id='send-button' type="submit">Send</button>
+                            <button id='send-button' type="submit">Assess response </button>
                         </form>
 
 
@@ -123,7 +123,7 @@
                     if ( busy == 'true' ){
                         btn.type = 'button'
                         btn.textContent = 'Wait ... ' + patience
-		    	btn.style.backgroundColor = "orange";
+		    	btn.style.backgroundColor = "darkorange";
 		    	btn.style.color = "white"; // optional: for better contrast
 
 
@@ -138,10 +138,16 @@
             });
 
 	    function button_color( btn , color ) {
-		    btn.style.display = "block";
+		    if( color == 'green' ){
+			document.getElementById("submitBtn").disabled = false ;
+		    } else {
+			document.getElementById("submitBtn").disabled = true ;
+		    }
+
 		    btn.style.backgroundColor = color;
 		    btn.style.color = "white"; // optional: for better contrast
-	    }
+		    return btn
+	    	}
 
 
 
@@ -174,10 +180,7 @@
                 const mindexarea = document.getElementById('newmessage_index');
                 const comment_text = comment;
                 if( comment_text == '' ){
-		    let btn = document.getElementById("submitBtn");
-		    btn.style.display = "block";
-		    btn.style.backgroundColor = "red";
-		    btn.style.color = "white"; // optional: for better contrast
+			button_color(  document.getElementById("submitBtn") ,'red' )
                 } else {
                     document.getElementById("submitBtn").style.display = "block";
                 }
@@ -212,30 +215,21 @@
                })
 
             document.getElementById('myForm').addEventListener('input', function () {
-		    let btn = document.getElementById("send-button");
-		    btn.style.display = "block";
-		    btn.style.backgroundColor = "green";
-		    btn.style.color = "white"; // optional: for better contrast
-
+		    button_color( document.getElementById("send-button"), 'green' )
 		    console.log("MyForm Changed")
                })
 
         </script>
 
         <script>
+	    var abc = button_color( document.getElementById("send-button"), "red")
+	    var bce = button_color( document.getElementById("submitBtn"), "red")
+
             $(document).ready(function() {
-                (  document.getElementsByName("query")[0]).addEventListener("input", function() {
-			let btn = document.getElementById("submitBtn");
-			btn.style.display = "block";
-			btn.style.backgroundColor = "green";
-			btn.style.color = "white"; // optional: for better contrast
-                });
-		let btn = document.getElementById("send-button");
-		    btn.style.display = "block";
-		    btn.style.backgroundColor = "red";
-		    btn.style.color = "white"; // optional: for better contrast
-
-
+                document.getElementsByName("query")[0].addEventListener("input", function() {
+			button_color( document.getElementById("send-button"), "red");
+			button_color( document.getElementById("submitBtn"), "green");
+                	});
 
                 const textarea = document.getElementById('id_query').innerHTML;
                 try {
@@ -244,10 +238,7 @@
                 }
                 console.log("READY", comment_area)
                 if ( comment_area == '' && textarea != '' ){
-			let btn = document.getElementById("submitBtn");
-			btn.style.display = "block";
-			btn.style.backgroundColor = "red";
-			btn.style.color = "white"; // optional: for better contrast
+			button_color( document.getElementById("submitBtn"), "red")
                 }
                 if ( textarea == '' ){
                     document.getElementById("response-block").style.display = "none";
@@ -272,10 +263,8 @@
                             mcomment.textContent = response['comment'];
                             const mchoice = document.getElementById('choice-' + mindex );
                             mchoice.textContent = response['choice'];
-				let btn = document.getElementById("submitBtn");
-				btn.style.display = "block";
-				btn.style.backgroundColor = "red";
-				btn.style.color = "white"; // optional: for better contrast
+				let btn = button_color( document.getElementById("submitBtn"), "red")
+			    button_color( document.getElementById("send-button"), 'red' )
                         },
                         error: function(xhr, status, error) {
                             console.error('Error:', error);

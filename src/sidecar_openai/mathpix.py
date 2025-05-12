@@ -34,7 +34,7 @@ async def convert_pdf_file( pdf_path , format_out='mmd'):
         'file': (filename, open(pdf_path, 'rb'), 'application/pdf'),
         'options_json': (
             None,
-            '{"ocr": ["math", "text"], "formats": ["latex_styled"], "include_image_data" : "true" }',
+            '{"ocr": ["math", "text"], "formats": ["latex_styled","latex_simplified","mmd"], "include_image_data" : "true" }',
             'application/json'
         )
     }

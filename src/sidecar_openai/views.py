@@ -99,6 +99,10 @@ def query_view(request,subpath):
         instructions = 'Answer only questions about the enclosed document. Do not offer helpful answers to questions that do not refer to the document. Be concise. If the question is irrelevant, answer with "That is not a question that is relevant to the document."'
         assistant.instructions = instructions
         assistant.save()
+    if assistant.model :
+        model = assistant.model
+    else :
+        model = settings.AI_MODEL
     thread = create_or_retrieve_thread( assistant, name , user )
     data = request.POST;
     deletes = request.POST.getlist('delete-entry')
@@ -144,8 +148,8 @@ def query_view(request,subpath):
     else:
         form = QueryForm()
     #print(f"REQUEST = {request.POST}")
-    f = [ { 'index' : index, 'user' : item['user'] , 'assistant' : mark_safe( mathfix(item['assistant'] ) ), 'ntokens' : item['ntokens'], 'comment' : item.get('comment','') , 'choice' : item.get('choice',0)  }  for index, item in enumerate( messages ) ];
+    f = [ { 'index' : index, 'user' : item['user'] , 'assistant' : mark_safe( mathfix(item['assistant'] ) ), 'ntokens' : item['ntokens'], 'comment' : item.get('comment','') , 'choice' : item.get('choice',0), 'model' : item.get('model', model )   }  for index, item in enumerate( messages ) ];
     print(f"MINDEX = {mindex}")
-    response = render(request, 'sidecar_openai/query_form.html', {'form': form, 'response': response,'messages' : f, 'name' : assistant.name , 'mindex' : mindex , 'comment' : comment, 'choices' : choices , 'choice' : choice  })
+    response = render(request, 'sidecar_openai/query_form.html', {'form': form, 'response': response,'messages' : f, 'name' : assistant.name , 'mindex' : mindex , 'comment' : comment, 'choices' : choices , 'choice' : choice , 'model' : model })
     response.set_cookie('busy' , 'false')
     return response

@@ -546,6 +546,10 @@ class Thread(models.Model) :
             assistant.save();
             print(f"ASSISTANT SAVED")
         assistant_id = assistant.assistant_id
+        if assistant.model :
+            model = assistant.model
+        else :
+            model = settings.AI_MODEL;
         thread = self
         thread_id = thread.thread_id
         #print(f"QUERY_ID = {assistant_id} RUN_QUERY ")
@@ -592,7 +596,7 @@ class Thread(models.Model) :
         txt = txt + f"<p/> *[{ntokens} tokens]*"
         tokens = encoding.encode(txt)
         #print(f"RETGURN TOKENS = {len(tokens)} REPLY = {txt}")
-        thread.messages.append({'user' : query, 'assistant' : txt, 'ntokens' : ntokens }) 
+        thread.messages.append({'user' : query, 'assistant' : txt, 'ntokens' : ntokens , 'model' : model }) 
         thread.save()
         return txt
 
