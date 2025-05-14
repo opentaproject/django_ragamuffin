@@ -81,7 +81,7 @@
                         <div style="border: 1px dashed gray; background-color: #f9f9f9; padding: 1rem;">
                             <p><div id='response'> {{ response| safe }} {{ model }} </div></p>
                         </div>
-<div style="border: 1px dashed gray; background-color: #f9f9f9; padding: 1rem; margin-top: 20px">
+				<div id="button-box" style="border: 4px dashed red; background-color: #f9f9f9; padding: 1rem; margin-top: 20px">
 
                         <form id="myForm">
                             {% csrf_token %}
@@ -99,7 +99,7 @@
                             <label> <input style="display:none" type="radio" name="other"  value='99'> {{ comment }}</label> Further comment? (optional)
                             <input type="text" id="comment" name="option" value="{{comment}}" />
                             <p/>
-                            <button id='send-button' type="submit">Submit assessment </button>
+                            <button id='send-button' style="display:none" type="submit">Submit assessment </button>
                         </form>
 </div>
                     </div>
@@ -248,7 +248,6 @@
             }
             $('#myForm').on('submit', function(e) {
                 e.preventDefault();  // Prevent full form submission
-		console.log("CLICKED SEND-BUTTON")
 
                 $.ajax({
                     type: 'POST',
@@ -265,7 +264,7 @@
                         mcomment.textContent = response['comment'];
                         const mchoice = document.getElementById('choice-' + mindex );
                         mchoice.textContent = response['choice'];
-                        let btn = button_color( document.getElementById("submitBtn"), "red")
+                        let btn = button_color( document.getElementById("submitBtn"), "green")
                         button_color( document.getElementById("send-button"), 'red' )
                     },
                     error: function(xhr, status, error) {
