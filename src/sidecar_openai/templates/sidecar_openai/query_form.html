@@ -90,7 +90,7 @@
 			    <div class="form-row">
                             {% for  i , c   in choices.items %}
                                 {% if i ==  choice  %}
-                                    <label><input type="radio" name="option" value={{i}}  checked > {{i}}-{{ c }} </label>
+                                    <label><input type="radio"  name="option" value={{i}}  checked > {{i}}-{{ c }} </label>
                                 {% else %}
                                     <label><input type="radio" name="option" value={{i}} >{{i}}-{{ c }} </label>
                                 {% endif %}
@@ -211,7 +211,8 @@
         })
 
         document.getElementById('myForm').addEventListener('input', function () {
-            button_color( document.getElementById("send-button"), 'green' )
+            button_color( document.getElementById("send-button"), 'green' );
+	    document.getElementById("send-button").click();
         })
 
     </script>
@@ -247,6 +248,7 @@
             }
             $('#myForm').on('submit', function(e) {
                 e.preventDefault();  // Prevent full form submission
+		console.log("CLICKED SEND-BUTTON")
 
                 $.ajax({
                     type: 'POST',
