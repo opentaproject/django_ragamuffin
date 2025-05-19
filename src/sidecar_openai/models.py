@@ -623,7 +623,6 @@ class Thread(models.Model) :
         txt = re.sub(r"【\d+:\d+†[^】]+】", "", txt)
         ntokens = len( encoding.encode(txt ) )
         ntokens = usage.total_tokens
-        txt = txt + f"<p/> *[{ntokens} tokens]*"
         tokens = encoding.encode(txt)
         #print(f"RETGURN TOKENS = {len(tokens)} REPLY = {txt}")
         #thread.messages.append({'user' : query, 'assistant' : txt, 'ntokens' : ntokens , 'model' : model }) 
