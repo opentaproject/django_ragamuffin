@@ -138,7 +138,7 @@ def query_view(request,subpath):
                     break
             try :
                 if txt == None :
-                    txt = thread.run_query(  query=query )
+                    txt = thread.run_query(  query=query ,last_messages=2 )
             except Exception as e:
                 txt = str(e);
             txt = mathfix( txt )
@@ -150,6 +150,7 @@ def query_view(request,subpath):
     #print(f"REQUEST = {request.POST}")
     f = [ { 'index' : index, 'user' : item['user'] , 'assistant' : mark_safe( mathfix(item['assistant'] ) ), 'ntokens' : item['ntokens'], 'comment' : item.get('comment','') , 'choice' : item.get('choice',0), 'model' : item.get('model', model )   }  for index, item in enumerate( messages ) ];
     print(f"MINDEX = {mindex}")
+    print(f"f = {f}")
     response = render(request, 'sidecar_openai/query_form.html', {'form': form, 'response': response,'messages' : f, 'name' : assistant.name , 'mindex' : mindex , 'comment' : comment, 'choices' : choices , 'choice' : choice , 'model' : model })
     response.set_cookie('busy' , 'false')
     return response

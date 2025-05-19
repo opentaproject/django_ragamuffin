@@ -27,6 +27,32 @@ client = openai.OpenAI(api_key=settings.AI_KEY)
 
 upload_storage = FileSystemStorage(settings.OPENAI_UPLOAD_STORAGE, base_url="/" )
 
+from openai import OpenAIError, RateLimitError, APIError, Timeout
+
+def create_run_with_retry(thread_id, assistant_id, timeout, truncation_strategy, tools, max_retries=5):
+    delay = 2  # initial delay in seconds
+    for attempt in range(1, max_retries + 1):
+        try:
+            run = openai.beta.threads.runs.create(
+                thread_id=thread_id,
+                assistant_id=assistant_id,
+                timeout=timeout,
+                truncation_strategy=truncation_strategy,
+                tools=tools,
+            )
+            return run  # success
+        except RateLimitError as e:
+            print(f"Rate limit hit. Attempt {attempt}/{max_retries}. Retrying in {delay} seconds...")
+        except (APIError, Timeout) as e:
+            print(f"Transient API error on attempt {attempt}/{max_retries}: {e}. Retrying in {delay} seconds...")
+        except Exception as e:
+            print(f"Non-retryable error: {e}")
+            raise  # re-raise non-rate-limit exceptions
+        time.sleep(delay)
+        delay *= 2  # exponential backoff
+
+    raise Exception("Max retries exceeded due to rate limiting or API errors.")
+
 def validate_file_extension(value):
     ext = os.path.splitext(value.name)[-1].lower()
     if ext not in ['.md','.txt','.pdf','.tex']:
@@ -552,6 +578,7 @@ class Thread(models.Model) :
             model = settings.AI_MODEL;
         thread = self
         thread_id = thread.thread_id
+        print(f"THREAD_ID = {thread_id}")
         #print(f"QUERY_ID = {assistant_id} RUN_QUERY ")
     
         encoding = tiktoken.encoding_for_model(settings.AI_MODEL)
@@ -564,11 +591,15 @@ class Thread(models.Model) :
         else :
             max_tokens = settings.MAX_TOKENS
         timeout = settings.MAXWAIT
-        if last_messages == None :
-            run = openai.beta.threads.runs.create( thread_id=thread_id, assistant_id=assistant_id ,  timeout=timeout)
-        else :
-            run = openai.beta.threads.runs.create( thread_id=thread_id, assistant_id=assistant_id ,   timeout=timeout, 
-                    truncation_strategy={ "type": "last_messages", "last_messages": last_messages })
+        last_messages = 3;
+        truncation_strategy = { "type": "last_messages", "last_messages": last_messages }
+        tools=[ { "type": "file_search", "file_search": { "max_num_results": 5 , "ranking_options": { "score_threshold": 0.0 } } } ]
+        print(f"RUN")
+        if last_messages is None:
+            run = create_run_with_retry(thread_id, assistant_id, timeout, truncation_strategy, tools)
+        else:
+            run = create_run_with_retry(thread_id, assistant_id, timeout, truncation_strategy, tools)
+        print(f"RUN CREATED ")
         interval = 1;
         imax = settings.MAXWAIT / interval
         i = 0;
@@ -583,6 +614,8 @@ class Thread(models.Model) :
                 time.sleep(1)
             i = i + 1;
             print(f"I = {i}")
+        usage = run_status.usage
+        print(f"USAGE = {usage}")
         assert i < imax , f"Request timed out after {settings.MAXWAIT} seconds; try again ; try to change the question."
         messages = openai.beta.threads.messages.list(thread_id=thread_id)
         i = 0;
@@ -593,6 +626,7 @@ class Thread(models.Model) :
         txt =   str( msg.content[0].text.value )
         txt = re.sub(r"【\d+:\d+†[^】]+】", "", txt)
         ntokens = len( encoding.encode(txt ) )
+        ntokens = usage.total_tokens
         txt = txt + f"<p/> *[{ntokens} tokens]*"
         tokens = encoding.encode(txt)
         #print(f"RETGURN TOKENS = {len(tokens)} REPLY = {txt}")
