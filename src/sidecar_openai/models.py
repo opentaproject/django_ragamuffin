@@ -43,7 +43,9 @@ def create_run_with_retry(thread_id, assistant_id, timeout, truncation_strategy,
             return run  # success
         except RateLimitError as e:
             print(f"Rate limit hit. Attempt {attempt}/{max_retries}. Retrying in {delay} seconds...")
-        except (APIError, Timeout) as e:
+        except APIError  as e:
+            print(f"Transient API error on attempt {attempt}/{max_retries}: {e}. Retrying in {delay} seconds...")
+        except Timeout as e:
             print(f"Transient API error on attempt {attempt}/{max_retries}: {e}. Retrying in {delay} seconds...")
         except Exception as e:
             print(f"Non-retryable error: {e}")
@@ -561,7 +563,7 @@ class Thread(models.Model) :
 
 
     def run_query( self, *args, **kwargs  ):
-        last_messages = kwargs.get('last_messages',None)
+        last_messages = kwargs.get('last_messages',30)
         max_num_results = kwargs.get('max_num_results',None)
         query= kwargs['query']
         now = time.time();
