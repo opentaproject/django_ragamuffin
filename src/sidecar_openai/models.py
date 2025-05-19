@@ -1,6 +1,7 @@
 from django.db import models
 from pathlib import Path
 import base64
+import random, string
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User, AnonymousUser
 import shutil
@@ -28,6 +29,7 @@ client = openai.OpenAI(api_key=settings.AI_KEY)
 upload_storage = FileSystemStorage(settings.OPENAI_UPLOAD_STORAGE, base_url="/" )
 
 from openai import OpenAIError, RateLimitError, APIError, Timeout
+DEFAULT_LAST_MESSAGES = 30
 
 def create_run_with_retry(thread_id, assistant_id, timeout, truncation_strategy, tools, max_retries=5):
     delay = 2  # initial delay in seconds
@@ -563,7 +565,7 @@ class Thread(models.Model) :
 
 
     def run_query( self, *args, **kwargs  ):
-        last_messages = kwargs.get('last_messages',30)
+        last_messages = kwargs.get('last_messages',DEFAULT_LAST_MESSAGES)
         max_num_results = kwargs.get('max_num_results',None)
         query= kwargs['query']
         now = time.time();
@@ -629,8 +631,28 @@ class Thread(models.Model) :
         #print(f"RETGURN TOKENS = {len(tokens)} REPLY = {txt}")
         #thread.messages.append({'user' : query, 'assistant' : txt, 'ntokens' : ntokens , 'model' : model }) 
         time_spent = int( time.time() - now  + 0.5 )
-        msg =  {'user' : query, 'assistant' : txt, 'ntokens' : ntokens , 'model' : model, 'time_spent' : time_spent , 'last_messages' : last_messages, 'max_num_results' : max_num_results}
-        print(f"MSG = {msg}")
+        characters = string.ascii_letters + string.digits  # a-zA-Z0-9
+        h = ''.join(random.choices(characters, k=8))
+        msg =  {'user' : query, 'assistant' : txt, 'ntokens' : ntokens , 'model' : model, 'time_spent' : time_spent , 'last_messages' : last_messages, 'max_num_results' : max_num_results,'hash' : h }
+
+        #def doarchive( thread, msg ):
+        #    assistant = thread.assistant;
+        #    print(f"ASSISTANT = {assistant.name}")
+        #    subdir =  assistant.name.split('.')
+        #    print(f"SUBDIR = {subdir}")
+        #    h = msg['hash']
+        #    print(f"H = {h}")
+        #    p = os.path.join('/subdomain-data','openai','queries', *subdir,thread.user.username,)
+        #    print(f"P = {p}")
+        #    os.makedirs(p, exist_ok=True )
+        #    fn = f"{p}/{h}.json"
+        #    print(f"FN = {fn}")
+        #    msgsave = msg
+        #    msgsave.update({'name' : assistant.name})
+        #    with open(fn, "w") as f:
+        #        json.dump(msgsave,  f , indent=2)
+
+        #doarchive(thread,msg)
         thread.messages.append(msg) 
         thread.save()
         return txt

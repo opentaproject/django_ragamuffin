@@ -1,4 +1,5 @@
 from django.shortcuts import render
+import json
 from django.http import JsonResponse
 import tiktoken
 from django.shortcuts import redirect
@@ -16,6 +17,7 @@ import shutil
 import os
 import markdown
 from django.utils.safestring import mark_safe
+import string, random
 
 import openai 
 from openai import OpenAI
@@ -38,6 +40,29 @@ def mathfix( txt ):
 
 LAST_MESSAGES = 3
 MAX_NUM_RESULTS =5
+
+def get_hash() :
+ characters = string.ascii_letters + string.digits  # a-zA-Z0-9
+ h = ''.join(random.choices(characters, k=8))
+ return h
+
+
+def doarchive( thread, msg ):
+    assistant = thread.assistant;
+    print(f"ASSISTANT = {assistant.name}")
+    h = msg.get('hash',get_hash() )
+    subdir =  assistant.name.split('.')
+    print(f"SUBDIR = {subdir}")
+    print(f"H = {h}")
+    p = os.path.join('/subdomain-data','openai','queries', *subdir,thread.user.username,)
+    print(f"P = {p}")
+    os.makedirs(p, exist_ok=True )
+    fn = f"{p}/{h}.json"
+    print(f"FN = {fn}")
+    msgsave = msg
+    msgsave.update({'name' : assistant.name,'hash' : h })
+    with open(fn, "w") as f:
+        json.dump(msgsave,  f , indent=2)
 
 
 
@@ -70,7 +95,9 @@ def query_view(request,subpath):
             #    comment = comment + ' ' + other
         thread.messages[index].update( {'comment': comment , 'choice' : choice })
         msg = thread.messages[index];
+        print(f"MSG = {msg}")
         thread.save();
+        doarchive(thread, msg )
         #print(f"REDIRECT TO query/{thread_name}")
         #return redirect( f'query/{thread_name}')
         return JsonResponse({"success": True,'index' : index ,'comment' : comment , 'choice' :choice  })
