@@ -562,15 +562,14 @@ class Thread(models.Model) :
 
     def run_query( self, *args, **kwargs  ):
         last_messages = kwargs.get('last_messages',None)
+        max_num_results = kwargs.get('max_num_results',None)
         query= kwargs['query']
     
         """ last_messages is either None for auto or an integer for length of thread history to keep at OpenAI. 
         The entire history is kept in the local database"""
         assistant = self.assistant
-        print(f"ASSISTANT_MODEL = {assistant.model} AI_MODEL = {settings.AI_MODEL}")
         if not assistant.model == settings.AI_MODEL :
             assistant.save();
-            print(f"ASSISTANT SAVED")
         assistant_id = assistant.assistant_id
         if assistant.model :
             model = assistant.model
@@ -578,7 +577,6 @@ class Thread(models.Model) :
             model = settings.AI_MODEL;
         thread = self
         thread_id = thread.thread_id
-        print(f"THREAD_ID = {thread_id}")
         #print(f"QUERY_ID = {assistant_id} RUN_QUERY ")
     
         encoding = tiktoken.encoding_for_model(settings.AI_MODEL)
@@ -591,15 +589,12 @@ class Thread(models.Model) :
         else :
             max_tokens = settings.MAX_TOKENS
         timeout = settings.MAXWAIT
-        last_messages = 3;
         truncation_strategy = { "type": "last_messages", "last_messages": last_messages }
-        tools=[ { "type": "file_search", "file_search": { "max_num_results": 5 , "ranking_options": { "score_threshold": 0.0 } } } ]
-        print(f"RUN")
+        tools=[ { "type": "file_search", "file_search": { "max_num_results": max_num_results , "ranking_options": { "score_threshold": 0.0 } } } ]
         if last_messages is None:
             run = create_run_with_retry(thread_id, assistant_id, timeout, truncation_strategy, tools)
         else:
             run = create_run_with_retry(thread_id, assistant_id, timeout, truncation_strategy, tools)
-        print(f"RUN CREATED ")
         interval = 1;
         imax = settings.MAXWAIT / interval
         i = 0;

@@ -42,20 +42,12 @@ FILENAME = "../README.md"
 def query_view(request,subpath):
     segments = subpath.split('/')
     name = ( '.'.join( segments ) ).rstrip('.')
-    print(f"POST = {request.POST}")
-    print(f"THREAD_NAME = {name}")
     choices = {0 : 'Unread' ,1 : 'Wrong' , 2 : 'Irrelevant', 3 : 'I did not understand.',  4 : "Too superficial." ,  5: "Somewhat helpful", 6 : 'Very helpful', }
     choice = 0;
     if name == '.feedback' :
-        print(f"ONLY RETURNING FEEDBACK {request.path} ")
-        #thread = Thread.objects.get(name=name,user=request.user)
-        #messages = thread.messages
         index = int( request.POST.getlist('newmessage_index')[0] )
         thread_name = ( '.'.join( ( request.POST.getlist('thread')[0] ).split('/')[2:] ) ).rstrip('.');
-        print(f"THREAD_NAME = {thread_name}")
-        print("AA")
         threads = Thread.objects.filter(name=thread_name,user=request.user)
-        print(f"BB {threads}")
         thread = threads[0]
         comment = ''
         comments =  request.POST.getlist('comment')
@@ -64,29 +56,21 @@ def query_view(request,subpath):
         if comments :
             comment = comments[0]
         elif options :
-            print(f"OPTIONS = {options}")
             i = int( options[0] );
             print(f"I = {i}")
             comment = options[1];
             choice = i
             #if other :
             #    comment = comment + ' ' + other
-            print(f"COMMENT = {comment}")
-            print(f"CHOICE_INDEX = {choice}")
         thread.messages[index].update( {'comment': comment , 'choice' : choice })
-        print(f"CC")
         msg = thread.messages[index];
-        print(f"DD")
-        print(f"MSG = {msg.get('comment','')}")
         thread.save();
         #print(f"REDIRECT TO query/{thread_name}")
         #return redirect( f'query/{thread_name}')
         return JsonResponse({"success": True,'index' : index ,'comment' : comment , 'choice' :choice  })
     response = None
     user = request.user
-    print(f"ASSISTANT = {name}")
     assistants = Assistant.objects.filter(name=name)
-    print(f"ASSISTANTS = {assistants}")
     if assistants :
         assistant = assistants[0]
         vs = assistant.vector_stores.all()[0]
@@ -106,7 +90,6 @@ def query_view(request,subpath):
     thread = create_or_retrieve_thread( assistant, name , user )
     data = request.POST;
     deletes = request.POST.getlist('delete-entry')
-    print(f"deletes= {deletes}")
     if deletes :
         messages = thread.messages;
         ideletes = [int(i) for i in deletes ];
@@ -125,7 +108,6 @@ def query_view(request,subpath):
         form = QueryForm(request.POST)
         if form.is_valid():
             assistant_id = assistant.assistant_id 
-            print(f"MODEL = {assistant.model}")
             query = form.cleaned_data['query']
             txt = None
             for i,message in enumerate( messages ) :
@@ -135,11 +117,11 @@ def query_view(request,subpath):
                     comment = message.get('comment','')
                     choice = message.get('choice','0')
                     mindex = mindex - 1;
-                    print(f"CHOICE = {choice}")
                     break
             try :
                 if txt == None :
-                    txt = thread.run_query(  query=query ,last_messages=2 )
+                    txt = thread.run_query(  query=query ,last_messages=3, max_num_results=5)
+                    #txt = thread.run_query(  query=query ,last_messages=None, max_num_results=None )
             except Exception as e:
                 txt = str(e);
             txt = mathfix( txt )
@@ -150,8 +132,6 @@ def query_view(request,subpath):
         form = QueryForm()
     #print(f"REQUEST = {request.POST}")
     f = [ { 'index' : index, 'user' : item['user'] , 'assistant' : mark_safe( mathfix(item['assistant'] ) ), 'ntokens' : item['ntokens'], 'comment' : item.get('comment','') , 'choice' : item.get('choice',0), 'model' : item.get('model', model )   }  for index, item in enumerate( messages ) ];
-    print(f"MINDEX = {mindex}")
-    print(f"f = {f}")
     response = render(request, 'sidecar_openai/query_form.html', {'form': form, 'response': response,'messages' : f, 'name' : assistant.name , 'mindex' : mindex , 'comment' : comment, 'choices' : choices , 'choice' : choice , 'model' : model })
     response.set_cookie('busy' , 'false')
     return response
