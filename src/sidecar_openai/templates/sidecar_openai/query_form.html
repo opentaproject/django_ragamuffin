@@ -81,7 +81,12 @@
                         <div style="border: 1px dashed gray; background-color: #f9f9f9; padding: 1rem;">
                             <p><div id='response'> {{ response| safe }} {{ model }} </div></p>
                         </div>
+			{% if choice == 0 %}
 				<div id="button-box" style="border: 4px dashed red; background-color: #f9f9f9; padding: 1rem; margin-top: 20px">
+			{% else %}
+				<div id="button-box" style="border: 1px dashed black; background-color: #f9f9f9; padding: 1rem; margin-top: 20px">
+
+			{% endif %}
 
                         <form id="myForm">
                             {% csrf_token %}
@@ -184,15 +189,8 @@
             mindexarea.value = message_index
 	    let selectedValue = document.querySelector('input[name="option"]:checked')?.value;
 	    console.log("SELECTED_VALUE = ", selectedValue)
-	    if ( selectedValue != 0 ){
-		    document.getElementById('button-box').style.border = '1px dashed black';
-		    console.log("NOT ZERO SO SET BLACK")
-	    } else {
-		   document.getElementById('button-box').style.border = '2px dashed red ';
-
-	    }
+	    fix_box();
             document.cookie = "busy=false ; max-age=3600; path=/";
-
                 //document.getElementById("submitBtn").click()  // THIS WAS OLD WHEN RELOADING FROM SERVER
 
         }
@@ -229,6 +227,7 @@
     <script>
 	function fix_box( ) {
 	    let selectedValue = document.querySelector('input[name="option"]:checked')?.value;
+	    
 	    if ( selectedValue == 0 ){
 		document.getElementById('button-box').style.border = '2px dashed red ';
 		} else {
@@ -276,14 +275,15 @@
             $('#myForm').on('submit', function(e) {
                 e.preventDefault();  // Prevent full form submission
 		document.getElementById('button-box').style.border = '1px dashed black';
-		let selectedValue = document.querySelector('input[name="option"]:checked')?.value;
-		console.log("SELECTED = ", selectedValue )
-		if ( selectedValue != 0 ){
-		    document.getElementById('button-box').style.border = '1px dashed black';
-		    console.log("NOT ZERO SO SET BLACK")
-	    	} else {
-		   document.getElementById('button-box').style.border = '1px dashed blue';
-	    		}
+		fix_box();
+		//let selectedValue = document.querySelector('input[name="option"]:checked')?.value;
+		//console.log("SELECTED = ", selectedValue )
+	//	if ( selectedValue != 0 ){
+	//	    document.getElementById('button-box').style.border = '1px dashed black';
+	//	    console.log("NOT ZERO SO SET BLACK")
+	    //	} else {
+	//	   document.getElementById('button-box').style.border = '1px dashed blue';
+	//    		}
 
 
 
@@ -308,10 +308,8 @@
 			console.log("SUCCESS2")
 			let selectedValue = document.querySelector('input[name="option"]:checked')?.value;
 			console.log("SELECTED2 = ", selectedValue )
-			if( selectedValue == 0 ){
-				document.getElementById('button-box').style.border = '1px dashed red';
-			}
-                    },
+			fix_box();
+                    	},
                     error: function(xhr, status, error) {
                         console.error('Error:', error);
                     }

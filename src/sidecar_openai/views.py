@@ -135,6 +135,7 @@ def query_view(request,subpath):
                     comment = message.get('comment','')
                     choice = message.get('choice','0')
                     mindex = mindex - 1;
+                    print(f"CHOICE = {choice}")
                     break
             try :
                 if txt == None :
