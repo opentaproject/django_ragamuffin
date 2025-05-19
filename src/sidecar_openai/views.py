@@ -36,11 +36,17 @@ def mathfix( txt ):
     txt = markdown2.markdown(txt)
     return txt
 
+LAST_MESSAGES = 3
+MAX_NUM_RESULTS =5
+
+
 
 FILENAME = "../README.md"
 @csrf_exempt
 def query_view(request,subpath):
     segments = subpath.split('/')
+    last_messages = LAST_MESSAGES;
+    max_num_results = MAX_NUM_RESULTS;
     name = ( '.'.join( segments ) ).rstrip('.')
     choices = {0 : 'Unread' ,1 : 'Wrong' , 2 : 'Irrelevant', 3 : 'I did not understand.',  4 : "Too superficial." ,  5: "Somewhat helpful", 6 : 'Very helpful', }
     choice = 0;
@@ -104,6 +110,8 @@ def query_view(request,subpath):
     messages = thread.messages
     mindex = 0
     comment = ''
+    time_spent = 0;
+    now = time.time();
     if request.method == 'POST':
         form = QueryForm(request.POST)
         if form.is_valid():
@@ -120,7 +128,8 @@ def query_view(request,subpath):
                     break
             try :
                 if txt == None :
-                    txt = thread.run_query(  query=query ,last_messages=3, max_num_results=5)
+                    txt = thread.run_query(  query=query ,last_messages=last_messages, max_num_results=max_num_results)
+
                     #txt = thread.run_query(  query=query ,last_messages=None, max_num_results=None )
             except Exception as e:
                 txt = str(e);
@@ -131,7 +140,29 @@ def query_view(request,subpath):
     else:
         form = QueryForm()
     #print(f"REQUEST = {request.POST}")
-    f = [ { 'index' : index, 'user' : item['user'] , 'assistant' : mark_safe( mathfix(item['assistant'] ) ), 'ntokens' : item['ntokens'], 'comment' : item.get('comment','') , 'choice' : item.get('choice',0), 'model' : item.get('model', model )   }  for index, item in enumerate( messages ) ];
-    response = render(request, 'sidecar_openai/query_form.html', {'form': form, 'response': response,'messages' : f, 'name' : assistant.name , 'mindex' : mindex , 'comment' : comment, 'choices' : choices , 'choice' : choice , 'model' : model })
+    time_spent = int( ( time.time() - now  ) + 0.5 )
+    f = [ { 'index' : index, 'user' : item['user'] , 
+       'assistant' : mark_safe( mathfix(item['assistant'] ) ),
+       'ntokens' : item['ntokens'],
+       'comment' : item.get('comment','') ,
+       'choice' : item.get('choice',0),
+       'model' : item.get('model', model) ,  
+       'max_num_results' : item.get('max_num_results' , max_num_results ),
+       'last_messages' : item.get('last_messages' , last_messages)  ,
+       'time_spent' : item.get('time_spent', time_spent) }  for index, item in enumerate( messages ) ];
+    print(f"TIME_SPENT = {time_spent}")
+    response = render(request, 'sidecar_openai/query_form.html', {
+        'form': form,
+        'response': response,
+        'messages' : f,
+        'name' : assistant.name ,
+        'mindex' : mindex ,
+        'comment' : comment,
+        'choices' : choices ,
+        'choice' : choice ,
+        'model' : model ,
+        'max_num_results' : max_num_results,
+        'last_messages' : last_messages ,
+        'time_spent' : time_spent  })
     response.set_cookie('busy' , 'false')
     return response

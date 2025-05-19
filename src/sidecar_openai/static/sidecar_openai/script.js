@@ -166,10 +166,14 @@
                         //console.log('Success1:', response);
                         const mindex = response['index']
                         const choice = response['choice'];
-                        const mcomment = document.getElementById('comment-' + mindex );
-                        mcomment.textContent = response['comment'];
+                        try {
+                          const mcomment = document.getElementById('comment-' + mindex );
+                          mcomment.textContent = response['comment'];
+                        } catch { } 
                         const mchoice = document.getElementById('choice-' + mindex );
-                        mchoice.textContent = response['choice'];
+                        try {
+                          mchoice.textContent = response['choice'];
+                        } catch {}
                         let btn = button_color( document.getElementById("submitBtn"), "green")
                         button_color( document.getElementById("send-button"), 'red' )
 			//console.log("SUCCESS2")

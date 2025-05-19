@@ -58,7 +58,9 @@
                                 <span class="form-row">
                                     <input type="checkbox" name="delete-entry" value="{{ m.index}}" class="choice-box" >
                                     <button style="width: 100% ; text-align: left; " name='oldquery' value="{{m.user}}">{{ m.index  | stringformat:"02d" }}:
-                                        [  <span class="innerChoice" id="choice-{{m.index}}">{{m.choice}}</span> ]  <div class="innerDiv" style="display: none"> {{m.assistant | safe }} {{ m.model }} </div>
+					    [  <span class="innerChoice" id="choice-{{m.index}}">{{m.choice}}</span> ]  <div class="innerDiv" style="display: none"> {{m.assistant | safe }} 
+						    {{ m.model }} time={{ m.time_spent }} last_messages={{ m.last_messages }} chunks={{ m.max_num_results}}   
+					    </div>
                                         <div class="mindex" style="display: none"> {{m.index }} </div>
                                         {{m.user|truncatechars:30}} <em> <span id="comment-{{m.index}}" class="innerComment">{{ m.comment}}</span> </em>   </button>
                                     <div class="message_index"></div>
@@ -79,7 +81,10 @@
                     </form>
                     <div id='response-block'>
                         <div style="border: 1px dashed gray; background-color: #f9f9f9; padding: 1rem;">
-                            <p><div id='response'> {{ response| safe }} {{ model }} </div></p>
+                            <p><div id='response'> {{ response| safe }} {{ model }} 
+{{ model }} time_spent={{ time_spent }} last_messages={{last_messages }} chunks={{ max_num_results}}   
+			    </div>
+			    </p>
                         </div>
 			{% if choice == 0 %}
 				<div id="button-box" style="border: 4px dashed red; background-color: #f9f9f9; padding: 1rem; margin-top: 20px">

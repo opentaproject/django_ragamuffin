@@ -564,6 +564,7 @@ class Thread(models.Model) :
         last_messages = kwargs.get('last_messages',None)
         max_num_results = kwargs.get('max_num_results',None)
         query= kwargs['query']
+        now = time.time();
     
         """ last_messages is either None for auto or an integer for length of thread history to keep at OpenAI. 
         The entire history is kept in the local database"""
@@ -625,7 +626,11 @@ class Thread(models.Model) :
         txt = txt + f"<p/> *[{ntokens} tokens]*"
         tokens = encoding.encode(txt)
         #print(f"RETGURN TOKENS = {len(tokens)} REPLY = {txt}")
-        thread.messages.append({'user' : query, 'assistant' : txt, 'ntokens' : ntokens , 'model' : model }) 
+        #thread.messages.append({'user' : query, 'assistant' : txt, 'ntokens' : ntokens , 'model' : model }) 
+        time_spent = int( time.time() - now  + 0.5 )
+        msg =  {'user' : query, 'assistant' : txt, 'ntokens' : ntokens , 'model' : model, 'time_spent' : time_spent , 'last_messages' : last_messages, 'max_num_results' : max_num_results}
+        print(f"MSG = {msg}")
+        thread.messages.append(msg) 
         thread.save()
         return txt
 
