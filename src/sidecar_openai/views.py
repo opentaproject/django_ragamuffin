@@ -111,36 +111,41 @@ def query_view(request,subpath):
         return JsonResponse({"success": True,'index' : index ,'comment' : comment , 'choice' :choice  })
     response = None
     user = request.user
-    assistants = Assistant.objects.filter(name=name)
 
 
     def setup_default_assistant(src):
         name = src.split('/')[-1].split('.')[0]
         t1 = upload_or_retrieve_openai_file( name, src )
         vs = create_or_retrieve_vector_store( name, [t1])
-        assistant = Assistant(name=name)
-        assistant.save()
+        #assistant = Assistant(name=name)
+        #assistant.save()
         assistant = create_or_retrieve_assistant( name  , vs )
         return assistant
 
-    assistant_exists = False
-    if assistants :
-        assistant = assistants[0]
-        vss = assistant.vector_stores.all()
-        if vss :
-            vs = vss[0]
-            assistant_exists = True
-    if not assistant_exists :
+    def get_assistant( name , user ):
+        assistants = Assistant.objects.filter(name=name)
+        assistant_exists = False
         if assistants :
-            assistants[0].delete();
-        assistant = setup_default_assistant( FILENAME );
-        assistant.save()
-    if assistant.model :
-        model = assistant.model
-    else :
-        model = get_current_model( request.user )
+            assistant = assistants[0]
+            vss = assistant.vector_stores.all()
+            if vss :
+                vs = vss[0]
+                assistant_exists = True
+        if not assistant_exists :
+            if assistants :
+                assistants[0].delete();
+            assistant = setup_default_assistant( FILENAME );
+            assistant.save()
+
+        if assistant.model :
+            model = assistant.model
+        else :
+            model = get_current_model( user )
         assistant.model = model
         assistant.save();
+        return assistant
+
+    assistant = get_assistant( name, request.user  )
     print(f"NOW CREATE THE THREAD model={model}")
     thread = create_or_retrieve_thread( assistant, name , user )
     print(f"THREAD = {thread} assistant = {assistant} {thread.assistant}  ")

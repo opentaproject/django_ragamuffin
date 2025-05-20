@@ -655,8 +655,7 @@ class Thread(models.Model) :
             i = i + 1;
             print(f"I = {i}")
         usage = run_status.usage
-        runmodel = run.model
-        print(f"RUNMODEL = {runmodel}")
+        model = run.model
         print(f"USAGE = {usage}")
         assert i < imax , f"Request timed out after {settings.MAXWAIT} seconds; try again ; try to change the question."
         messages = openai.beta.threads.messages.list(thread_id=thread_id)
