@@ -185,3 +185,24 @@ AI_MODEL = {'staff' : 'gpt-4o' , 'default' : 'gtp-4o-mini' }
 
 
 LOGIN_URL = '/admin/login'
+
+AUTH_PASSWORD_VALIDATORS = [
+    #{
+    #    'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    #},
+    # Remove or reduce the minimum length
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 4,
+        }
+    },
+    # Comment out to allow common passwords
+    #{
+    #    'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    #},
+    # Comment out to allow numeric passwords
+    # {
+    #     'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    # },
+]
