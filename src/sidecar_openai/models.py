@@ -111,21 +111,16 @@ def create_or_retrieve_thread( assistant, name, user ) :
 
 
 def upload_or_retrieve_openai_file( name ,src ):
-    #print(f"UPLOAD_OR_RETRIEVE NAME {name}")
-    #print(f"UPLOAD_OR_RETRIEVE SRC {src}")
     os.makedirs( os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), exist_ok=True )
     dst = os.path.join(os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), 'README.md')
     name = dst.split('/')[-1];
     ts = OpenAIFile.objects.filter(name=name)
     if not ts :
-        #print(f" SRC={src} DST = {dst}")
-        #print(f"FILE NEEDST TO BE CREATED")
         shutil.copy2(src, dst)
         t1 = OpenAIFile(file=dst)
         t1.name = name
         t1.save()
     else :
-        #print(f"FILE EXISTS")
         t1 = ts[0]
     return t1
 
@@ -156,7 +151,6 @@ def chunk_mmd(linestring):
                     "heading": current_heading,
                     "content": ''.join(current_chunk).strip()
                 })
-            #current_heading = line.strip()
             current_chunk = []
         else:
             current_chunk.append(line)
@@ -169,12 +163,6 @@ def chunk_mmd(linestring):
 
     s = f"{chunks}"
     chunks = split_long_chunks( chunks );
-    #s = ''
-    #i = 0;
-    #for i, chunk in enumerate(chunks ):
-    #    s = s + json.dumps({ "id": f"chunk_{i}", "text": f"{chunk['heading']}\n{chunk['content']}" }) + "\n"
-    #    i = i + 1 ;
-    #    print(f"I = {i}")
     s = re.sub(r"},","},\n",s)
     return s.encode('utf-8')
 
@@ -199,42 +187,30 @@ class OpenAIFile(models.Model) :
 
     def save( self, *args, **kwargs ):
         is_new = self._state.adding  and not self.pk
-        #print(f"SAVE FILE ORIG {self.file}")
         name =  f"{self.file}".split('/')[-1]
-        #print(f"SAVE INITIALLY NAME = {name}")
         super().save(*args, **kwargs)  # Save first, so file is processed
-        #print(f"SAVE FILE AFTER SUPER {self.file}")
         if is_new and self.file:
-            #print(f"SELF.FILE.NAME = { self.file.name}")
-            #fn = hashed_upload_to(self , self.file.name )
             fn = self.file.name 
-            #print(f"FN = {fn}")
             self.name = self.file.name.split('/')[-1]
             src = self.file.path
             extension = src.split('.')[-1];
             if extension == 'pdf' :
-                #print(f"DOING MATHPIX")
                 txt = mathpix( src ,format_out='mmd')
             else :
                 txt = ( open(src,'rb').read() ).decode('utf-8')
             chunks = chunk_mmd(txt)
-            #print(f"CHUNKS = {chunks}")
             chunkdir = os.path.join( os.path.dirname( src ), 'chunks')
             os.makedirs( chunkdir, exist_ok=True )
             srcbase = Path( os.path.basename(src) )
             jbase = srcbase.with_suffix('.json')
             dst = os.path.join( chunkdir, jbase )
-            #print(f"CHUNKS = {chunks}")
             if chunks :
                 open( dst, "wb").write( chunks)
             else :
                 shutil.copy2(src, dst)
-            #print(f"FN = {fn}")
             data = self.file.read()
             self.checksum = hashlib.md5(data).hexdigest()
-            #print(f"FILE_PATH = {self.file.path}")
             uploaded_file = openai.files.create( file=open( dst, "rb"), purpose="assistants")
-            #self.file_id = uploaded_file.id
             self.file_ids = [uploaded_file.id ]
             self.path = os.path.dirname( self.file.path )
 
@@ -249,13 +225,11 @@ class OpenAIFile(models.Model) :
                         except UnicodeDecodeError:
                             continue  # Skip invalid lines
                 tokens = encoding.encode(valid_text)
-                #print(f"Total tokens: {len(tokens)}")
                 return len( tokens )
 
 
 
             self.ntokens = get_ntokens( dst )
-            #print(f"PATH = { self.path}")
             #print(f"NOW AFTER CHUNKING NAME IS {self.name}")
             self.name = name
             super().save(*args, **kwargs) # Then update with true hashed path
@@ -264,7 +238,6 @@ class OpenAIFile(models.Model) :
 
 @receiver(pre_delete, sender=OpenAIFile)
 def custom_delete_openaifile(sender, instance, **kwargs):
-    #print(f"CUSTOM_DELETE_OPENAIFILE {instance.path} ")
     pk = instance.pk
     try :
         shutil.rmtree(instance.path)
@@ -283,9 +256,7 @@ def custom_delete_openaifile(sender, instance, **kwargs):
                     pass
             try :
                 client.files.delete(file_id)
-                #print(f"DELETED {instance.name}")
             except openai.NotFoundError as e:
-                #print(f"ERROR DELETING {instance.name}")
                 pass
 
 class VectorStore( models.Model ):
@@ -302,9 +273,6 @@ class VectorStore( models.Model ):
         ids = []
         for f in files.all():
             ids.extend( f.file_ids )
-            #for file_id in f.file_ids :
-            #    ids.append(file_id)
-        #print(f"IDS IN VECTOR_STORE IS {ids}")
         return ids
 
     def ntokens( self, *args, **kwargs ):
@@ -333,24 +301,19 @@ class VectorStore( models.Model ):
     def files_ok( self, *args, **kwargs) :
         vs = self
         file_ids = vs.file_ids()
-        #print(f"FILE_IDS = {file_ids}")
         vector_store_id = vs.vector_store_id
         vector_store =  client.vector_stores.retrieve(vector_store_id)
         vector_store_files = client.vector_stores.files.list( vector_store_id=vector_store.id)
         remote_ids = []
         for f in vector_store_files:
             remote_ids.append( f.id)
-        #print(f"REMOTE_IDS = {remote_ids}")
-        #assert  set( file_ids) == set( remote_ids) , f"{file_ids} == {remote_ids} is false "
         return set( file_ids) == set( remote_ids) 
 
 
 
     def save( self, *args, **kwargs ):
         is_new = self._state.adding and not self.pk
-        #print(f"IS_NEW = {is_new}")
         super().save(*args,**kwargs)
-        #print(f"DID SUPER SAVE")
         if is_new :
             vector_store = client.vector_stores.create(name=self.name,metadata={"api_key": settings.AI_KEY[-8:] } )
             self.vector_store_id = vector_store.id
@@ -360,7 +323,6 @@ class VectorStore( models.Model ):
 def custom_delete_vector_store(sender, instance, **kwargs):
     try :
         vector_store_id = instance.vector_store_id
-        #print(f"DELETE VECTOR_STORE{vector_store_id}")
         client.vector_stores.delete(vector_store_id=vector_store_id)
     except openai.NotFoundError as e:
         pass
@@ -414,10 +376,7 @@ class Assistant( models.Model ):
             self.instructions = 'Answer only questions about the enclosed document. Do not offer helpful answers to questions that do not refer to the document. Be concise. If the question is irrelevant, answer with "That is not a question that is relevant to the document." \n For images use created by mathpix, not the sandbox link created by openai. Since it is visible, dont  say something like "You can view the picture ... ". If a link does not exist, just say that such an image does not exist. '
         instructions = self.instructions
         super().save(*args,**kwargs)
-        #print(f"ASSISTANT_SAVE INSTRUCTIONS = {instructions}")
         if is_new :
-            #print(f"SETTING TEMPPERATUR TO {temperature}")
-            #print(f"SETTING INSTRUCTIONS TO {instructions}")
             assistant = client.beta.assistants.create( name=self.name,
                 instructions=instructions, 
                 model=self.model,
@@ -428,7 +387,6 @@ class Assistant( models.Model ):
         else :
             assistant_id = self.assistant_id
             if not old_instructions  ==  self.instructions :
-                #print(f"REVISE INSTRUCTIONS")
                 client.beta.assistants.update(assistant_id, instructions=instructions)
             if not old_temperature ==  temperature :
                 print(f"SET TEMPERATUR TO {temperature}")
@@ -480,7 +438,6 @@ class Assistant( models.Model ):
         for v in vs :
             for vf in v.files.all():
                 f.extend( vf.file_ids )
-        #print(f"ASSISTANT F = {f}")
         f = list( set( f) )
         return f
 
@@ -585,13 +542,8 @@ class Thread(models.Model) :
             assistant.save();
         assistant_id = assistant.assistant_id
         model = assistant.model
-        #if assistant.model :
-        #    model = assistant.model
-        #else :
-        #    model = settings.AI_MODEL;
         thread = self
         thread_id = thread.thread_id
-        #print(f"QUERY_ID = {assistant_id} RUN_QUERY ")
     
         encoding = tiktoken.encoding_for_model(settings.AI_MODEL['staff'])
         try :
@@ -638,31 +590,17 @@ class Thread(models.Model) :
         ntokens = len( encoding.encode(txt ) )
         ntokens = usage.total_tokens
         tokens = encoding.encode(txt)
-        #print(f"RETGURN TOKENS = {len(tokens)} REPLY = {txt}")
-        #thread.messages.append({'user' : query, 'assistant' : txt, 'ntokens' : ntokens , 'model' : model }) 
         time_spent = int( time.time() - now  + 0.5 )
         characters = string.ascii_letters + string.digits  # a-zA-Z0-9
         h = ''.join(random.choices(characters, k=8))
-        msg =  {'user' : query, 'assistant' : txt, 'ntokens' : ntokens , 'model' : model, 'time_spent' : time_spent , 'last_messages' : last_messages, 'max_num_results' : max_num_results,'hash' : h }
+        msg =  {'user' : query, 'assistant' : txt,
+                'ntokens' : ntokens ,
+                'model' : model,
+                'time_spent' : time_spent ,
+                'last_messages' : last_messages,
+                'max_num_results' : max_num_results,
+                'hash' : h }
 
-        #def doarchive( thread, msg ):
-        #    assistant = thread.assistant;
-        #    print(f"ASSISTANT = {assistant.name}")
-        #    subdir =  assistant.name.split('.')
-        #    print(f"SUBDIR = {subdir}")
-        #    h = msg['hash']
-        #    print(f"H = {h}")
-        #    p = os.path.join('/subdomain-data','openai','queries', *subdir,thread.user.username,)
-        #    print(f"P = {p}")
-        #    os.makedirs(p, exist_ok=True )
-        #    fn = f"{p}/{h}.json"
-        #    print(f"FN = {fn}")
-        #    msgsave = msg
-        #    msgsave.update({'name' : assistant.name})
-        #    with open(fn, "w") as f:
-        #        json.dump(msgsave,  f , indent=2)
-
-        #doarchive(thread,msg)
         thread.messages.append(msg) 
         thread.save()
         return msg

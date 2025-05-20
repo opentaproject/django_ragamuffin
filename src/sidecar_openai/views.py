@@ -100,8 +100,6 @@ def query_view(request,subpath):
         msg = thread.messages[index];
         thread.save();
         doarchive(thread, msg )
-        #print(f"REDIRECT TO query/{thread_name}")
-        #return redirect( f'query/{thread_name}')
         return JsonResponse({"success": True,'index' : index ,'comment' : comment , 'choice' :choice  })
     response = None
     user = request.user
@@ -111,8 +109,6 @@ def query_view(request,subpath):
         name = src.split('/')[-1].split('.')[0]
         t1 = upload_or_retrieve_openai_file( name, src )
         vs = create_or_retrieve_vector_store( name, [t1])
-        #assistant = Assistant(name=name)
-        #assistant.save()
         assistant = create_or_retrieve_assistant( name  , vs )
         return assistant
 
@@ -176,8 +172,6 @@ def query_view(request,subpath):
                     msg = thread.run_query(  query=query ,last_messages=last_messages, max_num_results=max_num_results)
                     txt = msg['assistant']
                     ntokens = msg['ntokens']
-
-                    #txt = thread.run_query(  query=query ,last_messages=None, max_num_results=None )
             except Exception as e:
                 txt = str(e);
             txt = mathfix( txt )
