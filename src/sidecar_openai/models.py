@@ -63,9 +63,7 @@ def validate_file_extension(value):
         raise ValidationError(f"Unsupported file extension '{ext}'.")
 
 def hashed_upload_to(instance, filename):
-    #print(f"FILE_NAME = {instance.file.name}")
     dirname = '.'.join( instance.file.name.split('.')[:-1] )
-    print(f"DIRNAME = {dirname}")
     os.makedirs(os.path.join( settings.OPENAI_UPLOAD_STORAGE, dirname ) ,  exist_ok=True)
     return os.path.join( dirname, instance.file.name )
 
@@ -117,7 +115,6 @@ def upload_or_retrieve_openai_file( name ,src ):
     #print(f"UPLOAD_OR_RETRIEVE SRC {src}")
     os.makedirs( os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), exist_ok=True )
     dst = os.path.join(os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), 'README.md')
-    print(f"UPLOAD_OR_RETRIEV DST {dst}")
     name = dst.split('/')[-1];
     ts = OpenAIFile.objects.filter(name=name)
     if not ts :
@@ -204,7 +201,6 @@ class OpenAIFile(models.Model) :
         is_new = self._state.adding  and not self.pk
         #print(f"SAVE FILE ORIG {self.file}")
         name =  f"{self.file}".split('/')[-1]
-        print(f"NAME1 = {name}")
         #print(f"SAVE INITIALLY NAME = {name}")
         super().save(*args, **kwargs)  # Save first, so file is processed
         #print(f"SAVE FILE AFTER SUPER {self.file}")
@@ -214,7 +210,6 @@ class OpenAIFile(models.Model) :
             fn = self.file.name 
             #print(f"FN = {fn}")
             self.name = self.file.name.split('/')[-1]
-            print(f"NAME2 = {self.name}")
             src = self.file.path
             extension = src.split('.')[-1];
             if extension == 'pdf' :
@@ -263,7 +258,6 @@ class OpenAIFile(models.Model) :
             #print(f"PATH = { self.path}")
             #print(f"NOW AFTER CHUNKING NAME IS {self.name}")
             self.name = name
-            print(f"NAME3 ={self.name}")
             super().save(*args, **kwargs) # Then update with true hashed path
 
 
@@ -379,7 +373,6 @@ def get_current_model( user=None ):
         model = settings.AI_MODEL['staff']
     else :
         model = settings.AI_MODEL['default']
-    print(f"CURRENT_MODEL = {model}")
     return model
 
 
@@ -400,9 +393,7 @@ class Assistant( models.Model ):
 
 
     def save( self, *args, **kwargs ):
-        print(f"SAVING ASSISTANT MODEL ")
         is_new = self._state.adding and not self.pk
-        print("A")
         try :
             if not self.model :
                 self.model = get_current_model( )
@@ -415,7 +406,6 @@ class Assistant( models.Model ):
             old_model = self.model
         else :
             old_instructions = ''
-        print(f"B")
         if self.temperature :
             temperature = self.temperature
         else :
@@ -423,12 +413,9 @@ class Assistant( models.Model ):
         if self.instructions== '' :
             self.instructions = 'Answer only questions about the enclosed document. Do not offer helpful answers to questions that do not refer to the document. Be concise. If the question is irrelevant, answer with "That is not a question that is relevant to the document." \n For images use created by mathpix, not the sandbox link created by openai. Since it is visible, dont  say something like "You can view the picture ... ". If a link does not exist, just say that such an image does not exist. '
         instructions = self.instructions
-        print(f"C")
         super().save(*args,**kwargs)
-        print(f"D")
         #print(f"ASSISTANT_SAVE INSTRUCTIONS = {instructions}")
         if is_new :
-            print(f"E")
             #print(f"SETTING TEMPPERATUR TO {temperature}")
             #print(f"SETTING INSTRUCTIONS TO {instructions}")
             assistant = client.beta.assistants.create( name=self.name,
@@ -439,7 +426,6 @@ class Assistant( models.Model ):
             self.assistant_id = assistant.id
             super().save(*args,**kwargs)
         else :
-            print(f"F")
             assistant_id = self.assistant_id
             if not old_instructions  ==  self.instructions :
                 #print(f"REVISE INSTRUCTIONS")
@@ -557,12 +543,7 @@ class Thread(models.Model) :
 
     def save( self, *args, **kwargs ):
         is_new = self._state.adding  and not self.pk
-        print(f"MESSAGES LENGTH { len( self.messages) }")
         self.messages = self.messages
-        print(f"SAVE PK = {self.pk}")
-        print(f"SAVE ARGS = {args}")
-        print(f"SAVE KWARGS = {kwargs}")
-        #print(f"MSGS = ", self.messages )
         super().save(*args, **kwargs)  # Save first, so file is processed
         if is_new  :
             thread = client.beta.threads.create(); 
@@ -572,16 +553,9 @@ class Thread(models.Model) :
             super().save(*args, **kwargs) # Then update with true hashed path
         elif 'update_fields' in kwargs :
             thread_id = self.thread_id
-            print(f"UPDATE_MESSAGES = {self.messages}")
             old_thread_id = thread_id
-            #client.beta.threads.delete(old_thread_id)
-            print(f"B")
             new_thread =  client.beta.threads.create(); 
-            print(f"C")
-            print(f"OLD_THREAD_ID = {old_thread_id}")
             new_thread_id = new_thread.id
-            print(f"NEW_THREAD_ID = {new_thread_id}")
-            print("D")
             if self.messages :
                 for msg in self.messages:
                     for role in ['user','assistant'] :
@@ -591,13 +565,9 @@ class Thread(models.Model) :
                             content=msg[role]
                         )
                         
-                    print("E")
             self.thread_id = new_thread_id
             self.messages = self.messages
             super().save(*args, **kwargs)
-            print(f"SUPER WAS SAVED")
-
-            #thread = client.beta.threads.create(); 
 
 
 
@@ -610,7 +580,6 @@ class Thread(models.Model) :
         """ last_messages is either None for auto or an integer for length of thread history to keep at OpenAI. 
         The entire history is kept in the local database"""
         assistant = self.assistant
-        print(f"RUN_QUERY ASSISTANT = {assistant}")
         if not assistant.model == get_current_model( self.user ):
             assistant.model = get_current_model( self.user )
             assistant.save();

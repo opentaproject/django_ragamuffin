@@ -49,16 +49,11 @@ def get_hash() :
 
 def doarchive( thread, msg ):
     assistant = thread.assistant;
-    print(f"ASSISTANT = {assistant.name}")
     h = msg.get('hash',get_hash() )
     subdir =  assistant.name.split('.')
-    print(f"SUBDIR = {subdir}")
-    print(f"H = {h}")
     p = os.path.join('/subdomain-data','openai','queries', *subdir,thread.user.username,)
-    print(f"P = {p}")
     os.makedirs(p, exist_ok=True )
     fn = f"{p}/{h}.json"
-    print(f"FN = {fn}")
     msgsave = msg
     msgsave.update({'name' : assistant.name,'hash' : h })
     with open(fn, "w") as f:
@@ -103,7 +98,6 @@ def query_view(request,subpath):
             #    comment = comment + ' ' + other
         thread.messages[index].update( {'comment': comment , 'choice' : choice })
         msg = thread.messages[index];
-        print(f"MSG = {msg}")
         thread.save();
         doarchive(thread, msg )
         #print(f"REDIRECT TO query/{thread_name}")
@@ -148,36 +142,27 @@ def query_view(request,subpath):
     assistant = get_assistant( name, request.user  )
     model = assistant.model
     thread = create_or_retrieve_thread( assistant, name , user )
-    print(f"THREAD = {thread} assistant = {assistant} {thread.assistant}  ")
     data = request.POST;
     deletes = request.POST.getlist('delete-entry')
     if deletes :
         messages = thread.messages;
         ideletes = [int(i) for i in deletes ];
-        print(f"IDELETES = {ideletes}")
         culled = [x for i,x in enumerate(messages) if i not in ideletes ]
-        print(f"CULLED LENGTH = {len( culled)}")
         thread.messages= culled
         thread.save(update_fields=["messages","thread_id"])
-        print(f"THREAD WAS SAVED")
     d = {'status' : 'pending' , 'result' : 'RESULT' }
-    print(f"DID DELETES")
     messages = thread.messages
-    print(f"DID MESSAGES")
     mindex = 0
     comment = ''
     time_spent = 0;
     now = time.time();
     ntokens = 0;
-    print(f"METHOD = {request.method}")
     if request.method == 'POST':
         form = QueryForm(request.POST)
         if form.is_valid():
-            print(f"IS_VALID")
             assistant_id = assistant.assistant_id 
             query = form.cleaned_data['query']
             txt = None
-            print(f"A1")
             for i,message in enumerate( messages ) :
                 mindex = i+1;
                 if query.strip()  == message['user'].strip() :
@@ -186,15 +171,11 @@ def query_view(request,subpath):
                     choice = message.get('choice','0')
                     mindex = mindex - 1;
                     break
-            print(f"A2")
             try :
                 if txt == None :
-                    print(f"RUN QUERY THREAD={thread} ASSISTANT IS NOW {thread.assistant} ")
                     msg = thread.run_query(  query=query ,last_messages=last_messages, max_num_results=max_num_results)
-                    print(f"QUERY RUN")
                     txt = msg['assistant']
                     ntokens = msg['ntokens']
-                    print(f"TXT = {txt}")
 
                     #txt = thread.run_query(  query=query ,last_messages=None, max_num_results=None )
             except Exception as e:
@@ -205,7 +186,6 @@ def query_view(request,subpath):
             response = f"{html}"
     else:
         form = QueryForm()
-    print(f"REQUEST = ")
     time_spent = int( ( time.time() - now  ) + 0.5 )
     f = [ { 'index' : index, 'user' : item['user'] , 
        'assistant' : mark_safe( mathfix(item['assistant'] ) ),
@@ -216,7 +196,6 @@ def query_view(request,subpath):
        'max_num_results' : item.get('max_num_results' , max_num_results ),
        'last_messages' : item.get('last_messages' , last_messages)  ,
        'time_spent' : item.get('time_spent', time_spent) }  for index, item in enumerate( messages ) ];
-    print(f"TIME_SPENT = {time_spent}")
     response = render(request, 'sidecar_openai/query_form.html', {
         'form': form,
         'response': response,
