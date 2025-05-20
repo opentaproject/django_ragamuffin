@@ -22,6 +22,8 @@ import string, random
 import openai 
 from openai import OpenAI
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
+
 import asyncio
 
 MAX_OLD_QUERIES = 30
@@ -68,6 +70,7 @@ def doarchive( thread, msg ):
 
 FILENAME = "../README.md"
 @csrf_exempt
+@login_required
 def query_view(request,subpath):
     segments = subpath.split('/')
     last_messages = LAST_MESSAGES;

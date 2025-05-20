@@ -181,3 +181,4 @@ MAX_TOKENS = 8000 # NOT IMPLMENTED AS OF openai==1.173.0
 
 
 
+LOGIN_URL = '/admin/login'
