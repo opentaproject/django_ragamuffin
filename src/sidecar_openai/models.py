@@ -53,6 +53,7 @@ def create_run_with_retry(thread_id, assistant_id, timeout, truncation_strategy,
             raise  # re-raise non-rate-limit exceptions
         time.sleep(delay)
         delay *= 2  # exponential backoff
+        return run
 
     raise Exception("Max retries exceeded due to rate limiting or API errors.")
 
@@ -84,10 +85,10 @@ def create_or_retrieve_assistant( name , vs ):
     if not assistants :
         assistant = Assistant(name=name)
         assistant.save()
-        assistant.vector_stores.add(vs)
-        assistant.save();
     else :
         assistant = assistants[0]
+    assistant.vector_stores.add(vs)
+    assistant.save();
     return assistant
 
 def create_or_retrieve_thread( assistant, name, user ) :
@@ -98,11 +99,11 @@ def create_or_retrieve_thread( assistant, name, user ) :
     threads = Thread.objects.filter(name=name,user=user)
     if not threads :
         thread = Thread(name=name,user=user)
-        thread.save()
-        thread.assistant = assistant
-        thread.save()
     else :
         thread = threads[0]
+    thread.save()
+    thread.assistant = assistant
+    thread.save()
     return thread
 
 
@@ -371,8 +372,10 @@ def custom_delete_vector_store(sender, instance, **kwargs):
         pass
 
 
-def get_current_model( user ):
-    if user.is_superuser :
+def get_current_model( user=None ):
+    if user == None :
+        model = settings.AI_MODEL['default']
+    elif user.is_superuser :
         model = settings.AI_MODEL['staff']
     else :
         model = settings.AI_MODEL['default']
@@ -397,10 +400,14 @@ class Assistant( models.Model ):
 
 
     def save( self, *args, **kwargs ):
-        print(f"SAVING ASSISTANT MODEL = {self.model}")
+        print(f"SAVING ASSISTANT MODEL ")
         is_new = self._state.adding and not self.pk
-        if not self.model :
-            self.model = get_current_model( self.user )
+        print("A")
+        try :
+            if not self.model :
+                self.model = get_current_model( )
+        except :
+            pass
         if self.pk :
             old = Assistant.objects.get(pk=self.pk)
             old_instructions = old.instructions
@@ -408,6 +415,7 @@ class Assistant( models.Model ):
             old_model = self.model
         else :
             old_instructions = ''
+        print(f"B")
         if self.temperature :
             temperature = self.temperature
         else :
@@ -415,9 +423,12 @@ class Assistant( models.Model ):
         if self.instructions== '' :
             self.instructions = 'Answer only questions about the enclosed document. Do not offer helpful answers to questions that do not refer to the document. Be concise. If the question is irrelevant, answer with "That is not a question that is relevant to the document." \n For images use created by mathpix, not the sandbox link created by openai. Since it is visible, dont  say something like "You can view the picture ... ". If a link does not exist, just say that such an image does not exist. '
         instructions = self.instructions
+        print(f"C")
         super().save(*args,**kwargs)
+        print(f"D")
         #print(f"ASSISTANT_SAVE INSTRUCTIONS = {instructions}")
         if is_new :
+            print(f"E")
             #print(f"SETTING TEMPPERATUR TO {temperature}")
             #print(f"SETTING INSTRUCTIONS TO {instructions}")
             assistant = client.beta.assistants.create( name=self.name,
@@ -428,6 +439,7 @@ class Assistant( models.Model ):
             self.assistant_id = assistant.id
             super().save(*args,**kwargs)
         else :
+            print(f"F")
             assistant_id = self.assistant_id
             if not old_instructions  ==  self.instructions :
                 #print(f"REVISE INSTRUCTIONS")
@@ -438,6 +450,22 @@ class Assistant( models.Model ):
             if not old_model ==  self.model :
                 print(f"SET OLD MODEL {old_model}  {self.model}")
                 client.beta.assistants.update(assistant_id, model=self.model)
+
+
+    def clone( self, newname, *args, **kwargs):
+        assistants = Assistant.objects.filter( name=newname).all();
+        assert  len( assistants) == 0 , f"CREATE ASSISTANT WITH NAME {newname} ; ASSISTANT ALREADY EXISTS"
+        assistant = Assistant(name=newname)
+        assistant.instructions = self.instructions;
+        assistant.json_field = self.json_field;
+        assistant.model = self.model
+        assistant.temperature = self.temperature;
+        assistant.save();
+        assistant.vector_stores.set(self.vector_stores.all() )
+        assistant.save();
+        return assistant;
+
+
 
 
 
@@ -582,6 +610,7 @@ class Thread(models.Model) :
         """ last_messages is either None for auto or an integer for length of thread history to keep at OpenAI. 
         The entire history is kept in the local database"""
         assistant = self.assistant
+        print(f"RUN_QUERY ASSISTANT = {assistant}")
         if not assistant.model == get_current_model( self.user ):
             assistant.model = get_current_model( self.user )
             assistant.save();
@@ -626,6 +655,8 @@ class Thread(models.Model) :
             i = i + 1;
             print(f"I = {i}")
         usage = run_status.usage
+        runmodel = run.model
+        print(f"RUNMODEL = {runmodel}")
         print(f"USAGE = {usage}")
         assert i < imax , f"Request timed out after {settings.MAXWAIT} seconds; try again ; try to change the question."
         messages = openai.beta.threads.messages.list(thread_id=thread_id)
@@ -676,12 +707,12 @@ class Thread(models.Model) :
 @receiver(pre_delete, sender=Assistant)
 def custom_delete_assistant(sender, instance, **kwargs):
     pk = instance.pk
-    assistant_id = instance.assistant_id
-    assistant = openai.beta.assistants.retrieve(assistant_id)
-    #print(f"DELETE ASSISTANT {assistant}")
-    tool_resources = assistant.tool_resources
-    #print(f"TOOL_RESOURCES = {tool_resources}")
     try :
+        assistant_id = instance.assistant_id
+        assistant = openai.beta.assistants.retrieve(assistant_id)
+        #print(f"DELETE ASSISTANT {assistant}")
+        tool_resources = assistant.tool_resources
+        #print(f"TOOL_RESOURCES = {tool_resources}")
         vector_store_id = tool_resources.file_search.vector_store_ids[0]
         #print(f"VECTOR_STORES = {vector_store_id}")
         vector_store =  client.vector_stores.retrieve(vector_store_id)
@@ -689,9 +720,9 @@ def custom_delete_assistant(sender, instance, **kwargs):
         #print(f"VECTOR_STORE_NAME = {vector_store.name}")
         if vector_store.name == assistant_id : # THIS IS HERE BECAUSE MULTIPL VECTOR STORES CAN'T BE USED BY AN ASSISTANT
             client.vector_stores.delete(vector_store_id)
+        client.beta.assistants.delete(assistant_id)
     except :
         pass
-    client.beta.assistants.delete(assistant_id)
 
 
 @receiver(m2m_changed, sender=Assistant.vector_stores.through)

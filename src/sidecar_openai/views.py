@@ -112,23 +112,38 @@ def query_view(request,subpath):
     response = None
     user = request.user
     assistants = Assistant.objects.filter(name=name)
-    if assistants :
-        assistant = assistants[0]
-        vs = assistant.vector_stores.all()[0]
-    else :
-        src = FILENAME
+
+
+    def setup_default_assistant(src):
         name = src.split('/')[-1].split('.')[0]
         t1 = upload_or_retrieve_openai_file( name, src )
         vs = create_or_retrieve_vector_store( name, [t1])
+        assistant = Assistant(name=name)
+        assistant.save()
         assistant = create_or_retrieve_assistant( name  , vs )
-        instructions = 'Answer only questions about the enclosed document. Do not offer helpful answers to questions that do not refer to the document. Be concise. If the question is irrelevant, answer with "That is not a question that is relevant to the document."'
-        assistant.instructions = instructions
+        return assistant
+
+    assistant_exists = False
+    if assistants :
+        assistant = assistants[0]
+        vss = assistant.vector_stores.all()
+        if vss :
+            vs = vss[0]
+            assistant_exists = True
+    if not assistant_exists :
+        if assistants :
+            assistants[0].delete();
+        assistant = setup_default_assistant( FILENAME );
         assistant.save()
     if assistant.model :
         model = assistant.model
     else :
         model = get_current_model( request.user )
+        assistant.model = model
+        assistant.save();
+    print(f"NOW CREATE THE THREAD model={model}")
     thread = create_or_retrieve_thread( assistant, name , user )
+    print(f"THREAD = {thread} assistant = {assistant} {thread.assistant}  ")
     data = request.POST;
     deletes = request.POST.getlist('delete-entry')
     if deletes :
@@ -140,20 +155,24 @@ def query_view(request,subpath):
         thread.messages= culled
         thread.save(update_fields=["messages","thread_id"])
         print(f"THREAD WAS SAVED")
-
     d = {'status' : 'pending' , 'result' : 'RESULT' }
+    print(f"DID DELETES")
     messages = thread.messages
+    print(f"DID MESSAGES")
     mindex = 0
     comment = ''
     time_spent = 0;
     now = time.time();
     ntokens = 0;
+    print(f"METHOD = {request.method}")
     if request.method == 'POST':
         form = QueryForm(request.POST)
         if form.is_valid():
+            print(f"IS_VALID")
             assistant_id = assistant.assistant_id 
             query = form.cleaned_data['query']
             txt = None
+            print(f"A1")
             for i,message in enumerate( messages ) :
                 mindex = i+1;
                 if query.strip()  == message['user'].strip() :
@@ -162,11 +181,15 @@ def query_view(request,subpath):
                     choice = message.get('choice','0')
                     mindex = mindex - 1;
                     break
+            print(f"A2")
             try :
                 if txt == None :
+                    print(f"RUN QUERY THREAD={thread} ASSISTANT IS NOW {thread.assistant} ")
                     msg = thread.run_query(  query=query ,last_messages=last_messages, max_num_results=max_num_results)
+                    print(f"QUERY RUN")
                     txt = msg['assistant']
                     ntokens = msg['ntokens']
+                    print(f"TXT = {txt}")
 
                     #txt = thread.run_query(  query=query ,last_messages=None, max_num_results=None )
             except Exception as e:
@@ -177,7 +200,7 @@ def query_view(request,subpath):
             response = f"{html}"
     else:
         form = QueryForm()
-    #print(f"REQUEST = {request.POST}")
+    print(f"REQUEST = ")
     time_spent = int( ( time.time() - now  ) + 0.5 )
     f = [ { 'index' : index, 'user' : item['user'] , 
        'assistant' : mark_safe( mathfix(item['assistant'] ) ),
