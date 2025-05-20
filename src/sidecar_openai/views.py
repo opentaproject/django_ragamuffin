@@ -146,7 +146,7 @@ def query_view(request,subpath):
         return assistant
 
     assistant = get_assistant( name, request.user  )
-    print(f"NOW CREATE THE THREAD model={model}")
+    model = assistant.model
     thread = create_or_retrieve_thread( assistant, name , user )
     print(f"THREAD = {thread} assistant = {assistant} {thread.assistant}  ")
     data = request.POST;
