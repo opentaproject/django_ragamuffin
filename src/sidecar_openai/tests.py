@@ -31,18 +31,12 @@ class OpenAI(TestCase):
 
     def create_testfile_from_string( self, s , name ):
         url = reverse('admin:sidecar_openai_openaifile_add')  # use your app and model name
-        print(f"A NAME={name} ")
         test_file1 = SimpleUploadedFile( name , s , content_type="text/plain")
-        print(f"B")
         csum = hashlib.md5( s  ).hexdigest()
-        print(f"C")
         res = self.client.post( url ,  {'file': test_file1}, follow=True)
-        print(f"D")
-        print(f"E")
         for file in OpenAIFile.objects.all() :
             print(f"ALL FILES = {file} {file.path} ")
         t1 = OpenAIFile.objects.get(name=name)
-        print(f"T1 = {t1}")
         return t1
 
 

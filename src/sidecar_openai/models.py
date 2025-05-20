@@ -389,10 +389,8 @@ class Assistant( models.Model ):
             if not old_instructions  ==  self.instructions :
                 client.beta.assistants.update(assistant_id, instructions=instructions)
             if not old_temperature ==  temperature :
-                print(f"SET TEMPERATUR TO {temperature}")
                 client.beta.assistants.update(assistant_id, temperature=temperature)
             if not old_model ==  self.model :
-                print(f"SET OLD MODEL {old_model}  {self.model}")
                 client.beta.assistants.update(assistant_id, model=self.model)
 
 
@@ -577,7 +575,6 @@ class Thread(models.Model) :
             print(f"I = {i}")
         usage = run_status.usage
         model = run.model
-        print(f"USAGE = {usage}")
         assert i < imax , f"Request timed out after {settings.MAXWAIT} seconds; try again ; try to change the question."
         messages = openai.beta.threads.messages.list(thread_id=thread_id)
         i = 0;
