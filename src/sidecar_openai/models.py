@@ -29,7 +29,6 @@ client = openai.OpenAI(api_key=settings.AI_KEY)
 upload_storage = FileSystemStorage(settings.OPENAI_UPLOAD_STORAGE, base_url="/" )
 
 from openai import OpenAIError, RateLimitError, APIError, Timeout
-DEFAULT_LAST_MESSAGES = 30
 
 def create_run_with_retry(thread_id, assistant_id, timeout, truncation_strategy, tools, max_retries=5):
     delay = 2  # initial delay in seconds
@@ -245,7 +244,7 @@ class OpenAIFile(models.Model) :
 
             def get_ntokens( file_path):
                 valid_text = ''
-                encoding = tiktoken.encoding_for_model(settings.AI_MODEL)
+                encoding = tiktoken.encoding_for_model(settings.AI_MODEL['staff'])
                 with open(file_path, "rb") as f:
                     for line in f:
                         try:
@@ -372,6 +371,17 @@ def custom_delete_vector_store(sender, instance, **kwargs):
         pass
 
 
+def get_current_model( user ):
+    if user.is_superuser :
+        model = settings.AI_MODEL['staff']
+    else :
+        model = settings.AI_MODEL['default']
+    print(f"CURRENT_MODEL = {model}")
+    return model
+
+
+
+
 class Assistant( models.Model ):
     name =   models.CharField(max_length=255,blank=True)
     instructions = models.TextField(blank=True)
@@ -390,7 +400,7 @@ class Assistant( models.Model ):
         print(f"SAVING ASSISTANT MODEL = {self.model}")
         is_new = self._state.adding and not self.pk
         if not self.model :
-            self.model = settings.AI_MODEL
+            self.model = get_current_model( self.user )
         if self.pk :
             old = Assistant.objects.get(pk=self.pk)
             old_instructions = old.instructions
@@ -403,9 +413,8 @@ class Assistant( models.Model ):
         else :
             temperature = settings.DEFAULT_TEMPERATURE
         if self.instructions== '' :
-            self.instructions = 'Answer only questions about the enclosed document. Do not offer helpful answers to questions that do not refer to the document. Be concise. If the question is irrelevant, answer with "That is not a question that is relevant to the document." For images, just silently include the link. Since it is visible, dont  say something like "You can view the picture ... ". If a link does not exist, just say that such an image does not exist. '
+            self.instructions = 'Answer only questions about the enclosed document. Do not offer helpful answers to questions that do not refer to the document. Be concise. If the question is irrelevant, answer with "That is not a question that is relevant to the document." \n For images use created by mathpix, not the sandbox link created by openai. Since it is visible, dont  say something like "You can view the picture ... ". If a link does not exist, just say that such an image does not exist. '
         instructions = self.instructions
-        self.model = settings.AI_MODEL
         super().save(*args,**kwargs)
         #print(f"ASSISTANT_SAVE INSTRUCTIONS = {instructions}")
         if is_new :
@@ -426,7 +435,7 @@ class Assistant( models.Model ):
             if not old_temperature ==  temperature :
                 print(f"SET TEMPERATUR TO {temperature}")
                 client.beta.assistants.update(assistant_id, temperature=temperature)
-            if not old_model ==  settings.AI_MODEL :
+            if not old_model ==  self.model :
                 print(f"SET OLD MODEL {old_model}  {self.model}")
                 client.beta.assistants.update(assistant_id, model=self.model)
 
@@ -565,26 +574,28 @@ class Thread(models.Model) :
 
 
     def run_query( self, *args, **kwargs  ):
-        last_messages = kwargs.get('last_messages',DEFAULT_LAST_MESSAGES)
-        max_num_results = kwargs.get('max_num_results',None)
+        last_messages = kwargs.get('last_messages',settings.LAST_MESSAGES)
+        max_num_results = kwargs.get('max_num_results',settings.MAX_NUM_RESULTS)
         query= kwargs['query']
         now = time.time();
     
         """ last_messages is either None for auto or an integer for length of thread history to keep at OpenAI. 
         The entire history is kept in the local database"""
         assistant = self.assistant
-        if not assistant.model == settings.AI_MODEL :
+        if not assistant.model == get_current_model( self.user ):
+            assistant.model = get_current_model( self.user )
             assistant.save();
         assistant_id = assistant.assistant_id
-        if assistant.model :
-            model = assistant.model
-        else :
-            model = settings.AI_MODEL;
+        model = assistant.model
+        #if assistant.model :
+        #    model = assistant.model
+        #else :
+        #    model = settings.AI_MODEL;
         thread = self
         thread_id = thread.thread_id
         #print(f"QUERY_ID = {assistant_id} RUN_QUERY ")
     
-        encoding = tiktoken.encoding_for_model(settings.AI_MODEL)
+        encoding = tiktoken.encoding_for_model(settings.AI_MODEL['staff'])
         try :
             openai.beta.threads.messages.create( thread_id=thread_id,  role="user", content=query )
         except Exception as err :
@@ -655,7 +666,7 @@ class Thread(models.Model) :
         #doarchive(thread,msg)
         thread.messages.append(msg) 
         thread.save()
-        return txt
+        return msg
 
 
 

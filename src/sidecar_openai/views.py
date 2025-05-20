@@ -3,7 +3,7 @@ import json
 from django.http import JsonResponse
 import tiktoken
 from django.shortcuts import redirect
-from sidecar_openai.models import OpenAIFile, VectorStore, Assistant,  Thread, hashed_upload_to, upload_or_retrieve_openai_file
+from sidecar_openai.models import OpenAIFile, VectorStore, Assistant,  Thread, hashed_upload_to, upload_or_retrieve_openai_file, get_current_model
 import time
 from sidecar_openai.models import create_or_retrieve_vector_store, create_or_retrieve_assistant, create_or_retrieve_thread
 from .forms import QueryForm
@@ -40,8 +40,6 @@ def mathfix( txt ):
     txt = markdown2.markdown(txt)
     return txt
 
-LAST_MESSAGES = 3
-MAX_NUM_RESULTS =5
 
 def get_hash() :
  characters = string.ascii_letters + string.digits  # a-zA-Z0-9
@@ -73,10 +71,17 @@ FILENAME = "../README.md"
 @login_required
 def query_view(request,subpath):
     segments = subpath.split('/')
-    last_messages = LAST_MESSAGES;
-    max_num_results = MAX_NUM_RESULTS;
+    last_messages = settings.LAST_MESSAGES;
+    max_num_results = settings.MAX_NUM_RESULTS;
     name = ( '.'.join( segments ) ).rstrip('.')
-    choices = {0 : 'Unread' ,1 : 'Wrong' , 2 : 'Irrelevant', 3 : 'I did not understand.',  4 : "Too superficial." ,  5: "Somewhat helpful", 6 : 'Very helpful', }
+    choices = {0 : 'Unread' ,
+               1 : 'Incomplete' , 
+               2 : 'Wrong', 
+               3 : 'Irrelevant',
+               4 : "Superficial." ,  
+               5 : "Unhelpful", 
+               6 : 'Partly Correct', 
+               7 : 'Completely Correct'}
     choice = 0;
     if name == '.feedback' :
         index = int( request.POST.getlist('newmessage_index')[0] )
@@ -122,7 +127,7 @@ def query_view(request,subpath):
     if assistant.model :
         model = assistant.model
     else :
-        model = settings.AI_MODEL
+        model = get_current_model( request.user )
     thread = create_or_retrieve_thread( assistant, name , user )
     data = request.POST;
     deletes = request.POST.getlist('delete-entry')
@@ -142,6 +147,7 @@ def query_view(request,subpath):
     comment = ''
     time_spent = 0;
     now = time.time();
+    ntokens = 0;
     if request.method == 'POST':
         form = QueryForm(request.POST)
         if form.is_valid():
@@ -158,7 +164,9 @@ def query_view(request,subpath):
                     break
             try :
                 if txt == None :
-                    txt = thread.run_query(  query=query ,last_messages=last_messages, max_num_results=max_num_results)
+                    msg = thread.run_query(  query=query ,last_messages=last_messages, max_num_results=max_num_results)
+                    txt = msg['assistant']
+                    ntokens = msg['ntokens']
 
                     #txt = thread.run_query(  query=query ,last_messages=None, max_num_results=None )
             except Exception as e:
@@ -190,6 +198,7 @@ def query_view(request,subpath):
         'comment' : comment,
         'choices' : choices ,
         'choice' : choice ,
+        'ntokens' : ntokens,
         'model' : model ,
         'max_num_results' : max_num_results,
         'last_messages' : last_messages ,

@@ -112,8 +112,8 @@
                                     {% endif %}
                                 {% endfor %}
                             </div>
-                            <label> <input style="display:none" type="radio" name="other"  value='99'> {{ comment }}</label> Further comment? (optional)
-                            <input type="text" id="comment" name="option" value="{{comment}}" />
+			    <label> <input style="display:none" type="radio" name="other"  value='99'> {{ comment }}</label> <p/> Further comment? (optional)
+                            <input style="width: 80ch ; " type="text" id="comment" name="option" value="{{comment}}" />
                             <p/>
                             <button id='send-button' style="display:none" type="submit">Submit assessment </button>
                         </form>
@@ -262,8 +262,8 @@
             } catch { }
             button_color( document.getElementById("send-button"), "red");
             const response_area = document.getElementById('response').innerHTML;
-            console.log("selectedValue= ", selectedValue )
-            if ( selectedValue == 0   &&  response_area.length > 20 ){
+		console.log("selectedValue1= ", selectedValue , 'LEN = >', response_area ,'<')
+		if ( selectedValue == 0   &&  response_area.length > 150  )  {
                 button_color( document.getElementById("submitBtn"), "red");
                 alert("You must read and assess the response before with a new related query.")
             } else {
