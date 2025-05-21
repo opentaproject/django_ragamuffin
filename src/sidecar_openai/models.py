@@ -30,6 +30,19 @@ upload_storage = FileSystemStorage(settings.OPENAI_UPLOAD_STORAGE, base_url="/" 
 
 from openai import OpenAIError, RateLimitError, APIError, Timeout
 
+def wait_for_vector_store_ready(client, vector_store_id, timeout=settings.MAXWAIT):
+    start_time = time.time()
+    while True:
+        vs = client.vector_stores.retrieve(vector_store_id=vector_store_id)
+        if vs.status == "completed":
+            print("✅ Vector store is ready.")
+            return vs
+        elif vs.status == "failed":
+            raise RuntimeError("❌ Vector store creation failed.")
+        elif time.time() - start_time > timeout:
+            raise TimeoutError("⏱️ Timeout: Vector store not ready in time.")
+        time.sleep(1)
+
 def create_run_with_retry(thread_id, assistant_id, timeout, truncation_strategy, tools, max_retries=5):
     delay = 2  # initial delay in seconds
     for attempt in range(1, max_retries + 1):
@@ -268,6 +281,17 @@ class VectorStore( models.Model ):
     def __str__(self):
         return f"{self.name}"
 
+    def clone( self, newname, *args, **kwargs):
+        vector_stores = VectorStore.objects.filter( name=newname).all();
+        assert  len( vector_stores) == 0 , f"CREATE ASSISTANT WITH NAME {newname} ; ASSISTANT ALREADY EXISTS"
+        vector_store = VectorStore(name=newname)
+        vector_store.save();
+        vector_store.checksum = self.checksum
+        vector_store.files.set(self.files.all() )
+        vector_store.save();
+        return vector_store;
+
+
     def file_ids(self, *args, **kwargs ):
         files = self.files
         ids = []
@@ -317,6 +341,7 @@ class VectorStore( models.Model ):
         if is_new :
             vector_store = client.vector_stores.create(name=self.name,metadata={"api_key": settings.AI_KEY[-8:] } )
             self.vector_store_id = vector_store.id
+            wait_for_vector_store_ready( client, self.vector_store_id )
             super().save(*args,**kwargs)
 
 @receiver(pre_delete, sender=VectorStore)
@@ -338,11 +363,19 @@ def get_current_model( user=None ):
     return model
 
 
+DEFAULT_INSTRUCTIONS = """Answer only questions about the enclosed document. 
+    Do not offer helpful answers to questions that do not refer to the document. 
+    Be concise. 
+    If the question is irrelevant, answer with "That is not a question that is relevant to the document." \n 
+    For images use created by mathpix, not the sandbox link created by openai. 
+    Since it is visible, dont  say something like "You can view the picture ... ". 
+    If a link does not exist, just say that such an image does not exist. '
+    """
 
 
 class Assistant( models.Model ):
     name =   models.CharField(max_length=255,blank=True)
-    instructions = models.TextField(blank=True)
+    instructions = models.TextField(blank=True,null=True)
     vector_stores = models.ManyToManyField( VectorStore )
     assistant_id = models.CharField(max_length=255,blank=True)
     json_field = models.JSONField( default=dict ,  blank=True, null=True)
@@ -353,6 +386,37 @@ class Assistant( models.Model ):
     def __str__(self):
         return f"{self.name}"
 
+    def parent( self ):
+        name = '.'.join( self.name.split('.')[:-1] )
+        assistants = Assistant.objects.filter(name=name);
+        if assistants :
+            return assistants[0]
+        else :
+            return None
+
+    def get_instructions( self ): # GET THE LAST INSTRUCTIONS IN THE TREE
+        if not self.instructions :
+            self.instructions = self.instructions.strip();
+        appended = ''
+        instructions = ''
+        if self.instructions :
+            do_append = self.instructions.split()[0].strip().rstrip(':').lower()  == 'append'
+            if do_append :
+                appended = ''.join( re.split(r'(\s+)', self.instructions)[1:] )
+                instructions = ''
+            else :
+                instructions = self.instructions
+        a = self;
+        p = a.parent();
+        while p and instructions == '' :
+            p = a.parent();
+            instructions = p.get_instructions();
+        if instructions == '':
+            instructions = DEFAULT_INSTRUCTIONS 
+        if appended :
+            instructions = instructions + "\n" + appended
+        return instructions
+            
 
     def save( self, *args, **kwargs ):
         is_new = self._state.adding and not self.pk
@@ -363,19 +427,17 @@ class Assistant( models.Model ):
             pass
         if self.pk :
             old = Assistant.objects.get(pk=self.pk)
-            old_instructions = old.instructions
+            old_instructions = old.get_instructions()
             old_temperature = old.temperature
             old_model = self.model
         else :
-            old_instructions = ''
+            old_instructions = None
         if self.temperature :
             temperature = self.temperature
         else :
             temperature = settings.DEFAULT_TEMPERATURE
-        if self.instructions== '' :
-            self.instructions = 'Answer only questions about the enclosed document. Do not offer helpful answers to questions that do not refer to the document. Be concise. If the question is irrelevant, answer with "That is not a question that is relevant to the document." \n For images use created by mathpix, not the sandbox link created by openai. Since it is visible, dont  say something like "You can view the picture ... ". If a link does not exist, just say that such an image does not exist. '
-        instructions = self.instructions
         super().save(*args,**kwargs)
+        instructions = self.get_instructions();
         if is_new :
             assistant = client.beta.assistants.create( name=self.name,
                 instructions=instructions, 
@@ -383,10 +445,10 @@ class Assistant( models.Model ):
                 temperature=temperature,
                 tools=[{"type": "file_search"}],metadata={"api_key": settings.AI_KEY[-8:] } )
             self.assistant_id = assistant.id
-            super().save(*args,**kwargs)
+            super().save(update_fields=['assistant_id'])
         else :
             assistant_id = self.assistant_id
-            if not old_instructions  ==  self.instructions :
+            if not old_instructions  ==  instructions :
                 client.beta.assistants.update(assistant_id, instructions=instructions)
             if not old_temperature ==  temperature :
                 client.beta.assistants.update(assistant_id, temperature=temperature)
@@ -403,7 +465,11 @@ class Assistant( models.Model ):
         assistant.model = self.model
         assistant.temperature = self.temperature;
         assistant.save();
-        assistant.vector_stores.set(self.vector_stores.all() )
+        i = 0;
+        for v in self.vector_stores.all() :
+            vnew = v.clone(f"{newname}-{i}");
+            assistant.vector_stores.add(vnew )
+            i = i + 1;
         assistant.save();
         return assistant;
 
@@ -575,6 +641,9 @@ class Thread(models.Model) :
             print(f"I = {i}")
         usage = run_status.usage
         model = run.model
+        print(f"MODEL = {model} usage={usage}")
+        assistant_id_ = run_status.assistant_id
+        used_instructions =  client.beta.assistants.retrieve(assistant_id=assistant_id_).instructions
         assert i < imax , f"Request timed out after {settings.MAXWAIT} seconds; try again ; try to change the question."
         messages = openai.beta.threads.messages.list(thread_id=thread_id)
         i = 0;
@@ -676,6 +745,7 @@ def handle_assistants_changed(sender, instance, action, **kwargs):
                 )
         else :
             vs = client.vector_stores.create( name=f"{assistant_id}", file_ids=file_ids, metadata={"api_key": settings.AI_KEY[-8:] } )
+            wait_for_vector_store_ready( client, vs.id )
             assistant = client.beta.assistants.update(
                 assistant_id=assistant_id,
                 tool_resources={"file_search": {"vector_store_ids": [ vs.id ] }},

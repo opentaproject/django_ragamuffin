@@ -244,20 +244,26 @@ class OpenAI(TestCase):
         print(f"NTOKENS ASSISTANT = {assistant.ntokens() }")
         print(f"ASSITANT REMOTE FILES OK")
 
-        queries =  [ 'What color was the dog.',
-                     'What color was the cat.',
-                     'What did the dog do?',
-                     'What did the cat do?',
-                      'Please repeat the reply to the first request'
+        queries =  [ [ 'What color was the dog.', 'black',True],
+                     [ 'What color was the cat.', 'white',True],
+                     [ 'What did the dog do?', 'barked',True] , 
+                     [ 'What did the cat do?', 'miaow',False],
+                     [ 'Please repeat the reply to the first request','black',True]
                         ]
 
         aname = randstring()
         thread = Thread(name=aname,assistant=assistant,user=self.user)
         thread.save()
-        for query in queries :
-            txt = thread.run_query(  query=query )
+        for  q in queries :
+            print(f"TESTING1 {q}")
+            [ query,response , truth ] =  q
+            r = thread.run_query(  query=query,  last_messages=2)
+            txt = r['assistant']
+            assert ( response in txt ) == truth , f"ERROR : in {q} TXT={txt} "
             print(f"QUERY {query} -> {txt}")
-        print(f"MESSAGES = {thread.messages}")
+
+        print(f"FINALLY MESSAGES = {thread.messages}")
+
         vs1.files.remove(t3)
         t3.delete();
         file_ids = assistant.file_ids()
@@ -273,16 +279,22 @@ class OpenAI(TestCase):
         print(f"ASSISTANT  FILE_IDS AFTER UPDATING t3 IS NOW {file_ids}")
         file_ids = assistant.remote_files();
         print(f"ASSISTANT  REMOTE FILE_IDS AFTER UPDATING t3 IS NOW {file_ids}")
-        queries =  [ 'What color was the cat.',
-                 'What color was the dog.',
-                 'What did the cat  do?',
-                 'What did the dog do?',
-                 'Please repeat the reply to the first request'
+        queries =  [ [ 'What color was the cat.','white',True],
+                     ['What color was the dog.','black',True],
+                     [ 'What did the cat  do?', 'miaow',True],
+                     [ 'What did the dog do?', 'bark' ,False],
+                     [ 'Please repeat the reply to the first request','black',True],
                  ]
-        for query in queries :
-            txt = thread.run_query(  query=query,  last_messages=2)
+        for  q in queries :
+            [ query,response ,truth ] =  q
+            print(f"TESTING2 {q}")
+            r = thread.run_query(  query=query,  last_messages=2)
+            txt = r['assistant']
+            assert ( response in txt ) == truth , f"ERROR : in {q}"
             print(f"QUERY {query} -> {txt}")
-        print(f"FINALLY MESSAGES = {thread.messages}")
+
+        print(f"FINALLY2 MESSAGES = {thread.messages}")
+        print(f"MESSAGES_LENGTH  = {len( thread.messages)}")
         vs1.delete();
         t1.delete();
         t2.delete();

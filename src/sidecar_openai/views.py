@@ -65,7 +65,8 @@ FILENAME = "../README.md"
 @csrf_exempt
 @login_required
 def query_view(request,subpath):
-    segments = subpath.split('/')
+    subpath_ = re.sub( r"\.","_",subpath )
+    segments = subpath_.split('/')
     last_messages = settings.LAST_MESSAGES;
     max_num_results = settings.MAX_NUM_RESULTS;
     name = ( '.'.join( segments ) ).rstrip('.')
@@ -80,7 +81,8 @@ def query_view(request,subpath):
     choice = 0;
     if name == '.feedback' :
         index = int( request.POST.getlist('newmessage_index')[0] )
-        thread_name = ( '.'.join( ( request.POST.getlist('thread')[0] ).split('/')[2:] ) ).rstrip('.');
+        post_thread =  re.sub(r'\.','_',request.POST.getlist('thread')[0])
+        thread_name = ( '.'.join( post_thread.split('/')[2:] ) ).rstrip('.');
         threads = Thread.objects.filter(name=thread_name,user=request.user)
         thread = threads[0]
         comment = ''
@@ -91,11 +93,8 @@ def query_view(request,subpath):
             comment = comments[0]
         elif options :
             i = int( options[0] );
-            print(f"I = {i}")
             comment = options[1];
             choice = i
-            #if other :
-            #    comment = comment + ' ' + other
         thread.messages[index].update( {'comment': comment , 'choice' : choice })
         msg = thread.messages[index];
         thread.save();
@@ -112,7 +111,21 @@ def query_view(request,subpath):
         assistant = create_or_retrieve_assistant( name  , vs )
         return assistant
 
-    def get_assistant( name , user ):
+    def get_assistant( name, user ):
+        assistants = Assistant.objects.filter(name=name)
+        if assistants :
+            assistant = assistants[0];
+            return assistant
+        base = '.'.join(name.split('.')[:-1])
+        subdir = name.split('.')[-1];
+        base_assistant = get_assistant( base, user );
+        if base_assistant :
+            assistant = base_assistant.clone( name )
+        else :
+            assistant = None
+        return assistant
+
+    def oldget_assistant( name , user ):
         assistants = Assistant.objects.filter(name=name)
         assistant_exists = False
         if assistants :
@@ -127,12 +140,13 @@ def query_view(request,subpath):
             assistant = setup_default_assistant( FILENAME );
             assistant.save()
 
+        old_model = None
         if assistant.model :
-            model = assistant.model
-        else :
-            model = get_current_model( user )
-        assistant.model = model
-        assistant.save();
+            old_model = assistant.model
+        new_model =  model = get_current_model( user )
+        if not new_model == old_model :
+            assistant.model = model
+            assistant.save();
         return assistant
 
     assistant = get_assistant( name, request.user  )

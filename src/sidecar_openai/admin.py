@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.conf import settings
 from django import forms
-from .models import OpenAIFile  , VectorStore , Assistant, Thread
+from .models import OpenAIFile  , VectorStore , Assistant, Thread, DEFAULT_INSTRUCTIONS
 
 @admin.register(OpenAIFile)
 class OpenAIFileAdmin(admin.ModelAdmin):
@@ -24,11 +24,24 @@ class VectorStoreAdmin(admin.ModelAdmin):
     list_file_ids.short_description = "File Names"
     
 class MyAssistantForm(forms.ModelForm):
+
+    actual_instructions = forms.CharField(disabled=True, required=False, widget=forms.Textarea(attrs={'disabled': 'disabled'}),)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        instance = self.instance
+        # Set initial value for the readonly field
+        #self.fields['actual_instructions'].initial = instance.get_instructions() + ' '.join( DEFAULT_INSTRUCTIONS.split() )  if self.instance.pk else "N/A"
+        if self.instance.pk :
+            instructions = ' '.join( instance.get_instructions().split() );
+        self.fields['actual_instructions'].initial = instructions if self.instance.pk else "N/A"
+
     class Meta:
         model = Assistant
-        fields = '__all__'
+        fields = ['name','instructions','vector_stores','assistant_id','json_field','model','temperature','actual_instructions' ,]
         help_texts = {
-            'temperature': f"Default temperature = {settings.DEFAULT_TEMPERATURE}"
+            'temperature': f"Default temperature = {settings.DEFAULT_TEMPERATURE}",
+            'instructions' : f"Leave blank for default; start with 'append: XXX...' to append 'XXX...' to default; Any other non-blank string completely replaces the default instructions.'"
         }
 
 
