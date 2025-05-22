@@ -1,76 +1,77 @@
 import openai
 import os
-import pprint
-import json
-import shutil
-import string
-import random
-
-from openai import OpenAI
-import requests
 import time
-import tiktoken
+import sys
+from openai import OpenAI
 
 model = 'gpt-4o-mini'
 
-def nuke( delete=False) :
-    if delete :
-        print(f"NUKE ")
-    else :
-        print(f"LIST")
+def nuke(delete=False):
+    action = 'DELETE ' if delete else 'LIST'
+    print(f"\n{action}VECTOR STORES")
+
     client = OpenAI()
     vector_stores = client.vector_stores.list()
-    action = 'DELETE ' if delete else ''
-    print(f"\n{action}VECTOR STORES")
-    for vector_store in  vector_stores :
+    for vector_store in vector_stores:
         vector_store_id = vector_store.id
-        vector_store_files = client.vector_stores.files.list( vector_store_id=vector_store.id)
+        vector_store_files = client.vector_stores.files.list(vector_store_id=vector_store_id)
         print(f"  {action} VS: {vector_store.name} {vector_store_id} {vector_store.metadata}")
-        for vector_store_file in vector_store_files :
+        for vector_store_file in vector_store_files:
             file_id = vector_store_file.id
-            print(f"    file: {file_id}  ")
-            if delete :
-                try :
-                    client.vector_stores.files.delete( vector_store_id=vector_store_id, file_id=file_id)
-                except :
-                    print(f"FILE ERROR {file_id}")
-        if delete :
-            try :
-                client.vector_stores.delete( vector_store_id=vector_store_id)
-            except :
-                print(f"VECTOR_STORE_ERROR {vector_store_id}")
+            print(f"    file: {file_id}")
+            if delete:
+                try:
+                    client.vector_stores.files.delete(vector_store_id=vector_store_id, file_id=file_id)
+                except Exception as e:
+                    print(f"FILE ERROR {file_id}: {e}")
+        if delete:
+            try:
+                client.vector_stores.delete(vector_store_id=vector_store_id)
+            except Exception as e:
+                print(f"VECTOR_STORE_ERROR {vector_store_id}: {e}")
 
-    assistants = openai.beta.assistants.list()
     print(f"\n{action}ASSISTANTS")
+    assistants = openai.beta.assistants.list()
     for assistant in assistants:
         assistant_id = assistant.id
-        print(f"  {action} AS: {assistant.name} {assistant_id} {assistant.metadata} ")
+        print(f"  {action} AS: {assistant.name} {assistant_id} {assistant.metadata}")
         vs = assistant.tool_resources.file_search.vector_store_ids
         print(f"      VS: {vs}")
         time.sleep(0.5)
-        if delete :
-            try :
+        if delete:
+            try:
                 client.beta.assistants.delete(assistant_id)
-            except :
-                print(f"ASSISTANT ERROR {assistant}")
+            except Exception as e:
+                print(f"ASSISTANT ERROR {assistant_id}: {e}")
 
-    files = client.files.list()
     print(f"\n{action}FILES")
-    for file in files :
+    files = client.files.list()
+    for file in files:
         file_id = file.id
         print(f" {action} FILE: {file_id} {file.filename}")
-        if delete :
-            client.files.delete(file_id)
+        if delete:
+            try:
+                client.files.delete(file_id)
+            except Exception as e:
+                print(f"FILE ERROR {file_id}: {e}")
 
-    print("\n✅ Done" )
+    print("\n✅ Done")
 
-def main(delete=True): 
-    nuke(delete=False)
-    while True :
+def main():
+    delete = False
+    if len(sys.argv) > 1 and sys.argv[1] == "delete=True":
+        confirmation = input("Do you really want to delete everything? (yes/no): ").strip().lower()
+        if confirmation == "yes":
+            delete = True
+        else:
+            print("Deletion aborted.")
+
+    if delete:
+        print("CHECK THE CODE IF YOU REALLY WANT TO DELETE EVERYTHING")
+    nuke(delete=delete)
+    while True:
         nuke(delete=False)
         time.sleep(10)
-    print(f"Bye")
-    
 
 if __name__ == "__main__":
     main()

@@ -18,7 +18,7 @@ from django.conf import settings
 import hashlib
 import openai 
 from openai import OpenAI
-from django.db.models.signals import m2m_changed, pre_delete
+from django.db.models.signals import m2m_changed, pre_delete, post_save
 from django.dispatch import receiver
 import re
 
@@ -376,8 +376,8 @@ DEFAULT_INSTRUCTIONS = """Answer only questions about the enclosed document.
 class Assistant( models.Model ):
     name =   models.CharField(max_length=255,blank=True)
     instructions = models.TextField(blank=True,null=True)
-    vector_stores = models.ManyToManyField( VectorStore )
-    assistant_id = models.CharField(max_length=255,blank=True)
+    vector_stores = models.ManyToManyField( VectorStore ,blank=True)
+    assistant_id = models.CharField(max_length=255,blank=True, null=True)
     json_field = models.JSONField( default=dict ,  blank=True, null=True)
     model = models.CharField(max_length=255,blank=True,null=True)
     temperature = models.FloatField(null=True, blank=True)
@@ -419,6 +419,10 @@ class Assistant( models.Model ):
             
 
     def save( self, *args, **kwargs ):
+        if getattr(self, '_busy', False):
+            return
+        print(f"SAVE ASSITANT args = {args}")
+        print(f"SAVE ASSITANT kwargs = {kwargs}")
         is_new = self._state.adding and not self.pk
         try :
             if not self.model :
@@ -437,8 +441,14 @@ class Assistant( models.Model ):
         else :
             temperature = settings.DEFAULT_TEMPERATURE
         super().save(*args,**kwargs)
+        print(f"VECTOR_STORESAGAIN = {self.vector_stores.all()}")
+        vs_empty = False;
+        if len( self.vector_stores.all() ):
+            vs_empty = True
+
         instructions = self.get_instructions();
         if is_new :
+            print(f"IS_NEW")
             assistant = client.beta.assistants.create( name=self.name,
                 instructions=instructions, 
                 model=self.model,
@@ -446,7 +456,9 @@ class Assistant( models.Model ):
                 tools=[{"type": "file_search"}],metadata={"api_key": settings.AI_KEY[-8:] } )
             self.assistant_id = assistant.id
             super().save(update_fields=['assistant_id'])
+
         else :
+            print(f"IS NOT NEW")
             assistant_id = self.assistant_id
             if not old_instructions  ==  instructions :
                 client.beta.assistants.update(assistant_id, instructions=instructions)
@@ -454,6 +466,21 @@ class Assistant( models.Model ):
                 client.beta.assistants.update(assistant_id, temperature=temperature)
             if not old_model ==  self.model :
                 client.beta.assistants.update(assistant_id, model=self.model)
+
+        if len( self.vector_stores.all() ) == 0   and   not getattr(self, '_busy', False) :
+
+            print(f"LEN = 0 ")
+            p = self.parent();
+            print(f"P = {p}")
+            i = 0;
+            while p and i < 4  :
+                self.vector_stores.add( *( p.vector_stores.all() ) )
+                self._state.adding  = True
+                p = self.parent()
+                i = i + 1;
+            self._state.busy = True
+            #print(f"SELF VECTOR_STORES = {self.vector_stores.all() }")
+            #super().save(*args,**kwargs)
 
 
     def clone( self, newname, *args, **kwargs):
@@ -467,7 +494,8 @@ class Assistant( models.Model ):
         assistant.save();
         i = 0;
         for v in self.vector_stores.all() :
-            vnew = v.clone(f"{newname}-{i}");
+            vnew  = v;
+            #vnew = v.clone(f"{newname}-{i}");
             assistant.vector_stores.add(vnew )
             i = i + 1;
         assistant.save();
@@ -681,25 +709,31 @@ def custom_delete_assistant(sender, instance, **kwargs):
     pk = instance.pk
     try :
         assistant_id = instance.assistant_id
+        print(f"TRY DELETETING {assistant_id}")
         assistant = openai.beta.assistants.retrieve(assistant_id)
-        #print(f"DELETE ASSISTANT {assistant}")
+        print(f"DELETE ASSISTANT {assistant}")
         tool_resources = assistant.tool_resources
-        #print(f"TOOL_RESOURCES = {tool_resources}")
-        vector_store_id = tool_resources.file_search.vector_store_ids[0]
-        #print(f"VECTOR_STORES = {vector_store_id}")
-        vector_store =  client.vector_stores.retrieve(vector_store_id)
-        #print(f"VECTOR_STORE = {vector_store}")
-        #print(f"VECTOR_STORE_NAME = {vector_store.name}")
-        if vector_store.name == assistant_id : # THIS IS HERE BECAUSE MULTIPL VECTOR STORES CAN'T BE USED BY AN ASSISTANT
-            client.vector_stores.delete(vector_store_id)
-        client.beta.assistants.delete(assistant_id)
-    except :
-        pass
+        print(f"TOOL_RESOURCES = {tool_resources}")
+        vector_store_ids = tool_resources.file_search.vector_store_ids
+        if vector_store_ids :
+            vector_store_id = vector_store_ids[0];
+            print(f"VECTOR_STORES = {vector_store_id}")
+            vector_store =  client.vector_stores.retrieve(vector_store_id)
+            print(f"VECTOR_STORE = {vector_store}")
+            print(f"VECTOR_STORE_NAME = {vector_store.name} {assistant_id}")
+            if vector_store.name == assistant_id : # THIS IS HERE BECAUSE MULTIPL VECTOR STORES CAN'T BE USED BY AN ASSISTANT
+                print(f"DELETE REMOTE VECTOR STORE {assistant_id}")
+                client.vector_stores.delete(vector_store_id)
+        print(f"DELETED VECTOR STORE")
+        res = client.beta.assistants.delete(assistant_id)
+        print(f"DELTED ASSISTANT")
+        print(f"RES = {res}")
+    except Exception as err :
+        print(f"ERROR = {str(err)}")
 
 
 @receiver(m2m_changed, sender=Assistant.vector_stores.through)
 def handle_assistants_changed(sender, instance, action, **kwargs):
-    #print(f"HANDLE_CHANGE_SENDER_ASSISTANT")
     if getattr(instance, '_updating_from_m2m', False):
         return
     instance._updating_from_m2m = True
@@ -713,7 +747,10 @@ def handle_assistants_changed(sender, instance, action, **kwargs):
         try :
             vector_store_id = tool_resources.file_search.vector_store_ids[0]
             vector_store =  client.vector_stores.retrieve(vector_store_id)
-            client.vector_stores.delete(vector_store_id)
+            print(f"VECTOR_STORE_NAME = {vector_store.name} {assistant_id} ")
+            if vector_store.name == assistant_id  :
+                print(f"DELETINT VECTOR STORE SINCE INSNAT = VECTOR")
+                client.vector_stores.delete(vector_store_id)
             #print(f"REMAINING VECTOR_STORES TO BE SET UP {vector_stores}")
         except :
             #print(f"ERROR DELTING")
@@ -751,13 +788,34 @@ def handle_assistants_changed(sender, instance, action, **kwargs):
                 tool_resources={"file_search": {"vector_store_ids": [ vs.id ] }},
                 metadata={"api_key": settings.AI_KEY[-8:] } 
                 )
+        #while True:
+        #    a = client.beta.assistants.retrieve(assistant.id)
+        #    if a.status == "ready":
+        #        break
+        #    elif a.status == "failed":
+        #        raise Exception("Assistant creation failed.")
+        #    time.sleep(1)
 
     instance.save()
     del instance._updating_from_m2m
 
 
 
-
+#@receiver(post_save, sender=Assistant)
+#def assistant_post_save(sender, instance, created,  *args, **kwargs):
+#    print(f"ARGS={args} KWARGS={kwargs}")
+#    print(f'New {sender.__name__} created: {instance}')
+#    if created :
+#        if len( instance.vector_stores.all() ) == 0  :
+#            print(f"LEN = 0 ")
+#            p = instance.parent();
+#            print(f"P = {p}")
+#            i = 0;
+#            #while p and i < 4  :
+#            for v in p.vector_stores.all() :
+#                print(f"ADD {v}")
+#                instance.vector_stores.add(v);
+#                p = instance.parent();
 
 @receiver(m2m_changed, sender=VectorStore.files.through)
 def handle_files_changed(sender, instance, action, **kwargs):
