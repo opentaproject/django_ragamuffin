@@ -59,11 +59,6 @@ def doarchive( thread, msg ):
     with open(fn, "w") as f:
         json.dump(msgsave,  f , indent=2)
 
-@csrf_exempt
-def feedback_view(request,subpath):
-    print(f"REQUESTION {request} {subpath} ")
-    return JsonResponse({"success": True})
-
 
 FILENAME = "../README.md"
 @csrf_exempt
@@ -100,10 +95,11 @@ def feedback_view(request,subpath):
         i = int( options[0] );
         comment = options[1];
         choice = i
-    thread.messages[index].update( {'comment': comment , 'choice' : choice })
-    msg = thread.messages[index];
-    thread.save();
-    doarchive(thread, msg )
+    if len( thread.messages) > 0 :
+        thread.messages[index].update( {'comment': comment , 'choice' : choice })
+        msg = thread.messages[index];
+        thread.save();
+        doarchive(thread, msg )
     return JsonResponse({"success": True,'index' : index ,'comment' : comment , 'choice' :choice  })
 
 
@@ -239,7 +235,8 @@ def query_view(request,subpath):
                     txt = msg['assistant']
                     ntokens = msg['ntokens']
             except Exception as e:
-                txt = str(e);
+                print(f"TXT = {txt}")
+                txt = f"ERROR  {type(e).__name__} {str(e) }";
             txt = mathfix( txt )
             html = mark_safe(txt )
             response = f" <h4> Query: </h4>  {query}  <h4> Response: </h4> {html}  "

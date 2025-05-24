@@ -113,7 +113,6 @@ function handleClick(event) {
   let selectedValue = document.querySelector(
     'input[name="option"]:checked'
   )?.value;
-  console.log("SELECTED_VALUE = ", selectedValue);
   fix_box();
   document.cookie = "busy=false; max-age=3600; path=/";
 }
@@ -181,21 +180,21 @@ $(document).ready(function () {
     } catch {}
     button_color(document.getElementById("send-button"), "red");
     const response_area = document.getElementById("response").innerHTML;
-    console.log(
-      "selectedValue1= ",
-      selectedValue,
-      "LEN = >",
-      response_area,
-      "<"
-    );
     console.log("selectedValue", selectedValue, "len=", response_area.length , response_area)
     var first_word = response_area.trim().split(/\s+/)[0];
     console.log("FIRST_WORD = ", first_word)
-    if (selectedValue == 0 && first_word != 'None' ){
+    if (selectedValue == 0 && first_word != 'None'     ){
       button_color(document.getElementById("submitBtn"), "red");
-      alert(
-        "You must read and assess the response before with a new related query."
-      );
+      if ( ! first_word.includes("ERROR")   ){
+        alert(
+          "You must read and assess the response before with a new related query."
+        );
+
+      } else {
+        button_color(document.getElementById("submitBtn"), "green");
+
+      }
+
     } else {
       button_color(document.getElementById("submitBtn"), "green");
     }
