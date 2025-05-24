@@ -110,9 +110,6 @@ function handleClick(event) {
       submitBtn.style.display = "block";
     }
   }
-  let selectedValue = document.querySelector(
-    'input[name="option"]:checked'
-  )?.value;
   fix_box();
   document.cookie = "busy=false; max-age=3600; path=/";
 }
@@ -120,18 +117,6 @@ document.querySelectorAll('span[name="queryrow"]').forEach((row) => {
   var btn =  row.querySelector('button[name="oldquery"]');
   btn.addEventListener("click", handleClick);
 });
-
-function getCookie(name) {
-  const cookieString = document.cookie;
-  const cookies = cookieString.split(";");
-  for (let cookie of cookies) {
-    cookie = cookie.trim();
-    if (cookie.startsWith(name + "=")) {
-      return cookie.substring(name.length + 1);
-    }
-  }
-  return null;
-}
 
 document.addEventListener("DOMContentLoaded", function () {
   const selectAll = document.getElementById("select-all");
@@ -180,33 +165,24 @@ $(document).ready(function () {
     } catch {}
     button_color(document.getElementById("send-button"), "red");
     const response_area = document.getElementById("response").innerHTML;
-    console.log("selectedValue", selectedValue, "len=", response_area.length , response_area)
+    console.log("selectedValue", selectedValue, "len=", response_area.length , response_area);
     var first_word = response_area.trim().split(/\s+/)[0];
-    console.log("FIRST_WORD = ", first_word)
-    if (selectedValue == 0 && first_word != 'None'     ){
+    console.log("FIRST_WORD = ", first_word);
+    if (selectedValue == 0 && first_word != 'None') {
       button_color(document.getElementById("submitBtn"), "red");
-      if ( ! first_word.includes("ERROR")   ){
+      if (!first_word.includes("ERROR")) {
         alert(
           "You must read and assess the response before with a new related query."
         );
-
       } else {
         button_color(document.getElementById("submitBtn"), "green");
-
       }
-
     } else {
       button_color(document.getElementById("submitBtn"), "green");
     }
   });
 
   const textarea = document.getElementById("id_query").innerHTML;
-  try {
-    const comment_area = document.getElementById("comment_area");
-    if (!comment_area && textarea !== "") {
-      button_color(document.getElementById("submitBtn"), "red");
-    }
-  } catch {}
   if (textarea == "") {
     document.getElementById("response-block").style.display = "none";
   }
@@ -224,16 +200,12 @@ $(document).ready(function () {
       },
       success: function (response) {
         const mindex = response["index"];
-        // Removed unused variable 'choice'
         const mcomment = document.getElementById("comment-" + mindex);
         mcomment.textContent = response["comment"];
         const mchoice = document.getElementById("choice-" + mindex);
         mchoice.textContent = response["choice"];
         button_color(document.getElementById("submitBtn"), "green");
         button_color(document.getElementById("send-button"), "red");
-        let selectedValue = document.querySelector(
-          'input[name="option"]:checked'
-        )?.value;
         fix_box();
       },
       error: function (_, __, error) {
