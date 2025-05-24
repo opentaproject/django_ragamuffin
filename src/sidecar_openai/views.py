@@ -127,27 +127,6 @@ def query_view(request,subpath):
                6 : 'Partly Correct', 
                7 : 'Completely Correct'}
     choice = 0;
-    #if name == '.feedback' :
-    #    index = int( request.POST.getlist('newmessage_index')[0] )
-    #    post_thread =  re.sub(r'\.','_',request.POST.getlist('thread')[0])
-    #    thread_name = ( '.'.join( post_thread.split('/')[2:] ) ).rstrip('.');
-    #    threads = Thread.objects.filter(name=thread_name,user=request.user)
-    #    thread = threads[0]
-    #    comment = ''
-    #    comments =  request.POST.getlist('comment')
-    #    options  =  request.POST.getlist('option' );
-    #    choice= 0
-    #    if comments :
-    #        comment = comments[0]
-    #    elif options :
-    #        i = int( options[0] );
-    #        comment = options[1];
-    #        choice = i
-    #    thread.messages[index].update( {'comment': comment , 'choice' : choice })
-    #    msg = thread.messages[index];
-    #    thread.save();
-    #    doarchive(thread, msg )
-    #    return JsonResponse({"success": True,'index' : index ,'comment' : comment , 'choice' :choice  })
     response = None
     user = request.user
 
@@ -175,26 +154,21 @@ def query_view(request,subpath):
 
     def oldget_assistant( name , user ):
         assistants = Assistant.objects.filter(name=name)
-        assistant_exists = False
-        if assistants :
+        if assistants:
             assistant = assistants[0]
-            vss = assistant.vector_stores.all()
-            if vss :
-                vs = vss[0]
-                assistant_exists = True
-        if not assistant_exists :
-            if assistants :
-                assistants[0].delete();
-            assistant = setup_default_assistant( FILENAME );
+            if not assistant.vector_stores.exists():
+                assistant.delete()
+                assistant = setup_default_assistant(FILENAME)
+                assistant.save()
+        else:
+            assistant = setup_default_assistant(FILENAME)
             assistant.save()
 
-        old_model = None
-        if assistant.model :
-            old_model = assistant.model
-        new_model =  model = get_current_model( user )
-        if not new_model == old_model :
-            assistant.model = model
-            assistant.save();
+        new_model = get_current_model(user)
+        if assistant.model != new_model:
+            assistant.model = new_model
+            assistant.save()
+
         return assistant
 
     assistant = get_assistant( name, request.user  )
@@ -218,7 +192,6 @@ def query_view(request,subpath):
     if request.method == 'POST':
         form = QueryForm(request.POST)
         if form.is_valid():
-            assistant_id = assistant.assistant_id 
             query = form.cleaned_data['query']
             txt = None
             for i,message in enumerate( messages ) :
@@ -235,7 +208,6 @@ def query_view(request,subpath):
                     txt = msg['assistant']
                     ntokens = msg['ntokens']
             except Exception as e:
-                print(f"TXT = {txt}")
                 txt = f"ERROR  {type(e).__name__} {str(e) }";
             txt = mathfix( txt )
             html = mark_safe(txt )
