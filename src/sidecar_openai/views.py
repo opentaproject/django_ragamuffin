@@ -194,12 +194,17 @@ def query_view(request,subpath):
             try:
                 if txt is None:
                     msg = thread.run_query(query=query, last_messages=last_messages, max_num_results=max_num_results)
+                    txt = msg['assistant']
                     ntokens = msg['ntokens']
             except (KeyError, AttributeError, ValueError) as e:
                 txt = f"ERROR {type(e).__name__}: {str(e)}"
             except Exception  as e:
                 txt = f"ERROR {type(e).__name__}: {str(e)}"
-            txt = mathfix(txt)
+            try :
+                txtnew = mathfix(txt)
+                txt = txtnew 
+            except Exception as err  :
+                txt = txt + f": Mathfix error {type(err).__name__} {str(err)}"
             html = mark_safe(txt )
             response = f" <h4> Query: </h4>  {query}  <h4> Response: </h4> {html}  "
             response = f"{html}"
