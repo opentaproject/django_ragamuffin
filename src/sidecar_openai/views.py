@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.http import HttpResponseForbidden
 import json
 from django.http import JsonResponse
 import tiktoken
@@ -144,16 +145,22 @@ def query_view(request,subpath):
             assistant = assistants[0];
             return assistant
         base = '.'.join(name.split('.')[:-1])
+        if base == '' :
+            return None
+        print(f"BASE= {base}")
         subdir = name.split('.')[-1];
+        print(f"SUBDIR = {subdir}")
         base_assistant = get_assistant( base, user );
+        print(f"BASE_ASSITANT = {base_assistant}")
         if base_assistant :
             assistant = base_assistant.clone( name )
         else :
             assistant = None
         return assistant
 
-
     assistant = get_assistant( name, request.user  )
+    if assistant == None :
+         return HttpResponseForbidden(f"No assistant <b>{name} </b> exists.")
     model = assistant.model
     thread = create_or_retrieve_thread( assistant, name , user )
     data = request.POST;
@@ -187,9 +194,10 @@ def query_view(request,subpath):
             try:
                 if txt is None:
                     msg = thread.run_query(query=query, last_messages=last_messages, max_num_results=max_num_results)
-                    txt = msg['assistant']
                     ntokens = msg['ntokens']
             except (KeyError, AttributeError, ValueError) as e:
+                txt = f"ERROR {type(e).__name__}: {str(e)}"
+            except Exception  as e:
                 txt = f"ERROR {type(e).__name__}: {str(e)}"
             txt = mathfix(txt)
             html = mark_safe(txt )
