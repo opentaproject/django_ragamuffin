@@ -59,12 +59,18 @@ def doarchive( thread, msg ):
     with open(fn, "w") as f:
         json.dump(msgsave,  f , indent=2)
 
+@csrf_exempt
+def feedback_view(request,subpath):
+    print(f"REQUESTION {request} {subpath} ")
+    return JsonResponse({"success": True})
 
 
 FILENAME = "../README.md"
 @csrf_exempt
 @login_required
-def query_view(request,subpath):
+def feedback_view(request,subpath):
+    print(f"SUBPATH IN FEEDBACK= {subpath}")
+    print(f"SUBPATH IN QUERYVIEW = {subpath}")
     subpath_ = re.sub( r"\.","_",subpath )
     segments = subpath_.split('/')
     last_messages = settings.LAST_MESSAGES;
@@ -79,27 +85,73 @@ def query_view(request,subpath):
                6 : 'Partly Correct', 
                7 : 'Completely Correct'}
     choice = 0;
-    if name == '.feedback' :
-        index = int( request.POST.getlist('newmessage_index')[0] )
-        post_thread =  re.sub(r'\.','_',request.POST.getlist('thread')[0])
-        thread_name = ( '.'.join( post_thread.split('/')[2:] ) ).rstrip('.');
-        threads = Thread.objects.filter(name=thread_name,user=request.user)
-        thread = threads[0]
-        comment = ''
-        comments =  request.POST.getlist('comment')
-        options  =  request.POST.getlist('option' );
-        choice= 0
-        if comments :
-            comment = comments[0]
-        elif options :
-            i = int( options[0] );
-            comment = options[1];
-            choice = i
-        thread.messages[index].update( {'comment': comment , 'choice' : choice })
-        msg = thread.messages[index];
-        thread.save();
-        doarchive(thread, msg )
-        return JsonResponse({"success": True,'index' : index ,'comment' : comment , 'choice' :choice  })
+    index = int( request.POST.getlist('newmessage_index')[0] )
+    post_thread =  re.sub(r'\.','_',request.POST.getlist('thread')[0])
+    thread_name = ( '.'.join( post_thread.split('/')[2:] ) ).rstrip('.');
+    threads = Thread.objects.filter(name=thread_name,user=request.user)
+    thread = threads[0]
+    comment = ''
+    comments =  request.POST.getlist('comment')
+    options  =  request.POST.getlist('option' );
+    choice= 0
+    if comments :
+        comment = comments[0]
+    elif options :
+        i = int( options[0] );
+        comment = options[1];
+        choice = i
+    thread.messages[index].update( {'comment': comment , 'choice' : choice })
+    msg = thread.messages[index];
+    thread.save();
+    doarchive(thread, msg )
+    return JsonResponse({"success": True,'index' : index ,'comment' : comment , 'choice' :choice  })
+
+
+
+
+
+
+
+FILENAME = "../README.md"
+@csrf_exempt
+@login_required
+def query_view(request,subpath):
+    print(f"SUBPATH IN QUERYVIEW = {subpath}")
+    subpath_ = re.sub( r"\.","_",subpath )
+    segments = subpath_.split('/')
+    last_messages = settings.LAST_MESSAGES;
+    max_num_results = settings.MAX_NUM_RESULTS;
+    name = ( '.'.join( segments ) ).rstrip('.')
+    choices = {0 : 'Unread' ,
+               1 : 'Incomplete' , 
+               2 : 'Wrong', 
+               3 : 'Irrelevant',
+               4 : "Superficial." ,  
+               5 : "Unhelpful", 
+               6 : 'Partly Correct', 
+               7 : 'Completely Correct'}
+    choice = 0;
+    #if name == '.feedback' :
+    #    index = int( request.POST.getlist('newmessage_index')[0] )
+    #    post_thread =  re.sub(r'\.','_',request.POST.getlist('thread')[0])
+    #    thread_name = ( '.'.join( post_thread.split('/')[2:] ) ).rstrip('.');
+    #    threads = Thread.objects.filter(name=thread_name,user=request.user)
+    #    thread = threads[0]
+    #    comment = ''
+    #    comments =  request.POST.getlist('comment')
+    #    options  =  request.POST.getlist('option' );
+    #    choice= 0
+    #    if comments :
+    #        comment = comments[0]
+    #    elif options :
+    #        i = int( options[0] );
+    #        comment = options[1];
+    #        choice = i
+    #    thread.messages[index].update( {'comment': comment , 'choice' : choice })
+    #    msg = thread.messages[index];
+    #    thread.save();
+    #    doarchive(thread, msg )
+    #    return JsonResponse({"success": True,'index' : index ,'comment' : comment , 'choice' :choice  })
     response = None
     user = request.user
 

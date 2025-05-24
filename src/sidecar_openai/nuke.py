@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import openai
 import os
 import time
