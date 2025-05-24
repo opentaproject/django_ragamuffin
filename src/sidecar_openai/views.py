@@ -60,6 +60,16 @@ def doarchive( thread, msg ):
     with open(fn, "w") as f:
         json.dump(msgsave,  f , indent=2)
 
+CHOICES = {0 : 'Unread' ,
+           1 : 'Incomplete' , 
+           2 : 'Wrong', 
+           3 : 'Irrelevant',
+           4 : "Superficial." ,  
+           5 : "Unhelpful", 
+           6 : 'Partly Correct', 
+           7 : 'Completely Correct'}
+
+
 
 FILENAME = "../README.md"
 @csrf_exempt
@@ -72,14 +82,6 @@ def feedback_view(request,subpath):
     last_messages = settings.LAST_MESSAGES;
     max_num_results = settings.MAX_NUM_RESULTS;
     name = ( '.'.join( segments ) ).rstrip('.')
-    choices = {0 : 'Unread' ,
-               1 : 'Incomplete' , 
-               2 : 'Wrong', 
-               3 : 'Irrelevant',
-               4 : "Superficial." ,  
-               5 : "Unhelpful", 
-               6 : 'Partly Correct', 
-               7 : 'Completely Correct'}
     choice = 0;
     index = int( request.POST.getlist('newmessage_index')[0] )
     post_thread =  re.sub(r'\.','_',request.POST.getlist('thread')[0])
@@ -119,14 +121,7 @@ def query_view(request,subpath):
     last_messages = settings.LAST_MESSAGES;
     max_num_results = settings.MAX_NUM_RESULTS;
     name = ( '.'.join( segments ) ).rstrip('.')
-    choices = {0 : 'Unread' ,
-               1 : 'Incomplete' , 
-               2 : 'Wrong', 
-               3 : 'Irrelevant',
-               4 : "Superficial." ,  
-               5 : "Unhelpful", 
-               6 : 'Partly Correct', 
-               7 : 'Completely Correct'}
+    choices = CHOICES
     choice = 0;
     response = None
     user = request.user
