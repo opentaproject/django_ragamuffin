@@ -152,24 +152,6 @@ def query_view(request,subpath):
             assistant = None
         return assistant
 
-    def oldget_assistant( name , user ):
-        assistants = Assistant.objects.filter(name=name)
-        if assistants:
-            assistant = assistants[0]
-            if not assistant.vector_stores.exists():
-                assistant.delete()
-                assistant = setup_default_assistant(FILENAME)
-                assistant.save()
-        else:
-            assistant = setup_default_assistant(FILENAME)
-            assistant.save()
-
-        new_model = get_current_model(user)
-        if assistant.model != new_model:
-            assistant.model = new_model
-            assistant.save()
-
-        return assistant
 
     assistant = get_assistant( name, request.user  )
     model = assistant.model
@@ -202,14 +184,14 @@ def query_view(request,subpath):
                     choice = message.get('choice','0')
                     mindex = mindex - 1;
                     break
-            try :
-                if txt == None :
-                    msg = thread.run_query(  query=query ,last_messages=last_messages, max_num_results=max_num_results)
+            try:
+                if txt is None:
+                    msg = thread.run_query(query=query, last_messages=last_messages, max_num_results=max_num_results)
                     txt = msg['assistant']
                     ntokens = msg['ntokens']
-            except Exception as e:
-                txt = f"ERROR  {type(e).__name__} {str(e) }";
-            txt = mathfix( txt )
+            except (KeyError, AttributeError, ValueError) as e:
+                txt = f"ERROR {type(e).__name__}: {str(e)}"
+            txt = mathfix(txt)
             html = mark_safe(txt )
             response = f" <h4> Query: </h4>  {query}  <h4> Response: </h4> {html}  "
             response = f"{html}"
