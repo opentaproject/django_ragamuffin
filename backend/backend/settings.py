@@ -57,7 +57,7 @@ ROOT_URLCONF = "backend.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": ["backend/templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -184,7 +184,7 @@ AI_MODEL = {'staff' : 'gpt-4o' , 'default' : 'gpt-4o-mini' }
 
 
 
-LOGIN_URL = '/admin/login'
+LOGIN_URL = '/login'
 
 AUTH_PASSWORD_VALIDATORS = [
     #{
