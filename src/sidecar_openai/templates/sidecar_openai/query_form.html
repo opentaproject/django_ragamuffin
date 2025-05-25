@@ -53,6 +53,9 @@
                 <form method="post">
                     {% csrf_token %}
                     <div style="margin: 10 auto; padding: 1rem;  ">
+                        <h3>
+                            <a href="{% url 'edit_assistant' pk=assistant_pk %}">Edit Assistant</a>
+                        </h3>
                         <h3> History </h3>
                         {% if messages %}
                             <div>

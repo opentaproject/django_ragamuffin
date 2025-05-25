@@ -3,7 +3,8 @@ from django.http import HttpResponseForbidden
 import json
 from django.http import JsonResponse
 import tiktoken
-from django.shortcuts import redirect
+from django.core.files.storage import FileSystemStorage
+from django.shortcuts import get_object_or_404, redirect, render
 from sidecar_openai.models import OpenAIFile, VectorStore, Assistant,  Thread, hashed_upload_to, upload_or_retrieve_openai_file, get_current_model
 import time
 from sidecar_openai.models import create_or_retrieve_vector_store, create_or_retrieve_assistant, create_or_retrieve_thread
@@ -12,8 +13,10 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 import re
 import markdown2
+from .models import upload_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.conf import settings
+from django import forms
 import shutil
 import os
 import markdown
@@ -69,6 +72,60 @@ CHOICES = {0 : 'Unread' ,
            6 : 'Partly Correct', 
            7 : 'Completely Correct'}
 
+
+
+
+def upload_file_view(request,pk):
+    if request.method == 'POST' and request.FILES.get('myfile'):
+        uploaded_file = request.FILES['myfile']
+        filename = uploaded_file.name 
+        assistant =  Assistant.objects.get(pk=pk)
+        file_url = assistant.add_file( filename, uploaded_file)
+        r = render(request, 'sidecar_openai/upload.html', {'file_url': file_url})
+        return redirect(f"/assistant/{pk}/edit/")
+
+    return render(request, 'sidecar_openai/upload.html')
+
+class AssistantEditForm(forms.ModelForm):
+
+    actual_instructions = forms.CharField(disabled=True, required=False, widget=forms.Textarea(attrs={'disabled': 'disabled'}),)
+    
+
+    def __init__(self, *args, **kwargs):
+        self.custom_data = kwargs.pop("custom_data", {})
+        super().__init__(*args, **kwargs)
+        instance = self.instance
+        # Set initial value for the readonly field
+        #self.fields['actual_instructions'].initial = instance.get_instructions() + ' '.join( DEFAULT_INSTRUCTIONS.split() )  if self.instance.pk else "N/A"
+        if self.instance.pk :
+            instructions = ' '.join( instance.get_instructions().split() );
+        self.fields['actual_instructions'].initial = instructions if self.instance.pk else "N/A"
+        print(f"SELF.CUSTOM_DATA = {self.custom_data}")
+
+
+
+
+    class Meta:
+        model = Assistant
+        fields = ['instructions','actual_instructions', 'temperature']
+        help_texts = {
+            'temperature': f"<p/>Default temperature = {settings.DEFAULT_TEMPERATURE}",
+            'instructions' : f"<b> Incremental instructions: </b>  <br>Leave or make blank to inherit default; <br> Start the field with 'append: XXX...' to append 'XXX...' to default; <br>Any other non-blank string completely replaces the default instructions.'<br> The entire instructions used by the assistant is shown below."
+
+        }
+
+
+def edit_assistant(request, pk):
+    assistant = get_object_or_404(Assistant, pk=pk)
+    if request.method == 'POST':
+        form = AssistantEditForm(request.POST, instance=assistant )
+        if form.is_valid():
+            form.save()
+            return redirect('edit_assistant', pk=assistant.pk)  # or another success URL
+    else:
+        form = AssistantEditForm(instance=assistant, custom_data=assistant.files() )
+    print(f"FORM_CUSTOM_DATA = {form.custom_data}")
+    return render(request, 'sidecar_openai/edit_assistant.html', {'form': form, 'assistant': assistant, 'custom_data' : form.custom_data  })
 
 
 FILENAME = "../README.md"
@@ -226,6 +283,7 @@ def query_view(request,subpath):
         'choice' : choice ,
         'ntokens' : ntokens,
         'model' : model ,
+        'assistant_pk' : assistant.pk ,
         'max_num_results' : max_num_results,
         'last_messages' : last_messages ,
         'time_spent' : time_spent  })

@@ -124,17 +124,20 @@ def create_or_retrieve_thread( assistant, name, user ) :
 
 
 def upload_or_retrieve_openai_file( name ,src ):
+    print(f"NAME = {name} SRC={src}")
     os.makedirs( os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), exist_ok=True )
-    dst = os.path.join(os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), 'README.md')
+    dst = os.path.join(os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), src)
     name = dst.split('/')[-1];
     ts = OpenAIFile.objects.filter(name=name)
     if not ts :
-        shutil.copy2(src, dst)
+        if not src == dst :
+            shutil.copy2(src, dst)
         t1 = OpenAIFile(file=dst)
         t1.name = name
-        t1.save()
+        t1.save();
     else :
         t1 = ts[0]
+    print(f"T1 = {t1}")
     return t1
 
 def split_long_chunks(chunks, max_len=800):
@@ -199,13 +202,16 @@ class OpenAIFile(models.Model) :
 
 
     def save( self, *args, **kwargs ):
+        print(f"STATE =  {self._state.adding} PK={self.pk}")
         is_new = self._state.adding  and not self.pk
         name =  f"{self.file}".split('/')[-1]
         super().save(*args, **kwargs)  # Save first, so file is processed
         if is_new and self.file:
+            print(f"IS_NEW {self.file}")
             fn = self.file.name 
             self.name = self.file.name.split('/')[-1]
             src = self.file.path
+            print(f"SRC = {src}")
             extension = src.split('.')[-1];
             if extension == 'pdf' :
                 txt = mathpix( src ,format_out='mmd')
@@ -386,6 +392,19 @@ class Assistant( models.Model ):
     def __str__(self):
         return f"{self.name}"
 
+
+    def add_file(self,  filename, uploaded_file ):
+        name = '.'.join( filename.split('.')[:-1])
+        filename = f"{name}/{filename}"
+        upload_storage.save(filename , uploaded_file)
+        file_url = settings.MEDIA_URL + upload_storage.url(filename)
+        src = settings.OPENAI_UPLOAD_STORAGE + '/' + filename
+        t1 = upload_or_retrieve_openai_file( name, src )
+        vs = create_or_retrieve_vector_store( name, [t1])
+        self.vector_stores.add( vs )
+        self.save();
+        return file_url
+
     def parent( self ):
         name = '.'.join( self.name.split('.')[:-1] )
         assistants = Assistant.objects.filter(name=name);
@@ -532,6 +551,16 @@ class Assistant( models.Model ):
                 f.extend( vf.file_ids )
         f = list( set( f) )
         return f
+
+    def files( self, *args, **kwargs ):
+        vs = self.vector_stores.all()
+        f = []
+        for v in vs :
+            for vf in v.files.all():
+                f.append( ( vf.pk , vf.name ) )
+        print(f"F = {f}")
+        return f
+
 
 
 

@@ -34,6 +34,7 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
+    "grappelli",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -169,6 +170,8 @@ os.makedirs(OPENAI_UPLOAD_STORAGE, exist_ok=True)
 INSTALLED_APPS.append('sidecar_openai')
 STATIC_ROOT = os.path.join(BASE_DIR, "deploystatic")
 STATIC_URL = "deploystatic/"
+MEDIA_URL = '/media/'
+MEDIA_ROOT = OPENAI_UPLOAD_STORAGE
 
 STATIC_URL = "/static/"
 print(f"STORAGE = {OPENAI_UPLOAD_STORAGE}")

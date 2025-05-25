@@ -1,0 +1,13 @@
+{% load static %}
+<html>
+<body>
+<form method="POST" enctype="multipart/form-data">
+  {% csrf_token %}
+  <input type="file" name="myfile" required>
+  <button type="submit">Upload File</button>
+</form>
+{% if file_url %}
+  <p>Uploaded file: <a href="{{ file_url }}">{{ file_url }}</a></p>
+{% endif %}
+</body>
+</html>
