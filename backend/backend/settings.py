@@ -170,7 +170,7 @@ os.makedirs(OPENAI_UPLOAD_STORAGE, exist_ok=True)
 INSTALLED_APPS.append('sidecar_openai')
 STATIC_ROOT = os.path.join(BASE_DIR, "deploystatic")
 STATIC_URL = "deploystatic/"
-MEDIA_URL = '/media/'
+MEDIA_URL = 'media/'
 MEDIA_ROOT = OPENAI_UPLOAD_STORAGE
 
 STATIC_URL = "/static/"

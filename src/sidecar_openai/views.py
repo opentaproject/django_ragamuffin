@@ -116,8 +116,15 @@ class AssistantEditForm(forms.ModelForm):
 
 
 def edit_assistant(request, pk):
+    print(f"METHOD = {request.method}")
     assistant = get_object_or_404(Assistant, pk=pk)
     if request.method == 'POST':
+        print(f"POST_REQUEST = {request.POST}")
+        deletions = request.POST.getlist('deletion')
+        if deletions :
+            for f in deletions :
+                print(f"DELETE THE FILE {f}")
+                assistant.delete_file(f)
         form = AssistantEditForm(request.POST, instance=assistant )
         if form.is_valid():
             form.save()
@@ -126,6 +133,8 @@ def edit_assistant(request, pk):
         form = AssistantEditForm(instance=assistant, custom_data=assistant.files() )
     print(f"FORM_CUSTOM_DATA = {form.custom_data}")
     return render(request, 'sidecar_openai/edit_assistant.html', {'form': form, 'assistant': assistant, 'custom_data' : form.custom_data  })
+
+
 
 
 FILENAME = "../README.md"

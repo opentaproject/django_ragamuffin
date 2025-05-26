@@ -60,10 +60,10 @@
             {% csrf_token %}
             {% for k,v  in  form.custom_data %}
 	    <small>
-              <span name='file_row' class="form-row"> <input type="checkbox" value="{{ k }}"> {{ v }} </input> </span>
+              <span name='file_row' class="form-row"> <input name="deletion" type="checkbox" value="{{ k }}"> {{ v }} </input> </span>
 	    </small>
             {% endfor %}
-	    <!-- <button style=" margin: 1rem;" type="submit">Delete checked:  </button> --!>
+	    <button style=" margin: 1rem;" type="submit">Delete checked:  </button> 
           </form>
 	  <a href="http://localhost:8000/upload/{{assistant.pk}}/"> <button> Upload new file  for the assistant <b>{{ assistant.name }}</b> </button> </a>
         </div>

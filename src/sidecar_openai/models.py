@@ -20,15 +20,37 @@ import openai
 from openai import OpenAI
 from django.db.models.signals import m2m_changed, pre_delete, post_save
 from django.dispatch import receiver
+#from openai.types.error import NotFoundError
+from openai._exceptions import NotFoundError
 import re
 
 import os
 logger = logging.getLogger(__name__)
 client = openai.OpenAI(api_key=settings.AI_KEY)
 
-upload_storage = FileSystemStorage(settings.OPENAI_UPLOAD_STORAGE, base_url="/" )
+upload_storage = FileSystemStorage(settings.OPENAI_UPLOAD_STORAGE, base_url=settings.MEDIA_URL )
 
 from openai import OpenAIError, RateLimitError, APIError, Timeout
+
+def delete_vector_store_and_wait(vector_store_id, timeout=60, interval=2):
+    # Initiate delete
+    client.vector_stores.delete(vector_store_id)
+    print(f"Deletion initiated for vector store: {vector_store_id}")
+
+    # Poll until deletion confirmed
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        try:
+            client.vector_stores.retrieve(vector_store_id)
+            print("Still deleting...")
+        except NotFoundError:
+            print("Vector store deletion confirmed.")
+            return
+        time.sleep(interval)
+
+    raise TimeoutError(f"Vector store {vector_store_id} deletion not confirmed within timeout.")
+
+
 
 def wait_for_vector_store_ready(client, vector_store_id, timeout=settings.MAXWAIT):
     start_time = time.time()
@@ -354,7 +376,8 @@ class VectorStore( models.Model ):
 def custom_delete_vector_store(sender, instance, **kwargs):
     try :
         vector_store_id = instance.vector_store_id
-        client.vector_stores.delete(vector_store_id=vector_store_id)
+        #client.vector_stores.delete(vector_store_id=vector_store_id)
+        delete_vector_store_and_wait(vector_store_id )
     except openai.NotFoundError as e:
         pass
 
@@ -404,6 +427,48 @@ class Assistant( models.Model ):
         self.vector_stores.add( vs )
         self.save();
         return file_url
+
+    def delete_file( self, deletion ):
+        deletion = int( deletion )
+        print(f"DELETE {deletion} in {self.name}")
+        vss = self.vector_stores.all();
+        pkss = [];
+        for vs in vss :
+            pks = vs.file_pks();
+            pkss.extend( pks )
+            print(f"VECTOR_STORES = VS = {pks}")
+        # DELETE THE SPECIAL VS's THAT ARE ASSOCIATED WITH ASSISTANTS DUE TO RESTRICTION OF ONE VECTOR STORE
+
+        def delete_remote_vs( assistant_id ):
+            print(f"TRY DELETETING {assistant_id}")
+            assistant = openai.beta.assistants.retrieve(assistant_id)
+            print(f"DELETE ASSISTANT {assistant}")
+            tool_resources = assistant.tool_resources
+            print(f"TOOL_RESOURCES = {tool_resources}")
+            vector_store_ids = tool_resources.file_search.vector_store_ids
+            if vector_store_ids :
+                vector_store_id = vector_store_ids[0];
+                print(f"VECTOR_STORES = {vector_store_id}")
+                vector_store =  client.vector_stores.retrieve(vector_store_id)
+                print(f"VECTOR_STORE = {vector_store}")
+                print(f"VECTOR_STORE_NAME = {vector_store.name} {assistant_id}")
+                if vector_store.name == assistant_id : # THIS IS HERE BECAUSE MULTIPL VECTOR STORES CAN'T BE USED BY AN ASSISTANT
+                    print(f"DELETE REMOTE VECTOR STORE {assistant_id}")
+                    delete_vector_store_and_wait(vector_store_id)
+                    #client.vector_stores.delete(vector_store_id)
+
+        assistant_id = self.assistant_id
+        delete_remote_vs( assistant_id )
+        print(f"PKSS = {pkss}")
+        pks = [ i for i in pkss if not i == deletion]
+        print(f"PKS = {pks}")
+        self.vector_stores.clear();
+        name = self.name
+        print(f"NAME = {name}")
+        files = OpenAIFile.objects.filter( pk__in=pks );
+        print(f"FILES = {files}")
+        vsnew  = create_or_retrieve_vector_store( name , files)
+        self.vector_stores.add( vsnew );
 
     def parent( self ):
         name = '.'.join( self.name.split('.')[:-1] )
@@ -750,9 +815,10 @@ def custom_delete_assistant(sender, instance, **kwargs):
             vector_store =  client.vector_stores.retrieve(vector_store_id)
             print(f"VECTOR_STORE = {vector_store}")
             print(f"VECTOR_STORE_NAME = {vector_store.name} {assistant_id}")
-            if vector_store.name == assistant_id : # THIS IS HERE BECAUSE MULTIPL VECTOR STORES CAN'T BE USED BY AN ASSISTANT
+            if vector_store.name == assistant.id : # THIS IS HERE BECAUSE MULTIPL VECTOR STORES CAN'T BE USED BY AN ASSISTANT
                 print(f"DELETE REMOTE VECTOR STORE {assistant_id}")
-                client.vector_stores.delete(vector_store_id)
+                #client.vector_stores.delete(vector_store_id)
+                delete_vector_store_and_wait(vector_store_id)
         print(f"DELETED VECTOR STORE")
         res = client.beta.assistants.delete(assistant_id)
         print(f"DELTED ASSISTANT")
@@ -779,7 +845,8 @@ def handle_assistants_changed(sender, instance, action, **kwargs):
             print(f"VECTOR_STORE_NAME = {vector_store.name} {assistant_id} ")
             if vector_store.name == assistant_id  :
                 print(f"DELETINT VECTOR STORE SINCE INSNAT = VECTOR")
-                client.vector_stores.delete(vector_store_id)
+                #client.vector_stores.delete(vector_store_id)
+                delete_vector_store_and_wait(vector_store_id)
             #print(f"REMAINING VECTOR_STORES TO BE SET UP {vector_stores}")
         except :
             #print(f"ERROR DELTING")
@@ -912,6 +979,8 @@ def handle_files_changed(sender, instance, action, **kwargs):
         ckstring = ''.join(cksums).encode()
         checksum = hashlib.md5(ckstring).hexdigest()
         instance.checksum = checksum
+        instance.save(update_fields=['checksum'])
+        print(f"DO CHECKSUMS IN SAVE")
         #others = VectorStore.objects.filter(checksum=checksum)
         #npks =  list( OpenAIFile.objects.filter(file_id__in=ids).values_list('pk',flat=True)  )
         #print(f"IDS = {ids} PKS = {pks}")
