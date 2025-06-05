@@ -42,9 +42,9 @@ def delete_vector_store_and_wait(vector_store_id, timeout=60, interval=2):
     while time.time() - start_time < timeout:
         try:
             client.vector_stores.retrieve(vector_store_id)
-            print("Still deleting...")
+            #print("Still deleting...")
         except NotFoundError:
-            print("Vector store deletion confirmed.")
+            #print("Vector store deletion confirmed.")
             return
         time.sleep(interval)
 
@@ -57,7 +57,7 @@ def wait_for_vector_store_ready(client, vector_store_id, timeout=settings.MAXWAI
     while True:
         vs = client.vector_stores.retrieve(vector_store_id=vector_store_id)
         if vs.status == "completed":
-            print("✅ Vector store is ready.")
+            #print("✅ Vector store is ready.")
             return vs
         elif vs.status == "failed":
             raise RuntimeError("❌ Vector store creation failed.")
@@ -146,7 +146,7 @@ def create_or_retrieve_thread( assistant, name, user ) :
 
 
 def upload_or_retrieve_openai_file( name ,src ):
-    print(f"NAME = {name} SRC={src}")
+    #print(f"NAME = {name} SRC={src}")
     os.makedirs( os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), exist_ok=True )
     dst = os.path.join(os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), src)
     name = dst.split('/')[-1];
@@ -159,7 +159,7 @@ def upload_or_retrieve_openai_file( name ,src ):
         t1.save();
     else :
         t1 = ts[0]
-    print(f"T1 = {t1}")
+    #print(f"T1 = {t1}")
     return t1
 
 def split_long_chunks(chunks, max_len=800):
@@ -224,16 +224,16 @@ class OpenAIFile(models.Model) :
 
 
     def save( self, *args, **kwargs ):
-        print(f"STATE =  {self._state.adding} PK={self.pk}")
+        #print(f"STATE =  {self._state.adding} PK={self.pk}")
         is_new = self._state.adding  and not self.pk
         name =  f"{self.file}".split('/')[-1]
         super().save(*args, **kwargs)  # Save first, so file is processed
         if is_new and self.file:
-            print(f"IS_NEW {self.file}")
+            #print(f"IS_NEW {self.file}")
             fn = self.file.name 
             self.name = self.file.name.split('/')[-1]
             src = self.file.path
-            print(f"SRC = {src}")
+            #print(f"SRC = {src}")
             extension = src.split('.')[-1];
             if extension == 'pdf' :
                 txt = mathpix( src ,format_out='mmd')
@@ -430,43 +430,43 @@ class Assistant( models.Model ):
 
     def delete_file( self, deletion ):
         deletion = int( deletion )
-        print(f"DELETE {deletion} in {self.name}")
+        #print(f"DELETE {deletion} in {self.name}")
         vss = self.vector_stores.all();
         pkss = [];
         for vs in vss :
             pks = vs.file_pks();
             pkss.extend( pks )
-            print(f"VECTOR_STORES = VS = {pks}")
+            #print(f"VECTOR_STORES = VS = {pks}")
         # DELETE THE SPECIAL VS's THAT ARE ASSOCIATED WITH ASSISTANTS DUE TO RESTRICTION OF ONE VECTOR STORE
 
         def delete_remote_vs( assistant_id ):
-            print(f"TRY DELETETING {assistant_id}")
+            #print(f"TRY DELETETING {assistant_id}")
             assistant = openai.beta.assistants.retrieve(assistant_id)
-            print(f"DELETE ASSISTANT {assistant}")
+            #print(f"DELETE ASSISTANT {assistant}")
             tool_resources = assistant.tool_resources
-            print(f"TOOL_RESOURCES = {tool_resources}")
+            #print(f"TOOL_RESOURCES = {tool_resources}")
             vector_store_ids = tool_resources.file_search.vector_store_ids
             if vector_store_ids :
                 vector_store_id = vector_store_ids[0];
-                print(f"VECTOR_STORES = {vector_store_id}")
+                #print(f"VECTOR_STORES = {vector_store_id}")
                 vector_store =  client.vector_stores.retrieve(vector_store_id)
-                print(f"VECTOR_STORE = {vector_store}")
-                print(f"VECTOR_STORE_NAME = {vector_store.name} {assistant_id}")
+                #print(f"VECTOR_STORE = {vector_store}")
+                #print(f"VECTOR_STORE_NAME = {vector_store.name} {assistant_id}")
                 if vector_store.name == assistant_id : # THIS IS HERE BECAUSE MULTIPL VECTOR STORES CAN'T BE USED BY AN ASSISTANT
-                    print(f"DELETE REMOTE VECTOR STORE {assistant_id}")
+                    #print(f"DELETE REMOTE VECTOR STORE {assistant_id}")
                     delete_vector_store_and_wait(vector_store_id)
                     #client.vector_stores.delete(vector_store_id)
 
         assistant_id = self.assistant_id
         delete_remote_vs( assistant_id )
-        print(f"PKSS = {pkss}")
+        #print(f"PKSS = {pkss}")
         pks = [ i for i in pkss if not i == deletion]
-        print(f"PKS = {pks}")
+        #print(f"PKS = {pks}")
         self.vector_stores.clear();
         name = self.name
-        print(f"NAME = {name}")
+        #print(f"NAME = {name}")
         files = OpenAIFile.objects.filter( pk__in=pks );
-        print(f"FILES = {files}")
+        #print(f"FILES = {files}")
         vsnew  = create_or_retrieve_vector_store( name , files)
         self.vector_stores.add( vsnew );
 
@@ -505,8 +505,8 @@ class Assistant( models.Model ):
     def save( self, *args, **kwargs ):
         if getattr(self, '_busy', False):
             return
-        print(f"SAVE ASSITANT args = {args}")
-        print(f"SAVE ASSITANT kwargs = {kwargs}")
+        #print(f"SAVE ASSITANT args = {args}")
+        #print(f"SAVE ASSITANT kwargs = {kwargs}")
         is_new = self._state.adding and not self.pk
         try :
             if not self.model :
@@ -525,14 +525,14 @@ class Assistant( models.Model ):
         else :
             temperature = settings.DEFAULT_TEMPERATURE
         super().save(*args,**kwargs)
-        print(f"VECTOR_STORESAGAIN = {self.vector_stores.all()}")
+        #print(f"VECTOR_STORESAGAIN = {self.vector_stores.all()}")
         vs_empty = False;
         if len( self.vector_stores.all() ):
             vs_empty = True
 
         instructions = self.get_instructions();
         if is_new :
-            print(f"IS_NEW")
+            #print(f"IS_NEW")
             assistant = client.beta.assistants.create( name=self.name,
                 instructions=instructions, 
                 model=self.model,
@@ -542,7 +542,7 @@ class Assistant( models.Model ):
             super().save(update_fields=['assistant_id'])
 
         else :
-            print(f"IS NOT NEW")
+            #print(f"IS NOT NEW")
             assistant_id = self.assistant_id
             if not old_instructions  ==  instructions :
                 client.beta.assistants.update(assistant_id, instructions=instructions)
@@ -553,9 +553,9 @@ class Assistant( models.Model ):
 
         if len( self.vector_stores.all() ) == 0   and   not getattr(self, '_busy', False) :
 
-            print(f"LEN = 0 ")
+            #print(f"LEN = 0 ")
             p = self.parent();
-            print(f"P = {p}")
+            #print(f"P = {p}")
             i = 0;
             while p and i < 4  :
                 self.vector_stores.add( *( p.vector_stores.all() ) )
@@ -623,7 +623,7 @@ class Assistant( models.Model ):
         for v in vs :
             for vf in v.files.all():
                 f.append( ( vf.pk , vf.name ) )
-        print(f"F = {f}")
+        #print(f"F = {f}")
         return f
 
 
@@ -763,7 +763,7 @@ class Thread(models.Model) :
             print(f"I = {i}")
         usage = run_status.usage
         model = run.model
-        print(f"MODEL = {model} usage={usage}")
+        #print(f"MODEL = {model} usage={usage}")
         assistant_id_ = run_status.assistant_id
         used_instructions =  client.beta.assistants.retrieve(assistant_id=assistant_id_).instructions
         assert i < imax , f"Request timed out after {settings.MAXWAIT} seconds; try again ; try to change the question."
@@ -803,26 +803,26 @@ def custom_delete_assistant(sender, instance, **kwargs):
     pk = instance.pk
     try :
         assistant_id = instance.assistant_id
-        print(f"TRY DELETETING {assistant_id}")
+        #print(f"TRY DELETETING {assistant_id}")
         assistant = openai.beta.assistants.retrieve(assistant_id)
-        print(f"DELETE ASSISTANT {assistant}")
+        #print(f"DELETE ASSISTANT {assistant}")
         tool_resources = assistant.tool_resources
-        print(f"TOOL_RESOURCES = {tool_resources}")
+        #print(f"TOOL_RESOURCES = {tool_resources}")
         vector_store_ids = tool_resources.file_search.vector_store_ids
         if vector_store_ids :
             vector_store_id = vector_store_ids[0];
-            print(f"VECTOR_STORES = {vector_store_id}")
+            #print(f"VECTOR_STORES = {vector_store_id}")
             vector_store =  client.vector_stores.retrieve(vector_store_id)
-            print(f"VECTOR_STORE = {vector_store}")
-            print(f"VECTOR_STORE_NAME = {vector_store.name} {assistant_id}")
+            #print(f"VECTOR_STORE = {vector_store}")
+            #print(f"VECTOR_STORE_NAME = {vector_store.name} {assistant_id}")
             if vector_store.name == assistant.id : # THIS IS HERE BECAUSE MULTIPL VECTOR STORES CAN'T BE USED BY AN ASSISTANT
-                print(f"DELETE REMOTE VECTOR STORE {assistant_id}")
+                #print(f"DELETE REMOTE VECTOR STORE {assistant_id}")
                 #client.vector_stores.delete(vector_store_id)
                 delete_vector_store_and_wait(vector_store_id)
-        print(f"DELETED VECTOR STORE")
+        #print(f"DELETED VECTOR STORE")
         res = client.beta.assistants.delete(assistant_id)
-        print(f"DELTED ASSISTANT")
-        print(f"RES = {res}")
+        #print(f"DELTED ASSISTANT")
+        #print(f"RES = {res}")
     except Exception as err :
         print(f"ERROR = {str(err)}")
 
@@ -842,9 +842,9 @@ def handle_assistants_changed(sender, instance, action, **kwargs):
         try :
             vector_store_id = tool_resources.file_search.vector_store_ids[0]
             vector_store =  client.vector_stores.retrieve(vector_store_id)
-            print(f"VECTOR_STORE_NAME = {vector_store.name} {assistant_id} ")
+            #print(f"VECTOR_STORE_NAME = {vector_store.name} {assistant_id} ")
             if vector_store.name == assistant_id  :
-                print(f"DELETINT VECTOR STORE SINCE INSNAT = VECTOR")
+                #print(f"DELETINT VECTOR STORE SINCE INSNAT = VECTOR")
                 #client.vector_stores.delete(vector_store_id)
                 delete_vector_store_and_wait(vector_store_id)
             #print(f"REMAINING VECTOR_STORES TO BE SET UP {vector_stores}")

@@ -100,7 +100,7 @@ class AssistantEditForm(forms.ModelForm):
         if self.instance.pk :
             instructions = ' '.join( instance.get_instructions().split() );
         self.fields['actual_instructions'].initial = instructions if self.instance.pk else "N/A"
-        print(f"SELF.CUSTOM_DATA = {self.custom_data}")
+        #print(f"SELF.CUSTOM_DATA = {self.custom_data}")
 
 
 
@@ -116,14 +116,14 @@ class AssistantEditForm(forms.ModelForm):
 
 
 def edit_assistant(request, pk):
-    print(f"METHOD = {request.method}")
+    #print(f"METHOD = {request.method}")
     assistant = get_object_or_404(Assistant, pk=pk)
     if request.method == 'POST':
-        print(f"POST_REQUEST = {request.POST}")
+        #print(f"POST_REQUEST = {request.POST}")
         deletions = request.POST.getlist('deletion')
         if deletions :
             for f in deletions :
-                print(f"DELETE THE FILE {f}")
+                #print(f"DELETE THE FILE {f}")
                 assistant.delete_file(f)
         form = AssistantEditForm(request.POST, instance=assistant )
         if form.is_valid():
@@ -131,7 +131,7 @@ def edit_assistant(request, pk):
             return redirect('edit_assistant', pk=assistant.pk)  # or another success URL
     else:
         form = AssistantEditForm(instance=assistant, custom_data=assistant.files() )
-    print(f"FORM_CUSTOM_DATA = {form.custom_data}")
+    #print(f"FORM_CUSTOM_DATA = {form.custom_data}")
     return render(request, 'sidecar_openai/edit_assistant.html', {'form': form, 'assistant': assistant, 'custom_data' : form.custom_data  })
 
 
@@ -141,8 +141,8 @@ FILENAME = "../README.md"
 @csrf_exempt
 @login_required
 def feedback_view(request,subpath):
-    print(f"SUBPATH IN FEEDBACK= {subpath}")
-    print(f"SUBPATH IN QUERYVIEW = {subpath}")
+    #print(f"SUBPATH IN FEEDBACK= {subpath}")
+    #print(f"SUBPATH IN QUERYVIEW = {subpath}")
     subpath_ = re.sub( r"\.","_",subpath )
     segments = subpath_.split('/')
     last_messages = settings.LAST_MESSAGES;
@@ -181,7 +181,7 @@ FILENAME = "../README.md"
 @csrf_exempt
 @login_required
 def query_view(request,subpath):
-    print(f"SUBPATH IN QUERYVIEW = {subpath}")
+    #print(f"SUBPATH IN QUERYVIEW = {subpath}")
     subpath_ = re.sub( r"\.","_",subpath )
     segments = subpath_.split('/')
     last_messages = settings.LAST_MESSAGES;
@@ -208,11 +208,11 @@ def query_view(request,subpath):
         base = '.'.join(name.split('.')[:-1])
         if base == '' :
             return None
-        print(f"BASE= {base}")
+        #print(f"BASE= {base}")
         subdir = name.split('.')[-1];
-        print(f"SUBDIR = {subdir}")
+        #print(f"SUBDIR = {subdir}")
         base_assistant = get_assistant( base, user );
-        print(f"BASE_ASSITANT = {base_assistant}")
+        #print(f"BASE_ASSITANT = {base_assistant}")
         if base_assistant :
             assistant = base_assistant.clone( name )
         else :
@@ -251,6 +251,7 @@ def query_view(request,subpath):
                     comment = message.get('comment','')
                     choice = message.get('choice','0')
                     mindex = mindex - 1;
+                    ntokens = message.get('ntokens')
                     break
             try:
                 if txt is None:
