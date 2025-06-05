@@ -1,7 +1,12 @@
 {% load static %}
+{% load filename_extras %}
 <html>
   <head>
     <style>
+     a {
+  	color: blue;
+  	text-decoration: none;
+	}
       .instructions {
         display: block;
         margin: 5px 0 10px 0;
@@ -60,7 +65,8 @@
             {% csrf_token %}
             {% for k,v  in  form.custom_data %}
 	    <small>
-              <span name='file_row' class="form-row"> <input name="deletion" type="checkbox" value="{{ k }}"> {{ v }} </input> </span>
+		    <span name='file_row' class="form-row"> <input name="deletion" type="checkbox" value="{{ k }}"> </input> 
+			    <a href="/media/{{v|strip_extension}}/{{ v }}"> {{v}} </a>  </span>
 	    </small>
             {% endfor %}
 	    <button style=" margin: 1rem;" type="submit">Delete checked:  </button> 
