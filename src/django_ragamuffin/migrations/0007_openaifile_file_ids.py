@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("sidecar_openai", "0006_rename_original_file_name_openaifile_name"),
+        ("django_ragamuffin", "0006_rename_original_file_name_openaifile_name"),
     ]
 
     operations = [

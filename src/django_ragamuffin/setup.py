@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='sidecar_openai',  # Your app name
+    name='django_ragamuffin',  # Your app name
     version='0.1.0',  # Initial version
     packages=find_packages(),
     include_package_data=True,  # Important for static files/migrations

@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("sidecar_openai", "0003_thread_unique_thread"),
+        ("django_ragamuffin", "0003_thread_unique_thread"),
     ]
 
     operations = [

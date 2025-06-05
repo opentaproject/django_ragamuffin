@@ -5,9 +5,9 @@ from django.http import JsonResponse
 import tiktoken
 from django.core.files.storage import FileSystemStorage
 from django.shortcuts import get_object_or_404, redirect, render
-from sidecar_openai.models import OpenAIFile, VectorStore, Assistant,  Thread, hashed_upload_to, upload_or_retrieve_openai_file, get_current_model
+from django_ragamuffin.models import OpenAIFile, VectorStore, Assistant,  Thread, hashed_upload_to, upload_or_retrieve_openai_file, get_current_model
 import time
-from sidecar_openai.models import create_or_retrieve_vector_store, create_or_retrieve_assistant, create_or_retrieve_thread
+from django_ragamuffin.models import create_or_retrieve_vector_store, create_or_retrieve_assistant, create_or_retrieve_thread
 from .forms import QueryForm
 from django.contrib.auth.models import User
 from django.urls import reverse
@@ -81,10 +81,10 @@ def upload_file_view(request,pk):
         filename = uploaded_file.name 
         assistant =  Assistant.objects.get(pk=pk)
         file_url = assistant.add_file( filename, uploaded_file)
-        r = render(request, 'sidecar_openai/upload.html', {'file_url': file_url})
+        r = render(request, 'django_ragamuffin/upload.html', {'file_url': file_url})
         return redirect(f"/assistant/{pk}/edit/")
 
-    return render(request, 'sidecar_openai/upload.html')
+    return render(request, 'django_ragamuffin/upload.html')
 
 class AssistantEditForm(forms.ModelForm):
 
@@ -132,7 +132,7 @@ def edit_assistant(request, pk):
     else:
         form = AssistantEditForm(instance=assistant, custom_data=assistant.files() )
     #print(f"FORM_CUSTOM_DATA = {form.custom_data}")
-    return render(request, 'sidecar_openai/edit_assistant.html', {'form': form, 'assistant': assistant, 'custom_data' : form.custom_data  })
+    return render(request, 'django_ragamuffin/edit_assistant.html', {'form': form, 'assistant': assistant, 'custom_data' : form.custom_data  })
 
 
 
@@ -282,7 +282,7 @@ def query_view(request,subpath):
        'max_num_results' : item.get('max_num_results' , max_num_results ),
        'last_messages' : item.get('last_messages' , last_messages)  ,
        'time_spent' : item.get('time_spent', time_spent) }  for index, item in enumerate( messages ) ];
-    response = render(request, 'sidecar_openai/query_form.html', {
+    response = render(request, 'django_ragamuffin/query_form.html', {
         'form': form,
         'response': response,
         'messages' : f,

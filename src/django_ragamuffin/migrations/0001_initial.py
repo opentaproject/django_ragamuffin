@@ -2,7 +2,7 @@
 
 import django.core.files.storage
 import django.db.models.deletion
-import sidecar_openai.models
+import django_ragamuffin.models
 from django.db import migrations, models
 
 
@@ -55,7 +55,7 @@ class Migration(migrations.Migration):
                         storage=django.core.files.storage.FileSystemStorage(
                             "/tmp/openaifiles", base_url="/"
                         ),
-                        upload_to=sidecar_openai.models.hashed_upload_to,
+                        upload_to=django_ragamuffin.models.hashed_upload_to,
                     ),
                 ),
                 ("ntokens", models.IntegerField(blank=True, default=0, null=True)),
@@ -83,7 +83,7 @@ class Migration(migrations.Migration):
                         null=True,
                         on_delete=django.db.models.deletion.SET_NULL,
                         related_name="threads",
-                        to="sidecar_openai.assistant",
+                        to="django_ragamuffin.assistant",
                     ),
                 ),
             ],
@@ -103,12 +103,12 @@ class Migration(migrations.Migration):
                 ("checksum", models.CharField(blank=True, max_length=255)),
                 ("vector_store_id", models.CharField(blank=True, max_length=255)),
                 ("name", models.CharField(max_length=255, unique=True)),
-                ("files", models.ManyToManyField(to="sidecar_openai.openaifile")),
+                ("files", models.ManyToManyField(to="django_ragamuffin.openaifile")),
             ],
         ),
         migrations.AddField(
             model_name="assistant",
             name="vector_stores",
-            field=models.ManyToManyField(to="sidecar_openai.vectorstore"),
+            field=models.ManyToManyField(to="django_ragamuffin.vectorstore"),
         ),
     ]

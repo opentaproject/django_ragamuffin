@@ -13,7 +13,7 @@ from openai import OpenAI
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 django.setup()
-from sidecar_openai.models import OpenAIFile, VectorStore, Assistant,  Thread
+from django_ragamuffin.models import OpenAIFile, VectorStore, Assistant,  Thread
 from django.contrib.auth.models import User
 
 model = 'gpt-4o-mini'
@@ -30,7 +30,7 @@ def randstring(length=8):
 class OpenAI(TestCase):
 
     def create_testfile_from_string( self, s , name ):
-        url = reverse('admin:sidecar_openai_openaifile_add')  # use your app and model name
+        url = reverse('admin:django_ragamuffin_openaifile_add')  # use your app and model name
         test_file1 = SimpleUploadedFile( name , s , content_type="text/plain")
         csum = hashlib.md5( s  ).hexdigest()
         res = self.client.post( url ,  {'file': test_file1}, follow=True)
@@ -53,9 +53,9 @@ class OpenAI(TestCase):
         self.assertTrue(user_exists)
 
     def test_create_and_delete_file_object(self):
-        url = reverse('admin:sidecar_openai_openaifile_changelist')  # use your app and model name
+        url = reverse('admin:django_ragamuffin_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
-        url = reverse('admin:sidecar_openai_openaifile_add')  # use your app and model name
+        url = reverse('admin:django_ragamuffin_openaifile_add')  # use your app and model name
         t1 = self.create_testfile_from_string(b"test1_content_here","test1.txt")
         file_id1 = t1.file_ids[0]
         try :
@@ -86,10 +86,10 @@ class OpenAI(TestCase):
 
 
     def test_create_and_delete_two_openai_file_objects(self):
-        url = reverse('admin:sidecar_openai_openaifile_changelist')  # use your app and model name
+        url = reverse('admin:django_ragamuffin_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
         print(f"RESPONSE = {response}")
-        url = reverse('admin:sidecar_openai_openaifile_add')  # use your app and model name
+        url = reverse('admin:django_ragamuffin_openaifile_add')  # use your app and model name
         t1 = self.create_testfile_from_string( b"test1_content_here", "test1.txt" )
         t2 = self.create_testfile_from_string( b"test2_content_here" , "test2.txt")
         for t in [t1,t2] :
@@ -119,7 +119,7 @@ class OpenAI(TestCase):
 
 
     def test_create_and_delete_vector_store_object(self):
-        url = reverse('admin:sidecar_openai_openaifile_changelist')  # use your app and model name
+        url = reverse('admin:django_ragamuffin_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
         print(f"RESPONSE = {response}")
         t1 = self.create_testfile_from_string( b"test1_content_here" ,"test1.txt")
@@ -146,10 +146,10 @@ class OpenAI(TestCase):
 
 
     def test_create_and_delete_assistant_object(self):
-        url = reverse('admin:sidecar_openai_openaifile_changelist')  # use your app and model name
+        url = reverse('admin:django_ragamuffin_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
         print(f"RESPONSE = {response}")
-        url = reverse('admin:sidecar_openai_openaifile_add')  # use your app and model name
+        url = reverse('admin:django_ragamuffin_openaifile_add')  # use your app and model name
 
         t1 = self.create_testfile_from_string( b"test1_content_here" ,"test1.txt")
         t2 = self.create_testfile_from_string( b"test2_content_here" ,"test2.txt")
@@ -207,10 +207,10 @@ class OpenAI(TestCase):
         import tiktoken
 
 
-        url = reverse('admin:sidecar_openai_openaifile_changelist')  # use your app and model name
+        url = reverse('admin:django_ragamuffin_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
         print(f"RESPONSE = {response}")
-        url = reverse('admin:sidecar_openai_openaifile_add')  # use your app and model name
+        url = reverse('admin:django_ragamuffin_openaifile_add')  # use your app and model name
         #test_file1 = SimpleUploadedFile( "test1.txt", b"The dog was black", content_type="text/plain")
         #self.client.post( url ,  {'file': test_file1}, follow=True)
         #t1 = OpenAIFile.objects.get(name="test1.txt")

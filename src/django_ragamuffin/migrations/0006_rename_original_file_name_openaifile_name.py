@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("sidecar_openai", "0005_alter_openaifile_file"),
+        ("django_ragamuffin", "0005_alter_openaifile_file"),
     ]
 
     operations = [

@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("sidecar_openai", "0010_remove_assistant_max_tokens_thread_max_tokens"),
+        ("django_ragamuffin", "0010_remove_assistant_max_tokens_thread_max_tokens"),
     ]
 
     operations = [

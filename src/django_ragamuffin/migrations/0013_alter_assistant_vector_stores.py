@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("sidecar_openai", "0012_alter_assistant_instructions"),
+        ("django_ragamuffin", "0012_alter_assistant_instructions"),
     ]
 
     operations = [
         migrations.AlterField(
             model_name="assistant",
             name="vector_stores",
-            field=models.ManyToManyField(blank=True, to="sidecar_openai.vectorstore"),
+            field=models.ManyToManyField(blank=True, to="django_ragamuffin.vectorstore"),
         ),
     ]

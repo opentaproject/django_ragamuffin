@@ -27,7 +27,7 @@ urlpatterns = [
     path('', login_view, name='login'),
     path('logout/', logout_view, name='logout'),
     path("admin/", admin.site.urls),
-    path('', include('sidecar_openai.urls')),
+    path('', include('django_ragamuffin.urls')),
     
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_URL)

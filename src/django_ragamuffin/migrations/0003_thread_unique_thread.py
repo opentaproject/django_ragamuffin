@@ -7,7 +7,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("sidecar_openai", "0002_thread_user"),
+        ("django_ragamuffin", "0002_thread_user"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
