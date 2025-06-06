@@ -229,13 +229,56 @@ def query_view(request,subpath):
     model = assistant.model
     thread = create_or_retrieve_thread( assistant, name , user )
     data = request.POST;
-    deletes = request.POST.getlist('delete-entry')
-    if deletes :
-        messages = thread.messages;
-        ideletes = [int(i) for i in deletes ];
-        culled = [x for i,x in enumerate(messages) if i not in ideletes ]
-        thread.messages= culled
-        thread.save(update_fields=["messages","thread_id"])
+    print(f"POST = {request.POST}")
+    if 'delete' in request.POST.getlist('action') :
+        deletes = request.POST.getlist('entry')
+        print(f"DELETES = {deletes}")
+        if deletes :
+            messages = thread.messages;
+            ideletes = [int(i) for i in deletes ];
+            culled = [x for i,x in enumerate(messages) if i not in ideletes ]
+            #thread.messages= culled
+            #thread.save(update_fields=["messages","thread_id"])
+    elif 'print' in request.POST.getlist('action') :
+        prints = request.POST.getlist('entry')
+        print(f"PRINTS ={prints}")
+        if prints :
+            head = " \
+                \\documentclass{article}\n\
+                \\usepackage{amsmath} \n\
+                \\usepackage[a4paper, margin=1.5cm]{geometry} \n\
+                \\begin{document} \n\
+                \\setlength{\\fboxsep}{5pt}   \n\
+                \\setlength{\\fboxrule}{0.5pt}"
+            boxhead = "\n\n\\fbox{\n\
+                \\parbox{\\dimexpr\\linewidth-2\\fboxsep-2\\fboxrule\\relax}{\n\
+                "
+            boxtail = "\n}}\n\\vspace{24pt}\n"
+            tail = "\n\\end{document}"
+            messages = thread.messages;
+            iprints = [int(i) for i in prints ];
+            ps = [(i,x) for i,x in enumerate(messages) if i in iprints ]
+            file = open("/tmp/tmp.tex","w");
+            file.write(head)
+            for (i,p) in ps :
+                msg = p;
+                q = msg['user'];
+                r = msg['assistant']
+                choice = msg.get('choice',0)
+                v = CHOICES[choice]
+                print(f"Q = {q}")
+                print(f"R = {r}")
+                time_spent = msg.get('time_spent',0);
+                model = msg.get('model','None')
+                file.write(boxhead)
+                file.write(f"\n\\textbf{{Question {i} :}} {q}\n\n\\vspace{{8pt}}\n\\textbf{{Response:}} {r}\n")
+                file.write(f"\n\\vspace{{8pt}}\n") 
+                file.write(f"\n\\textbf{{tokens={msg.get('ntokens',0)} dt={time_spent} model={model} choice={choice} {v} }} \n\n " )
+                file.write(boxtail)
+            file.write(tail)
+            file.close();
+
+
     d = {'status' : 'pending' , 'result' : 'RESULT' }
     messages = thread.messages
     mindex = 0
