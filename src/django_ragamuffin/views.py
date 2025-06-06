@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.http import HttpResponseForbidden
 import json
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse
 import tiktoken
 from django.core.files.storage import FileSystemStorage
 from django.shortcuts import get_object_or_404, redirect, render
@@ -17,6 +17,9 @@ from .models import upload_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.conf import settings
 from django import forms
+import subprocess
+import tempfile
+from pathlib import Path
 import shutil
 import os
 import markdown
@@ -57,6 +60,25 @@ def mathfix( txt ):
     txt = re.sub(r"UNDERSCORE",'_',txt)
     txt = markdown2.markdown(txt)
     return txt
+
+def tex_to_pdf(tex_code , output_dir="output", jobname="document"):
+    # Create a temp directory for compilation
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    
+    tex_file = output_path / f"{jobname}.tex"
+    with tex_file.open("wb") as f:
+        f.write(tex_code)
+    
+    subprocess.run(
+        ["pdflatex", "-interaction=nonstopmode", "-output-directory", output_dir, tex_file.name],
+        cwd=output_path,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=True
+    )
+    
+    return output_path / f"{jobname}.pdf"
 
 
 def get_hash() :
@@ -280,6 +302,16 @@ def query_view(request,subpath):
                 file.write(boxtail)
             file.write(tail)
             file.close();
+            try :
+                file  = open("/tmp/tmp.tex","rb")
+                s = file.read();
+                print(f"S = {s}")
+                pdf = tex_to_pdf(s,"/tmp/")
+                pdf_path = "/tmp/document.pdf"
+                return FileResponse(open(pdf_path, 'rb'), content_type='application/pdf')
+            except  Exception as err :
+                tex_path = "/tmp/tmp.tex"
+                return FileResponse(open(tex_path, 'rb'), content_type='application/tex')
 
 
     d = {'status' : 'pending' , 'result' : 'RESULT' }
