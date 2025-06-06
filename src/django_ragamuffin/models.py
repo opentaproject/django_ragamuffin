@@ -478,6 +478,13 @@ class Assistant( models.Model ):
         else :
             return None
 
+    def children( self ):
+        name  = self.name;
+        pattern = r'^%s\.[^.]+$' % name
+        children = Assistant.objects.filter(name__regex=pattern).only('pk','name')
+        res = [ {obj.pk : obj.name} for obj in children ]
+        return res
+
     def get_instructions( self ): # GET THE LAST INSTRUCTIONS IN THE TREE
         if self.instructions :
             self.instructions = self.instructions.strip();

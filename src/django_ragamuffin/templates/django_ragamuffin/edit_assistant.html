@@ -62,7 +62,8 @@
 	<h4> Files </h4>
         <div style="margin: 2 auto; padding: 0rem;  ">
 	{% if form.custom_data %}
-          <form method="post">
+<button style=" margin: 1rem;" type="submit">Delete checked:  </button> 
+          <form method="post" style="display: inline;" >
             {% csrf_token %}
             {% for k,v  in  form.custom_data %}
 	    <small>
@@ -70,11 +71,10 @@
 			    <a href="/media/{{v|strip_extension}}/{{ v }}"> {{v}} </a>  </span>
 	    </small>
             {% endfor %}
-	    <button style=" margin: 1rem;" type="submit">Delete checked:  </button> 
           </form>
 	  {% endif %}
 
-
+	  <br/>
 	  <a href="http://localhost:8000/upload/{{assistant.pk}}/"> <button> Upload new file  for the assistant <b>{{ assistant.name }}</b> </button> </a>
         </div>
 

@@ -1,4 +1,5 @@
 {% load static %}
+{% load replace_filters %}
 <html>
     <head>
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -16,6 +17,11 @@
 
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
         <style>
+     	   a {
+  		color: blue;
+  		text-decoration: none;
+		}
+
             .verbatim {
                 white-space: pre;
                 font-family: monospace;
@@ -54,12 +60,25 @@
                     {% csrf_token %}
                     <div style="margin: 10 auto; padding: 1rem;  ">
 			    {% if  user.is_staff %}
-                        <h3>
-                            <a href="{% url 'edit_assistant' pk=assistant_pk %}">Edit Assistant</a>
-                        </h3>
+			<h4> Hello {{ request.user }} </h4>
+                        <h4> <a href="{% url 'edit_assistant' pk=assistant_pk %}">Edit Assistant</a> </h4>
 			{% endif %}
-                        <h3> History </h3>
+			<hr/>
+			<h4> query/{{ name | replace:".,/" }} </h4>
+			{% if parent %}
+			&uarr; <a href='/query/{{parent.name|replace:".,/" }}'> {{parent.name|replace:".,/" }} </a>
+			{% endif %}
+			<div style="padding-left: 6px;"> <b> &bull; {{ name | replace:".,/"}} </b> </div>
+			{% for item in children %} 
+				{% for pk,name in item.items %}
+				<div  style="padding-left: 12px;"> &darr;
+				<a href='/query/{{name|replace:".,/" }}'> {{name|replace:".,/" }} </a> 
+				</div>
+				{% endfor %}
+			{% endfor %}
+			<hr/>
                         {% if messages %}
+			  <h4> Queries: {{ name | replace:".,/" }} </h4>
                             <div>
                                 <input type="checkbox" id="select-all"> Select All <em> [ assessment in brackets] </em>
                             </div>
@@ -78,13 +97,15 @@
                             {% endfor %}
                         {% endif %}
                     </div>
+		    {% if messages %}
                     <button name='action' value='delete' type="submit">Delete checked entries</button>
 		    <button name='action' value='print' type="submit">Print checked entries</button>
+		    {% endif %}
                 </form>
             </div>
             <div class="right">
                 <div style="margin: 10 auto; padding: 1rem;  ">
-                    <h3> Hello {{ request.user }} </h3><h4> Enter Your Query for  the {{ model }} assistant {{ name }} </h4>
+		    <h4> Enter Your Query for  the {{ model }} assistant {{ name }} </h4>
                     <form method="post" style="width: 100%" >
                         {% csrf_token %}
                         {{ form.as_p }}
