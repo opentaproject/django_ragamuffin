@@ -37,6 +37,9 @@ head = " \
 \\documentclass{article}\n\
 \\usepackage{amsmath} \n\
 \\usepackage[a4paper, right=2.5cm, left=2.0cm]{geometry} \n\
+\\usepackage{fancyhdr}\n\
+\\pagestyle{fancy}\n\
+\\fancyhf{} \n\
 \\begin{document} \n\
 \\setlength{\\fboxsep}{5pt}   \n\
 \\setlength{\\fboxrule}{0.5pt}"
@@ -294,6 +297,8 @@ def query_view(request,subpath):
                 print(f"R = {r}")
                 time_spent = msg.get('time_spent',0);
                 model = msg.get('model','None')
+                #file.write(f"\\fancyhead[R]{{ \\hspace{{1cm}} \\textbf{{ {name} }} }}\n");
+                file.write(f"\\fancyhead[R]{{\\makebox[0pt][l]{{\\hspace{{1cm}}\\textbf{{ {name} }}}} }} ")
                 file.write(boxhead)
                 file.write(f"\n\\textbf{{Assistant: {name} }}\n\\vspace{{8pt}}\n\n")
                 file.write(f"\n\\textbf{{Question {i} :}} {q}\n\n\\vspace{{8pt}}\n\\textbf{{Response:}} {r}\n")
