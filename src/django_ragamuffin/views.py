@@ -369,7 +369,12 @@ def query_view(request,subpath):
        'max_num_results' : item.get('max_num_results' , max_num_results ),
        'last_messages' : item.get('last_messages' , last_messages)  ,
        'time_spent' : item.get('time_spent', time_spent) }  for index, item in enumerate( messages ) ];
+    p = assistant.parent();
+    children = assistant.children();
+    parent = assistant.parent();
     response = render(request, 'django_ragamuffin/query_form.html', {
+        'parent' : parent,
+        'children' : children,
         'form': form,
         'response': response,
         'messages' : f,
