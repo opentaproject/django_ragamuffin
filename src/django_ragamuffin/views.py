@@ -5,7 +5,7 @@ from django.http import JsonResponse
 import tiktoken
 from django.core.files.storage import FileSystemStorage
 from django.shortcuts import get_object_or_404, redirect, render
-from django_ragamuffin.models import OpenAIFile, VectorStore, Assistant,  Thread, hashed_upload_to, upload_or_retrieve_openai_file, get_current_model
+from django_ragamuffin.models import OpenAIFile, VectorStore, Assistant,  Thread, hashed_upload_to, upload_or_retrieve_openai_file, get_current_model, DEFAULT_INSTRUCTIONS
 import time
 from django_ragamuffin.models import create_or_retrieve_vector_store, create_or_retrieve_assistant, create_or_retrieve_thread
 from .forms import QueryForm
@@ -221,7 +221,11 @@ def query_view(request,subpath):
 
     assistant = get_assistant( name, request.user  )
     if assistant == None :
-         return HttpResponseForbidden(f"No assistant <b>{name} </b> exists.")
+        if request.user.is_staff :
+            assistant = Assistant(name=name);
+            assistant.save();
+        else :
+            return HttpResponseForbidden(f"No assistant <b>{name} </b> exists.")
     model = assistant.model
     thread = create_or_retrieve_thread( assistant, name , user )
     data = request.POST;

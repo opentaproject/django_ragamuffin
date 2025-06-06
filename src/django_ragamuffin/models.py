@@ -479,7 +479,7 @@ class Assistant( models.Model ):
             return None
 
     def get_instructions( self ): # GET THE LAST INSTRUCTIONS IN THE TREE
-        if not self.instructions :
+        if self.instructions :
             self.instructions = self.instructions.strip();
         appended = ''
         instructions = ''

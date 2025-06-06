@@ -61,6 +61,7 @@
 	<h4>Modify Assistant: {{ assistant.name }}</h4>
 	<h4> Files </h4>
         <div style="margin: 2 auto; padding: 0rem;  ">
+	{% if form.custom_data %}
           <form method="post">
             {% csrf_token %}
             {% for k,v  in  form.custom_data %}
@@ -71,6 +72,9 @@
             {% endfor %}
 	    <button style=" margin: 1rem;" type="submit">Delete checked:  </button> 
           </form>
+	  {% endif %}
+
+
 	  <a href="http://localhost:8000/upload/{{assistant.pk}}/"> <button> Upload new file  for the assistant <b>{{ assistant.name }}</b> </button> </a>
         </div>
 
