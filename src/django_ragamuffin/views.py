@@ -38,9 +38,11 @@ head = " \
 \\documentclass{article}\n\
 \\usepackage{amsmath} \n\
 \\usepackage[a4paper, right=2.5cm, left=2.0cm]{geometry} \n\
-\\usepackage{fancyhdr}\n\
+\\usepackage{fancyhdr,hyperref}\n\
 \\pagestyle{fancy}\n\
 \\fancyhf{} \n\
+\\providecommand{\\tightlist}{\n\
+  \\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}\n\
 \\begin{document} \n\
 \\setlength{\\fboxsep}{5pt}   \n\
 \\setlength{\\fboxrule}{0.5pt}"
