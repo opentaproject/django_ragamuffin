@@ -38,7 +38,7 @@ head = " \
 \\documentclass{article}\n\
 \\usepackage{amsmath} \n\
 \\usepackage[a4paper, right=2.5cm, left=2.0cm]{geometry} \n\
-\\usepackage{fancyhdr,hyperref}\n\
+\\usepackage{fancyhdr,hyperref,mathrsfs}\n\
 \\pagestyle{fancy}\n\
 \\fancyhf{} \n\
 \\providecommand{\\tightlist}{\n\
@@ -299,11 +299,18 @@ def query_view(request,subpath):
                 r =  mark_safe( mathfix(r)  );
                 print(f"R INIT = {r}")
                 r = pypandoc.convert_text( r ,'latex', format='html+raw_tex', extra_args=["--wrap=preserve"]  )
-                r = re.sub(r'\\\$','$',r);
-                r = re.sub(r'\\\(','$',r);
-                r = re.sub(r'\\\)','R',r);
-                r = re.sub(r'\\_','_',r);
-                r = re.sub(r'textbackslash *','',r)
+                def pandoc_fix(r) :
+                    r = re.sub(r'\\\$','$',r);
+                    r = re.sub(r'\\\(','$',r);
+                    r = re.sub(r'\\\)','R',r);
+                    r = re.sub(r'\\_','_',r);
+                    r = re.sub(r'textbackslash *','',r)
+                    r = re.sub(r'\\textquotesingle',"\'",r)
+                    r = re.sub(r'\\{','{',r);
+                    r = re.sub(r'\\}','}',r);
+                    r = re.sub(r'\\\^','^',r);
+                    return r
+                r = pandoc_fix(r)
                 choice = msg.get('choice',0)
                 v = CHOICES[choice]
                 print(f"Q = {q}")
