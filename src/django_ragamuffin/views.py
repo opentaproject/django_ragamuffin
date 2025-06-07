@@ -73,8 +73,8 @@ def tex_to_pdf(tex_code , output_dir="output", jobname="document"):
     output_path.mkdir(parents=True, exist_ok=True)
     
     tex_file = output_path / f"{jobname}.tex"
-    with tex_file.open("wb") as f:
-        f.write(tex_code)
+    with tex_file.open("w") as f:
+        f.write(tex_code )
     
     subprocess.run(
         ["pdflatex", "-interaction=nonstopmode", "-output-directory", output_dir, tex_file.name],
@@ -296,8 +296,14 @@ def query_view(request,subpath):
                 msg = p;
                 q = msg['user'];
                 r = msg['assistant']
-                r =  mark_safe( r  );
-                r = pypandoc.convert_text( r ,'html', format='html+tex_math_dollars' )
+                r =  mark_safe( mathfix(r)  );
+                print(f"R INIT = {r}")
+                r = pypandoc.convert_text( r ,'latex', format='html+raw_tex', extra_args=["--wrap=preserve"]  )
+                r = re.sub(r'\\\$','$',r);
+                r = re.sub(r'\\\(','$',r);
+                r = re.sub(r'\\\)','R',r);
+                r = re.sub(r'\\_','_',r);
+                r = re.sub(r'textbackslash *','',r)
                 choice = msg.get('choice',0)
                 v = CHOICES[choice]
                 print(f"Q = {q}")
@@ -317,6 +323,7 @@ def query_view(request,subpath):
             try :
                 file  = open("/tmp/tmp.tex","rb")
                 s = file.read();
+                s = s.decode('utf-8')
                 print(f"S = {s}")
                 pdf = tex_to_pdf(s,"/tmp/")
                 pdf_path = "/tmp/document.pdf"
