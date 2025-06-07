@@ -311,7 +311,7 @@ def query_view(request,subpath):
                     r = re.sub(r'\\}','}',r);
                     r = re.sub(r'\\\^','^',r);
                     r = re.sub(r'textgreater','gt',r)
-                    r = re.sub(r'textasciitilde','sim',r)
+                    r = re.sub(r'textasciitilde','',r)
                     r = re.sub(r'{}','',r)
                     r = re.sub(r'{\[}','[',r);
                     r = re.sub(r'{\]}',']',r);
