@@ -38,6 +38,7 @@ head = " \
 \\documentclass{article}\n\
 \\usepackage{amsmath} \n\
 \\usepackage[a4paper, right=2.5cm, left=2.0cm]{geometry} \n\
+\\usepackage{graphicx} \n\
 \\usepackage{fancyhdr,hyperref,mathrsfs}\n\
 \\pagestyle{fancy}\n\
 \\fancyhf{} \n\
@@ -309,6 +310,11 @@ def query_view(request,subpath):
                     r = re.sub(r'\\{','{',r);
                     r = re.sub(r'\\}','}',r);
                     r = re.sub(r'\\\^','^',r);
+                    r = re.sub(r'textgreater','gt',r)
+                    r = re.sub(r'textasciitilde','sim',r)
+                    r = re.sub(r'{}','',r)
+                    r = re.sub(r'{\[}','[',r);
+                    r = re.sub(r'{\]}',']',r);
                     return r
                 r = pandoc_fix(r)
                 choice = msg.get('choice',0)
