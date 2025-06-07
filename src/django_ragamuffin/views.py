@@ -52,9 +52,8 @@ head = " \
 tail = "\n\\end{document}"
 boxhead = "\n\n\\fbox{\n\
 \\parbox{\\dimexpr\\linewidth-2\\fboxsep-2\\fboxrule\\relax}{\n"
+boxtail = "\n}}\n\\vspace{24pt}\n"
 
-boxtail = "\n\\end{mdframed} \n\\vspace{24pt}\n"
-boxhead = "\\begin{mdframed}\n"
 
 
 
@@ -87,7 +86,6 @@ def tex_to_pdf(tex_code , output_dir="output", jobname="document"):
         cwd=output_path,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
-        check=True
     )
     
     return output_path / f"{jobname}.pdf"
