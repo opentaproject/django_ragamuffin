@@ -1,4 +1,5 @@
 from django.shortcuts import render
+import pypandoc
 from django.http import HttpResponseForbidden
 import json
 from django.http import JsonResponse, FileResponse
@@ -281,16 +282,20 @@ def query_view(request,subpath):
     elif 'print' in request.POST.getlist('action') :
         prints = request.POST.getlist('entry')
         print(f"PRINTS ={prints}")
-        if prints :
+
+        def thread_to_pdf( thread , prints ):
             messages = thread.messages;
             iprints = [int(i) for i in prints ];
             ps = [(i,x) for i,x in enumerate(messages) if i in iprints ]
+
             file = open("/tmp/tmp.tex","w");
             file.write(head)
             for (i,p) in ps :
                 msg = p;
                 q = msg['user'];
                 r = msg['assistant']
+                r = mathfix( mark_safe( r ) );
+                r = pypandoc.convert_text( r ,'latex',format='html') 
                 choice = msg.get('choice',0)
                 v = CHOICES[choice]
                 print(f"Q = {q}")
@@ -317,6 +322,11 @@ def query_view(request,subpath):
             except  Exception as err :
                 tex_path = "/tmp/tmp.tex"
                 return FileResponse(open(tex_path, 'rb'), content_type='application/tex')
+
+
+        if prints :
+            response = thread_to_pdf( thread , prints )
+            return response
 
 
     d = {'status' : 'pending' , 'result' : 'RESULT' }
