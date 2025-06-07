@@ -37,20 +37,24 @@ import asyncio
 head = " \
 \\documentclass{article}\n\
 \\usepackage{amsmath} \n\
-\\usepackage[a4paper, right=2.5cm, left=2.0cm]{geometry} \n\
+\\usepackage[a4paper, right=2.5cm, left=2.0cm, top=1.5cm]{geometry} \n\
 \\usepackage{graphicx} \n\
+\\usepackage{mdframed} \n\
 \\usepackage{fancyhdr,hyperref,mathrsfs}\n\
 \\pagestyle{fancy}\n\
 \\fancyhf{} \n\
 \\providecommand{\\tightlist}{\n\
   \\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}\n\
 \\begin{document} \n\
+\\setlength{\parsep}{2pt} \n\
 \\setlength{\\fboxsep}{5pt}   \n\
 \\setlength{\\fboxrule}{0.5pt}"
 tail = "\n\\end{document}"
 boxhead = "\n\n\\fbox{\n\
 \\parbox{\\dimexpr\\linewidth-2\\fboxsep-2\\fboxrule\\relax}{\n"
-boxtail = "\n}}\n\\vspace{24pt}\n"
+
+boxtail = "\n\\end{mdframed} \n\\vspace{24pt}\n"
+boxhead = "\\begin{mdframed}\n"
 
 
 
@@ -62,11 +66,12 @@ def mathfix( txt ):
     txt = re.sub(r"\\\[",'LEFTBRAK',txt)
     txt = re.sub(r"\\\]",'RIGHTBRAK',txt)
     txt = markdown2.markdown( txt )
-    txt = re.sub(r"LEFTBRAK",'<p/>$',txt)
-    txt = re.sub(r"RIGHTBRAK",'$ <p/>',txt)
+    txt = re.sub(r"LEFTBRAK",'<p/>$\\;',txt)
+    txt = re.sub(r"RIGHTBRAK",'\\;$<p/>',txt)
     txt = re.sub(r"UNDERSCORE",'_',txt)
     txt = markdown2.markdown(txt)
     return txt
+
 
 def tex_to_pdf(tex_code , output_dir="output", jobname="document"):
     # Create a temp directory for compilation
@@ -310,11 +315,13 @@ def query_view(request,subpath):
                     r = re.sub(r'\\{','{',r);
                     r = re.sub(r'\\}','}',r);
                     r = re.sub(r'\\\^','^',r);
-                    r = re.sub(r'textgreater','gt',r)
+                    r = re.sub(r'\\textgreater','>',r)
                     r = re.sub(r'textasciitilde','',r)
                     r = re.sub(r'{}','',r)
                     r = re.sub(r'{\[}','[',r);
                     r = re.sub(r'{\]}',']',r);
+                    r = re.sub(r'\\;\$','\\]',r)
+                    r = re.sub(r'\$\\;','\\[',r)
                     return r
                 r = pandoc_fix(r)
                 choice = msg.get('choice',0)
@@ -324,9 +331,9 @@ def query_view(request,subpath):
                 time_spent = msg.get('time_spent',0);
                 model = msg.get('model','None')
                 #file.write(f"\\fancyhead[R]{{ \\hspace{{1cm}} \\textbf{{ {name} }} }}\n");
-                file.write(f"\\fancyhead[R]{{\\makebox[0pt][l]{{\\hspace{{1cm}}\\textbf{{ {name} }}}} }} ")
+                file.write(f"\\fancyhead[R]{{\\makebox[0pt][l]{{\\hspace{{-4cm}}\\textbf{{ {name} }}}} }} ")
                 file.write(boxhead)
-                file.write(f"\n\\textbf{{Assistant: {name} }}\n\\vspace{{8pt}}\n\n")
+                #file.write(f"\n\\textbf{{Assistant: {name} }}\n\\vspace{{8pt}}\n\n")
                 file.write(f"\n\\textbf{{Question {i} :}} {q}\n\n\\vspace{{8pt}}\n\\textbf{{Response:}} {r}\n")
                 file.write(f"\n\\vspace{{8pt}}\n") 
                 file.write(f"\n\\textbf{{tokens={msg.get('ntokens',0)} dt={time_spent} model={model} choice={choice} {v} }} \n\n " )
