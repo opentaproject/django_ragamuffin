@@ -296,8 +296,8 @@ def query_view(request,subpath):
                 msg = p;
                 q = msg['user'];
                 r = msg['assistant']
-                r = mathfix( mark_safe( r ) );
-                r = pypandoc.convert_text( r ,'latex',format='html') 
+                r =  mark_safe( r  );
+                r = pypandoc.convert_text( r ,'html', format='html+tex_math_dollars' )
                 choice = msg.get('choice',0)
                 v = CHOICES[choice]
                 print(f"Q = {q}")
