@@ -17,6 +17,45 @@
 
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
         <style>
+    .container {
+      display: flex;
+      width: 100%;
+      flex-direction: row;
+      gap: 0px;
+    }
+      .left-column {
+      width: 30%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      background-color: #f8f8f8;
+    }
+
+    .right-column {
+      flex: 1; /* Fills the remaining space */
+      padding: 10px;
+      border: 1px solid #ccc;
+      background-color: #e8e8e8;
+    }
+
+    .column {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+      }
+      .left-column {
+	      order: 2;
+	      width: 100%;
+      }
+      .right-column {
+	order: 1;
+        width: 100%;
+    }
+    }
      	   a {
   		color: blue;
   		text-decoration: none;
@@ -26,7 +65,7 @@
                 white-space: pre;
                 font-family: monospace;
             }
-            .container {
+            .oldcontainer {
                 display: flex;
                 width: 100%;
             }
@@ -42,6 +81,8 @@
             }
 
             .form-row {
+		background-color: #00ffff;
+		flex-direction: row;
                 display: flex;
                 align-items: center;  /* Aligns vertically */
                 gap: 2px;             /* Space between elements */
@@ -55,16 +96,10 @@
     </head>
     <body style="display: flex; justify-content: center;  height: 100vh; margin: 0;">
         <div class='container'>
-            <div class="left">
+            <div class="left-column">
                 <form method="post">
                     {% csrf_token %}
                     <div style="margin: 10 auto; padding: 1rem;  ">
-			    {% if  user.is_staff %}
-			<h4> Hello {{ request.user }} </h4>
-                        <h4> <a href="{% url 'edit_assistant' pk=assistant_pk %}">Edit Assistant</a> </h4>
-			{% endif %}
-			<hr/>
-			<h4> query/{{ name | replace:".,/" }} </h4>
 			{% if parent %}
 			&uarr; <a href='/query/{{parent.name|replace:".,/" }}'> {{parent.name|replace:".,/" }} </a>
 			{% endif %}
@@ -101,11 +136,16 @@
                     <button name='action' value='delete' type="submit">Delete checked entries</button>
 		    <button name='action' value='print' type="submit">Print checked entries</button>
 		    {% endif %}
+
+			{% if  user.is_staff %}
+                        <h4> <a href="{% url 'edit_assistant' pk=assistant_pk %}">Edit Assistant</a> </h4>
+			<hr/>
+			{% endif %}
                 </form>
             </div>
-            <div class="right">
+            <div class="right-column">
                 <div style="margin: 10 auto; padding: 1rem;  ">
-		    <h4> Enter Your Query for  the {{ model }} assistant {{ name }} </h4>
+			<h4> Hellow {{ request.user }}. Enter Your Query for  the {{ model }} assistant {{ name | replace:".,/" }} </h4>
                     <form method="post" style="width: 100%" >
                         {% csrf_token %}
                         {{ form.as_p }}
