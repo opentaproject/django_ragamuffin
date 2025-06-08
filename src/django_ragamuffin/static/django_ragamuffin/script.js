@@ -92,14 +92,14 @@ function handleClick(event) {
   }
 
   const response_area = document.getElementById("response");
-  if (response_area) {
-    response_area.innerHTML = content;
-  }
   const message_index =
     event.currentTarget?.querySelector(".mindex")?.innerHTML || "";
   const mindexarea = document.getElementById("newmessage_index");
   if (mindexarea) {
     mindexarea.value = message_index;
+  }
+  if (response_area) {
+    response_area.innerHTML = "<b>Query: " + String( mindexarea.value  ) + " </b>" +  String(  content   )
   }
   const comment_text = comment;
   const submitBtn = document.getElementById("submitBtn");

@@ -26,8 +26,12 @@
                 flex-direction: row;
                 gap: 0px;
             }
-            .navigation {
+
+            .here-button{
                 background-color: #f8f8f8
+            }
+            .navigation {
+                background-color: #c8c8c8;
             }
 
             .old-messages{
@@ -109,22 +113,8 @@
                 <form method="post">
                     {% csrf_token %}
                     <div style="margin: 10 auto; padding: 1rem;  ">
-                        <div class="navigation">
-                            <h4> Navigation </h4>
-                            {% if parent %}
-                                <span>
-                                    &uarr; <a href='/query/{{parent.name|replace:".,/" }}'> {{parent.name|replace:".,/" }} </a>
-                                </span>
-                            {% endif %}
-                            <span style="padding-left: 6px;"> <b> &bull; {{ name | replace:".,/"}} </b> </span>
-                            {% for item in children %}
-                                {% for pk,name in item.items %}
-                                    <span  style="padding-left: 12px;"> &darr;
-                                        <a href='/query/{{name|replace:".,/" }}'> {{name|replace:".,/" }} </a>
-                                    </span>
-                                {% endfor %}
-                            {% endfor %}
-                        </div>
+
+
                         <div class='old-messages'>
                             {% if messages %}
                                 <h4> Old queries </h4>
@@ -143,10 +133,10 @@
                                         <div class="message_index"></div>
                                     </span>
                                 {% endfor %}
-                            {% endif %}
                             <p/>
-                            <button name='action' value='delete' type="submit">Delete checked entries</button>
+                            <button name='action' value='delete' type="submit" id="deleteBtn" >Delete checked entries</button>
                             <button name='action' value='print' type="submit">Print checked entries</button>
+			    {% endif %}
                         </div>
                         {% if  user.is_staff %}
                             <h4 class="old-messages" > <a href="{% url 'edit_assistant' pk=assistant_pk %}">Edit Assistant</a> </h4>
@@ -156,8 +146,24 @@
                 </form>
             </div>
             <div class="right-column">
+
                 <div style="margin: 10 auto; padding: 1rem;  ">
-                    <h4> Hellow {{ request.user }}. Enter Your Query for  the {{ model }} assistant {{ name | replace:".,/" }} </h4>
+                        <div class="navigation">
+                            {% if parent %}
+                                <span>
+                                    &uarr; <a href='/query/{{parent.name|replace:".,/" }}'> {{parent.name|replace:".,/" }} </a>
+                                </span>
+                            {% endif %}
+                            <button class="here-button" style="padding-left: 6px;"> <b> &bull; {{ name | replace:".,/"}} </b> </button>
+                            {% for item in children %}
+                                {% for pk,name in item.items %}
+                                    <span  style="padding-left: 12px;"> &darr;
+                                        <a href='/query/{{name|replace:".,/" }}'> {{name|replace:".,/" }} </a>
+                                    </span>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+			<h4> Hello {{ request.user }}. Enter Your Query for  the {{ model }} assistant {{ name | replace:".,/" }} </h4>
                     <form method="post" style="width: 100%" >
                         {% csrf_token %}
                         {{ form.as_p }}
@@ -178,7 +184,7 @@
 
                         {% endif %}
 
-                        <form id="myForm">
+                        <form id='myForm'>
                             {% csrf_token %}
                             <input type="text" style="display: none"  name="thread" value="{{request.path}}" />
                             <input type="test" style="display: none" id="newmessage_index" name="newmessage_index" value="{{ mindex }}"  />
@@ -202,6 +208,9 @@
         </div>
     </body>
     <script src="{% static 'django_ragamuffin/script.js' %}"></script>
+
+
+
 
 
 </html>
