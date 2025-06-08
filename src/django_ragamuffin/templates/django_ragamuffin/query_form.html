@@ -17,27 +17,27 @@
 
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
         <style>
-  h4 {
-    margin-bottom: 0.5em; /* or try 4px, 8px */
-  }
+            h4 {
+                margin-bottom: 0.5em; /* or try 4px, 8px */
+            }
             .container {
                 display: flex;
                 width: 100%;
                 flex-direction: row;
                 gap: 0px;
             }
-	    .navigation {
-		    background-color: #e8e8e8
-	    }
+            .navigation {
+                background-color: #f8f8f8
+            }
 
-	    .old-messages{
-		    background-color: #e8e8e8
-	    }
+            .old-messages{
+                background-color: #f8f8f8
+            }
             .left-column {
                 width: 30%;
                 padding: 10px;
                 border: 1px solid #ccc;
-                background-color: #f8f8f8;
+                background-color: #e8e8e8;
             }
 
             .right-column {
@@ -53,7 +53,7 @@
                 border: 1px solid #ccc;
             }
 
-            @media (max-width: 768px) {
+            @media (max-width: 1024px) {
                 .container {
                     flex-direction: column;
                 }
@@ -109,45 +109,45 @@
                 <form method="post">
                     {% csrf_token %}
                     <div style="margin: 10 auto; padding: 1rem;  ">
-			    <div class="navigation">
-                        <h4> Navigation </h4>
-                        {% if parent %}
-                            <span>
-                                &uarr; <a href='/query/{{parent.name|replace:".,/" }}'> {{parent.name|replace:".,/" }} </a>
-                            </span>
-                        {% endif %}
-                        <span style="padding-left: 6px;"> <b> &bull; {{ name | replace:".,/"}} </b> </span>
-                        {% for item in children %}
-                            {% for pk,name in item.items %}
-                                <span  style="padding-left: 12px;"> &darr;
-                                    <a href='/query/{{name|replace:".,/" }}'> {{name|replace:".,/" }} </a>
+                        <div class="navigation">
+                            <h4> Navigation </h4>
+                            {% if parent %}
+                                <span>
+                                    &uarr; <a href='/query/{{parent.name|replace:".,/" }}'> {{parent.name|replace:".,/" }} </a>
                                 </span>
+                            {% endif %}
+                            <span style="padding-left: 6px;"> <b> &bull; {{ name | replace:".,/"}} </b> </span>
+                            {% for item in children %}
+                                {% for pk,name in item.items %}
+                                    <span  style="padding-left: 12px;"> &darr;
+                                        <a href='/query/{{name|replace:".,/" }}'> {{name|replace:".,/" }} </a>
+                                    </span>
+                                {% endfor %}
                             {% endfor %}
-                        {% endfor %}
-			    </div>
-			 <div class='old-messages'>
-                        {% if messages %}
-			<h4> Old queries </h4>
-                            <input type="checkbox" id="select-all"> Select all in <b> {{ name | replace:".,/" }} </b>   </em>
-                            <p> </p>
-                            {% for m in messages %}
-                                <span name='queryrow' class="form-row">
-                                    <input type="checkbox" name="entry" value="{{ m.index}}" class="choice-box">
-                                    <button style="width: 100% ; text-align: left; " name='oldquery' value="{{m.user}}">{{ m.index  | stringformat:"02d" }}:
-                                        [<span class="innerChoice" id="choice-{{m.index}}">{{m.choice}}</span>]
-                                        <div class="innerDiv" style="display: none"> {{m.assistant | safe }}
-                                            <div class='verbatim'> tokens={{m.ntokens}} model={{ m.model }} dt={{ m.time_spent }}s saved_messages={{ m.last_messages }} chunks={{ m.max_num_results }}  </div>
-                                        </div>
-                                        <div class="mindex" style="display: none"> {{m.index }} </div>
-                                        {{m.user|truncatechars:30}} <em> <span id="comment-{{m.index}}" class="innerComment">{{ m.comment}}</span> </em>   </button>
-                                    <div class="message_index"></div>
-                                </span>
-                            {% endfor %}
-                        {% endif %}
-                        <p/>
-                        <button name='action' value='delete' type="submit">Delete checked entries</button>
-                        <button name='action' value='print' type="submit">Print checked entries</button>
-			 </div>
+                        </div>
+                        <div class='old-messages'>
+                            {% if messages %}
+                                <h4> Old queries </h4>
+                                <input type="checkbox" id="select-all"> Select all in <b> {{ name | replace:".,/" }} </b>   </em>
+                                <p> </p>
+                                {% for m in messages %}
+                                    <span name='queryrow' class="form-row">
+                                        <input type="checkbox" name="entry" value="{{ m.index}}" class="choice-box">
+                                        <button style="width: 100% ; text-align: left; " name='oldquery' value="{{m.user}}">{{ m.index  | stringformat:"02d" }}:
+                                            [<span class="innerChoice" id="choice-{{m.index}}">{{m.choice}}</span>]
+                                            <div class="innerDiv" style="display: none"> {{m.assistant | safe }}
+                                                <div class='verbatim'> tokens={{m.ntokens}} model={{ m.model }} dt={{ m.time_spent }}s saved_messages={{ m.last_messages }} chunks={{ m.max_num_results }}  </div>
+                                            </div>
+                                            <div class="mindex" style="display: none"> {{m.index }} </div>
+                                            {{m.user|truncatechars:30}} <em> <span id="comment-{{m.index}}" class="innerComment">{{ m.comment}}</span> </em>   </button>
+                                        <div class="message_index"></div>
+                                    </span>
+                                {% endfor %}
+                            {% endif %}
+                            <p/>
+                            <button name='action' value='delete' type="submit">Delete checked entries</button>
+                            <button name='action' value='print' type="submit">Print checked entries</button>
+                        </div>
                         {% if  user.is_staff %}
                             <h4 class="old-messages" > <a href="{% url 'edit_assistant' pk=assistant_pk %}">Edit Assistant</a> </h4>
                             <hr/>
