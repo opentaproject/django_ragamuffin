@@ -7,7 +7,11 @@
             MathJax = {
                 tex: {
                     inlineMath: [['$', '$'], ['\\(', '\\)'],['\\[','\\]']]
-                }
+                },
+	    chtml: {
+      linebreaks: { automatic: true },
+      displayAlign: 'left'
+    }
             };
         </script>
         <script id="MathJax-script" async
@@ -17,9 +21,17 @@
 
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
         <style>
+<style>
+
             h4 {
                 margin-bottom: 0.5em; /* or try 4px, 8px */
             }
+
+	  .wrap-text {
+  		word-wrap: break-word;
+  		overflow-wrap: break-word;
+		max-width: 100%;
+		}
             .container {
                 display: flex;
                 width: 100%;
@@ -171,12 +183,10 @@
                     </form>
                     <div id='response-block'>
                         <div style="border: 1px dashed gray; background-color: #f9f9f9; padding: 1rem;">
-                            <p>
-                                <div id='response'> {{ response| safe }}
+                                <div id='response' class='wrap-text' > {{ response| safe }}
                                     <div class='verbatim'> ntokens={{ntokens}} model={{ model }} dt={{ time_spent }}s saved_messages={{ last_messages }} chunks={{ max_num_results }}  </div>
                                 </div>
-                            </p>
-                        </div>
+		    </div>
                         {% if choice == 0 %}
                             <div id="button-box" style="border: 4px dashed red; background-color: #f9f9f9; padding: 1rem; margin-top: 20px">
                         {% else %}
