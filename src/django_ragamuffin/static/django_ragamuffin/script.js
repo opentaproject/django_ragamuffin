@@ -63,6 +63,7 @@ function button_color(btn, color) {
 }
 
 function handleClick(event) {
+  console.log("HANDLE_CLICK")
   event.preventDefault();
   document.getElementById("response-block").style.display = "block";
   var txt = event.currentTarget?.value || "";
@@ -92,6 +93,12 @@ function handleClick(event) {
   }
 
   const response_area = document.getElementById("response");
+  console.log("TARGET = ", event.currentTarget)
+  var buttons = document.getElementsByName("oldquery").forEach(button => {
+  button.style.backgroundColor = "";
+});
+  
+  event.currentTarget.style.backgroundColor = "lightblue"; 
   const message_index =
     event.currentTarget?.querySelector(".mindex")?.innerHTML || "";
   const mindexarea = document.getElementById("newmessage_index");
@@ -99,7 +106,11 @@ function handleClick(event) {
     mindexarea.value = message_index;
   }
   if (response_area) {
-    response_area.innerHTML = "<b>Query: " + String( mindexarea.value  ) + " </b>" +  String(  content   )
+    if ( message_index ){
+    response_area.innerHTML = '<b  style="background-color: lightblue; padding: 4px " >Query: ' + String( message_index ) + ' </b>' +  String(  content   )
+    } else {
+    response_area.innerHTML =  String(  content   )
+    }
   }
   const comment_text = comment;
   const submitBtn = document.getElementById("submitBtn");
