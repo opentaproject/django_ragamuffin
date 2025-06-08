@@ -17,49 +17,59 @@
 
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
         <style>
-    .container {
-      display: flex;
-      width: 100%;
-      flex-direction: row;
-      gap: 0px;
-    }
-      .left-column {
-      width: 30%;
-      padding: 10px;
-      border: 1px solid #ccc;
-      background-color: #f8f8f8;
-    }
+  h4 {
+    margin-bottom: 0.5em; /* or try 4px, 8px */
+  }
+            .container {
+                display: flex;
+                width: 100%;
+                flex-direction: row;
+                gap: 0px;
+            }
+	    .navigation {
+		    background-color: #e8e8e8
+	    }
 
-    .right-column {
-      flex: 1; /* Fills the remaining space */
-      padding: 10px;
-      border: 1px solid #ccc;
-      background-color: #e8e8e8;
-    }
+	    .old-messages{
+		    background-color: #e8e8e8
+	    }
+            .left-column {
+                width: 30%;
+                padding: 10px;
+                border: 1px solid #ccc;
+                background-color: #f8f8f8;
+            }
 
-    .column {
-      flex: 1;
-      padding: 10px;
-      border: 1px solid #ccc;
-    }
+            .right-column {
+                flex: 1; /* Fills the remaining space */
+                padding: 10px;
+                border: 1px solid #ccc;
+                background-color: #e8e8e8;
+            }
 
-    @media (max-width: 768px) {
-      .container {
-        flex-direction: column;
-      }
-      .left-column {
-	      order: 2;
-	      width: 100%;
-      }
-      .right-column {
-	order: 1;
-        width: 100%;
-    }
-    }
-     	   a {
-  		color: blue;
-  		text-decoration: none;
-		}
+            .column {
+                flex: 1;
+                padding: 10px;
+                border: 1px solid #ccc;
+            }
+
+            @media (max-width: 768px) {
+                .container {
+                    flex-direction: column;
+                }
+                .left-column {
+                    order: 2;
+                    width: 100%;
+                }
+                .right-column {
+                    order: 1;
+                    width: 100%;
+                }
+            }
+            a {
+                color: blue;
+                text-decoration: none;
+            }
 
             .verbatim {
                 white-space: pre;
@@ -81,8 +91,7 @@
             }
 
             .form-row {
-		background-color: #00ffff;
-		flex-direction: row;
+                flex-direction: row;
                 display: flex;
                 align-items: center;  /* Aligns vertically */
                 gap: 2px;             /* Space between elements */
@@ -100,23 +109,27 @@
                 <form method="post">
                     {% csrf_token %}
                     <div style="margin: 10 auto; padding: 1rem;  ">
-			{% if parent %}
-			&uarr; <a href='/query/{{parent.name|replace:".,/" }}'> {{parent.name|replace:".,/" }} </a>
-			{% endif %}
-			<div style="padding-left: 6px;"> <b> &bull; {{ name | replace:".,/"}} </b> </div>
-			{% for item in children %} 
-				{% for pk,name in item.items %}
-				<div  style="padding-left: 12px;"> &darr;
-				<a href='/query/{{name|replace:".,/" }}'> {{name|replace:".,/" }} </a> 
-				</div>
-				{% endfor %}
-			{% endfor %}
-			<hr/>
+			    <div class="navigation">
+                        <h4> Navigation </h4>
+                        {% if parent %}
+                            <span>
+                                &uarr; <a href='/query/{{parent.name|replace:".,/" }}'> {{parent.name|replace:".,/" }} </a>
+                            </span>
+                        {% endif %}
+                        <span style="padding-left: 6px;"> <b> &bull; {{ name | replace:".,/"}} </b> </span>
+                        {% for item in children %}
+                            {% for pk,name in item.items %}
+                                <span  style="padding-left: 12px;"> &darr;
+                                    <a href='/query/{{name|replace:".,/" }}'> {{name|replace:".,/" }} </a>
+                                </span>
+                            {% endfor %}
+                        {% endfor %}
+			    </div>
+			 <div class='old-messages'>
                         {% if messages %}
-			  <h4> Queries: {{ name | replace:".,/" }} </h4>
-                            <div>
-                                <input type="checkbox" id="select-all"> Select All <em> [ assessment in brackets] </em>
-                            </div>
+			<h4> Old queries </h4>
+                            <input type="checkbox" id="select-all"> Select all in <b> {{ name | replace:".,/" }} </b>   </em>
+                            <p> </p>
                             {% for m in messages %}
                                 <span name='queryrow' class="form-row">
                                     <input type="checkbox" name="entry" value="{{ m.index}}" class="choice-box">
@@ -131,21 +144,20 @@
                                 </span>
                             {% endfor %}
                         {% endif %}
+                        <p/>
+                        <button name='action' value='delete' type="submit">Delete checked entries</button>
+                        <button name='action' value='print' type="submit">Print checked entries</button>
+			 </div>
+                        {% if  user.is_staff %}
+                            <h4 class="old-messages" > <a href="{% url 'edit_assistant' pk=assistant_pk %}">Edit Assistant</a> </h4>
+                            <hr/>
+                        {% endif %}
                     </div>
-		    {% if messages %}
-                    <button name='action' value='delete' type="submit">Delete checked entries</button>
-		    <button name='action' value='print' type="submit">Print checked entries</button>
-		    {% endif %}
-
-			{% if  user.is_staff %}
-                        <h4> <a href="{% url 'edit_assistant' pk=assistant_pk %}">Edit Assistant</a> </h4>
-			<hr/>
-			{% endif %}
                 </form>
             </div>
             <div class="right-column">
                 <div style="margin: 10 auto; padding: 1rem;  ">
-			<h4> Hellow {{ request.user }}. Enter Your Query for  the {{ model }} assistant {{ name | replace:".,/" }} </h4>
+                    <h4> Hellow {{ request.user }}. Enter Your Query for  the {{ model }} assistant {{ name | replace:".,/" }} </h4>
                     <form method="post" style="width: 100%" >
                         {% csrf_token %}
                         {{ form.as_p }}
