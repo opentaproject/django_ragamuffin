@@ -40,22 +40,56 @@ head = " \
 \\usepackage[a4paper, right=2.5cm, left=2.0cm, top=1.5cm]{geometry} \n\
 \\usepackage{graphicx} \n\
 \\usepackage{mdframed} \n\
+\\usepackage{amsmath} \n\
 \\usepackage{fancyhdr,hyperref,mathrsfs}\n\
 \\pagestyle{fancy}\n\
 \\fancyhf{} \n\
 \\providecommand{\\tightlist}{\n\
   \\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}\n\
 \\begin{document} \n\
+\\setlength{\parindent}{0pt} \n\
 \\setlength{\parsep}{2pt} \n\
 \\setlength{\\fboxsep}{5pt}   \n\
 \\setlength{\\fboxrule}{0.5pt}"
 tail = "\n\\end{document}"
 boxhead = "\n\n\\fbox{\n\
 \\parbox{\\dimexpr\\linewidth-2\\fboxsep-2\\fboxrule\\relax}{\n"
-boxtail = "\n}}\n\\vspace{24pt}\n"
+boxtail = "\n}}\n\\vspace{12pt}\n"
+
+boxhead = "\n\n\\hspace*{-20pt}\\fbox{\n\
+\\parbox{\\dimexpr\\linewidth-2\\fboxsep-2\\fboxrule\\relax}{\n"
 
 
 
+
+#def break_after_all_equals(tex_content, max_length=80):
+#
+#    def break_equation(match):
+#        full = match.group(0)
+#        inner = match.group(1)
+#
+#        # Only process if line is long enough and has equal signs
+#        if len(inner) < max_length or '=' not in inner:
+#            return full
+#
+#        # Split on '=' and rejoin with '= \\' after each
+#        parts = inner.split('=')
+#        broken = parts[0].strip()
+#        for part in parts[1:]:
+#            broken += ' =  ' + part.strip()
+#            print(f"broken={broken}")
+#        return full.replace(inner, broken)
+#
+#    math_patterns = [
+#        re.compile(r'\\\[(.*?)\\\]', re.DOTALL),
+#        re.compile(r'\$\$(.*?)\$\$', re.DOTALL)
+#    ]
+#
+#    for pattern in math_patterns:
+#        tex_content = pattern.sub(break_equation, tex_content)
+#
+#    return tex_content
+#
 
 MAX_OLD_QUERIES = 30
 def mathfix( txt ):
@@ -275,10 +309,8 @@ def query_view(request,subpath):
     model = assistant.model
     thread = create_or_retrieve_thread( assistant, name , user )
     data = request.POST;
-    print(f"POST = {request.POST}")
     if 'delete' in request.POST.getlist('action') :
         deletes = request.POST.getlist('entry')
-        print(f"DELETES = {deletes}")
         if deletes :
             messages = thread.messages;
             ideletes = [int(i) for i in deletes ];
@@ -287,7 +319,6 @@ def query_view(request,subpath):
             thread.save(update_fields=["messages","thread_id"])
     elif 'print' in request.POST.getlist('action') :
         prints = request.POST.getlist('entry')
-        print(f"PRINTS ={prints}")
 
         def thread_to_pdf( thread , prints ):
             messages = thread.messages;
@@ -301,7 +332,6 @@ def query_view(request,subpath):
                 q = msg['user'];
                 r = msg['assistant']
                 r =  mark_safe( mathfix(r)  );
-                print(f"R INIT = {r}")
                 r = pypandoc.convert_text( r ,'latex', format='html+raw_tex', extra_args=["--wrap=preserve"]  )
                 def pandoc_fix(r) :
                     r = re.sub(r'\\\$','$',r);
@@ -320,29 +350,27 @@ def query_view(request,subpath):
                     r = re.sub(r'{\]}',']',r);
                     r = re.sub(r'\\;\$','\\]',r)
                     r = re.sub(r'\$\\;','\\[',r)
+                    r = re.sub(r'section{','section*{\\\\textbullet \\\\hspace{5px} ',r)
+                    #r = break_after_all_equals( r , max_length=10)
                     return r
                 r = pandoc_fix(r)
                 choice = msg.get('choice',0)
                 v = CHOICES[choice]
-                print(f"Q = {q}")
-                print(f"R = {r}")
                 time_spent = msg.get('time_spent',0);
                 model = msg.get('model','None')
                 #file.write(f"\\fancyhead[R]{{ \\hspace{{1cm}} \\textbf{{ {name} }} }}\n");
                 file.write(f"\\fancyhead[R]{{\\makebox[0pt][l]{{\\hspace{{-4cm}}\\textbf{{ {name} }}}} }} ")
                 file.write(boxhead)
                 #file.write(f"\n\\textbf{{Assistant: {name} }}\n\\vspace{{8pt}}\n\n")
-                file.write(f"\n\\textbf{{Question {i} :}} {q}\n\n\\vspace{{8pt}}\n\\textbf{{Response:}} {r}\n")
+                file.write(f"\n\\textbf{{Question {i} :}} {q}\n{boxtail}\n\\textbf{{Response:}} {r}\n")
                 file.write(f"\n\\vspace{{8pt}}\n") 
-                file.write(f"\n\\textbf{{tokens={msg.get('ntokens',0)} dt={time_spent} model={model} choice={choice} {v} }} \n\n " )
-                file.write(boxtail)
+                file.write(f"\n\\textbf{{tokens={msg.get('ntokens',0)} dt={time_spent} model={model} choice={choice} {v} }} \\vspace{{12pt}} \n\n " )
             file.write(tail)
             file.close();
             try :
                 file  = open("/tmp/tmp.tex","rb")
                 s = file.read();
                 s = s.decode('utf-8')
-                print(f"S = {s}")
                 pdf = tex_to_pdf(s,"/tmp/")
                 pdf_path = "/tmp/document.pdf"
                 return FileResponse(open(pdf_path, 'rb'), content_type='application/pdf')
