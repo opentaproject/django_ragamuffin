@@ -1,5 +1,6 @@
 {% load static %}
 {% load filename_extras %}
+{% load replace_filters %}
 <html>
   <head>
     <style>
@@ -48,21 +49,30 @@
         float: none;
         clear: both;
       }
+      body {
+  padding: 50px;
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh; /* ensures full height */
+  box-sizing: border-box;
+}
 
 
 
     </style>
   </head>
-  <body style="display: flex; justify-content: center;  width: 600px; height: 100vh; margin: 0;">
+  <body style="backgroundColor=pink; display: flex; justify-content: center;  height: 100vh; margin: 0;">
     <div class='container'>
 
 
       {% block content %}
-	<h4>Modify Assistant: {{ assistant.name }}</h4>
+      <h4>Edit Assistant: <a href="/query/{{ assistant.name  | replace:".,/" }}">{{ assistant.name  | replace:".,/" }} </a> </h4>
 	<h4> Files </h4>
         <div style="margin: 2 auto; padding: 0rem;  ">
 	{% if form.custom_data %}
-<button style=" margin: 1rem;" type="submit">Delete checked:  </button> 
+<button type="submit">Delete checked:  </button> 
           <form method="post" style="display: inline;" >
             {% csrf_token %}
             {% for k,v  in  form.custom_data %}
