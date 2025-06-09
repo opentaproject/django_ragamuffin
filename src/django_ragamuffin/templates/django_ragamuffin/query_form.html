@@ -3,11 +3,18 @@
 <html>
     <head>
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-	<script>
-function confirmDelete() {
-  return confirm("Are you sure you want to delete this?");
-}
-</script>
+        <script>
+            function confirmDelete() {
+                return confirm("Are you sure you want to delete these messages ?");
+            }
+
+            function confirmDeleteAssistant() {
+                return confirm("Are you sure you want to this assistant; all threads will become inaccessible ?");
+            }
+            function disableDeleteAssistant() {
+                return alert("The assistant has children; delete them first");
+	    }
+        </script>
         <script>
             MathJax = {
                 tex: {
@@ -22,17 +29,17 @@ function confirmDelete() {
 
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
         <style>
-<style>
+            <style>
 
             h4 {
                 margin-bottom: 0.5em; /* or try 4px, 8px */
             }
 
-	  .wrap-text {
-  		word-wrap: break-word;
-  		overflow-wrap: break-word;
-		max-width: 100%;
-		}
+            .wrap-text {
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+                max-width: 100%;
+            }
             .container {
                 display: flex;
                 width: 100%;
@@ -146,13 +153,19 @@ function confirmDelete() {
                                         <div class="message_index"></div>
                                     </span>
                                 {% endfor %}
-                            <p/>
-                            <button onclick="return confirmDelete()" name='action' value='delete' type="submit" id="deleteBtn" >Delete checked entries</button>
-                            <button name='action' value='print' type="submit">Print checked entries</button>
-			    {% endif %}
+                                <p/>
+                                <button onclick="return confirmDelete()" name='action' value='delete' type="submit" id="deleteBtn" >Delete checked entries</button>
+                                <button name='action' value='print' type="submit">Print checked entries</button>
+                            {% endif %}
                         </div>
                         {% if  user.is_staff %}
-                            <h4 class="old-messages" > <a href="{% url 'edit_assistant' pk=assistant_pk %}">Edit Assistant</a> </h4>
+                            <h4 class="old-messages" > 
+				    <a href="{% url 'edit_assistant' pk=assistant_pk %}">Edit Assistant</a> </h4>
+			    {% if not children %}
+			    		<a href="{% url 'delete_assistant' pk=assistant_pk %}" onclick="return confirmDeleteAssistant()">Delete Assistant</a>
+			    {% else %}
+				<a href="{% url 'delete_assistant' pk=assistant_pk %}" onclick="return disableDeleteAssistant()">Delete Assistant</a>
+			    {% endif %}
                             <hr/>
                         {% endif %}
                     </div>
@@ -161,22 +174,22 @@ function confirmDelete() {
             <div class="right-column">
 
                 <div style="margin: 10 auto; padding: 1rem;  ">
-                        <div class="navigation">
-                            {% if parent %}
-                                <span>
-                                    &uarr; <a href='/query/{{parent.name|replace:".,/" }}'> {{parent.name|replace:".,/" }} </a>
+                    <div class="navigation">
+                        {% if parent %}
+                            <span>
+                                &uarr; <a href='/query/{{parent.name|replace:".,/" }}'> {{parent.name|replace:".,/" }} </a>
+                            </span>
+                        {% endif %}
+                        <button class="here-button" style="padding-left: 6px;"> <b> &bull; {{ name | replace:".,/"}} </b> </button>
+                        {% for item in children %}
+                            {% for pk,name in item.items %}
+                                <span  style="padding-left: 12px;"> &darr;
+                                    <a href='/query/{{name|replace:".,/" }}'> {{name|replace:".,/" }} </a>
                                 </span>
-                            {% endif %}
-                            <button class="here-button" style="padding-left: 6px;"> <b> &bull; {{ name | replace:".,/"}} </b> </button>
-                            {% for item in children %}
-                                {% for pk,name in item.items %}
-                                    <span  style="padding-left: 12px;"> &darr;
-                                        <a href='/query/{{name|replace:".,/" }}'> {{name|replace:".,/" }} </a>
-                                    </span>
-                                {% endfor %}
                             {% endfor %}
-                        </div>
-			<h4> Hello {{ request.user }}. Enter Your Query for  the {{ model }} assistant {{ name | replace:".,/" }} </h4>
+                        {% endfor %}
+                    </div>
+                    <h4> Hello {{ request.user }}. Enter Your Query for  the {{ model }} assistant {{ name | replace:".,/" }} </h4>
                     <form method="post" style="width: 100%" >
                         {% csrf_token %}
                         {{ form.as_p }}
@@ -184,10 +197,10 @@ function confirmDelete() {
                     </form>
                     <div id='response-block'>
                         <div style="border: 1px dashed gray; background-color: #f9f9f9; padding: 1rem;">
-                                <div id='response' class='wrap-text' > {{ response| safe }}
-                                    <div class='verbatim'> ntokens={{ntokens}} model={{ model }} dt={{ time_spent }}s saved_messages={{ last_messages }} chunks={{ max_num_results }}  </div>
-                                </div>
-		    </div>
+                            <div id='response' class='wrap-text' > {{ response| safe }}
+                                <div class='verbatim'> ntokens={{ntokens}} model={{ model }} dt={{ time_spent }}s saved_messages={{ last_messages }} chunks={{ max_num_results }}  </div>
+                            </div>
+                        </div>
                         {% if choice == 0 %}
                             <div id="button-box" style="border: 4px dashed red; background-color: #f9f9f9; padding: 1rem; margin-top: 20px">
                         {% else %}

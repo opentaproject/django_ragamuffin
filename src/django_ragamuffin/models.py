@@ -415,6 +415,10 @@ class Assistant( models.Model ):
     def __str__(self):
         return f"{self.name}"
 
+    def path(self) :
+        p = '/'.join( self.name.split('.') )
+        return p
+
 
     def add_file(self,  filename, uploaded_file ):
         name = '.'.join( filename.split('.')[:-1])

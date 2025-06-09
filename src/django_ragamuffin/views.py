@@ -1,6 +1,7 @@
 from django.shortcuts import render
 import pypandoc
 from django.http import HttpResponseForbidden
+from django.core.exceptions import PermissionDenied
 import json
 from django.http import JsonResponse, FileResponse
 import tiktoken
@@ -195,8 +196,24 @@ class AssistantEditForm(forms.ModelForm):
         }
 
 
+def delete_assistant(request, pk):
+    assistant = get_object_or_404(Assistant, pk=pk)
+    children = assistant.children()
+    if children :
+        referer = request.META.get('HTTP_REFERER', '/')
+        return redirect( referer )
+        #return HttpResponseForbidden("You cannot delete an assistant with children.")
+    threads = assistant.threads.all();
+    for thread in threads :
+        thread.delete();
+    parent = assistant.parent();
+    referer = request.META.get('HTTP_REFERER', '/')
+    path = parent.path();
+    assistant.delete();
+    return redirect('/query/' + path)
+    #return render(request, 'django_ragamuffin/edit_assistant.html', {'form': form, 'assistant': assistant, 'custom_data' : form.custom_data  })
+
 def edit_assistant(request, pk):
-    #print(f"METHOD = {request.method}")
     assistant = get_object_or_404(Assistant, pk=pk)
     if request.method == 'POST':
         #print(f"POST_REQUEST = {request.POST}")
