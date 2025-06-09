@@ -3,6 +3,12 @@
 {% load replace_filters %}
 <html>
   <head>
+	  <script>
+	  function confirmDeleteFile() {
+                return confirm("Are you sure you want to these files? The assistant will be rebuilt. It may take a minute or two.");
+            }
+	  </script>
+
     <style>
      a {
   	color: blue;
@@ -72,7 +78,6 @@
 	<h4> Files </h4>
         <div style="margin: 2 auto; padding: 0rem;  ">
 	{% if form.custom_data %}
-<button type="submit">Delete checked:  </button> 
           <form method="post" style="display: inline;" >
             {% csrf_token %}
             {% for k,v  in  form.custom_data %}
@@ -81,10 +86,11 @@
 			    <a href="/media/{{v|strip_extension}}/{{ v }}"> {{v}} </a>  </span>
 	    </small>
             {% endfor %}
+	 <div>
+	<button onclick="return confirmDeleteFile()" type="submit">Delete checked:  </button> 
+	 </div>
           </form>
 	  {% endif %}
-
-	  <br/>
 	  <a href="http://localhost:8000/upload/{{assistant.pk}}/"> <button> Upload new file  for the assistant <b>{{ assistant.name }}</b> </button> </a>
         </div>
 
