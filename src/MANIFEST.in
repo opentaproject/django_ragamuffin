@@ -1,0 +1,6 @@
+include README.md
+recursive-include django_ragamuffin/migrations *.py
+recursive-include django_ragamuffin/templates *
+recursive-include django_ragamuffin/static *
+recursive-include django_ragamuffin/templatetags *.py
+recursive-include django_ragamuffin *.py

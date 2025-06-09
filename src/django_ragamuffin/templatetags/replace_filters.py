@@ -4,7 +4,11 @@ register = template.Library()
 
 @register.filter
 def replace(value, args):
-    old, new = args.split(',')
-    res = value.replace(old, new)
-    print(f"RES = {res}")
-    return res
+    args = [ '.,/','_,.']
+    print(f"VALUE = {value} args={args}")
+    for a in args :
+        old, new = a.split(',')
+        value = value.replace(old, new)
+    print(f"VALUE = {value}")
+    return value
+    

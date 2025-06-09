@@ -24,10 +24,10 @@ from django.conf import settings
 urlpatterns = [
     path('grappelli/', include('grappelli.urls')),  # must come before adm
     path('login/', login_view, name='login'),
-    path('', login_view, name='login'),
     path('logout/', logout_view, name='logout'),
     path("admin/", admin.site.urls),
     path('', include('django_ragamuffin.urls')),
+    path('', login_view, name='login'),
     
 ]
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_URL)
