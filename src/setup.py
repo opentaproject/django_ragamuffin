@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='django_ragamuffin',  # Your app name
-    version='1.74.01',  # Initial version
+    name='django_ragamuffin',  
+    version='1.74.02',  
     packages=find_packages(),
     include_package_data=True,  # Important for static files/migrations
     license='MIT License',  # Choose your license
