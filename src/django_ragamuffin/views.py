@@ -170,6 +170,7 @@ def upload_file_view(request,pk):
 class AssistantEditForm(forms.ModelForm):
 
     actual_instructions = forms.CharField(disabled=True, required=False, widget=forms.Textarea(attrs={'disabled': 'disabled'}),)
+    directory_name = forms.CharField(required=False, help_text=mark_safe('<div class="instructions"> Change name of the directory </div> ') )
     
 
     def __init__(self, *args, **kwargs):
@@ -180,20 +181,25 @@ class AssistantEditForm(forms.ModelForm):
         #self.fields['actual_instructions'].initial = instance.get_instructions() + ' '.join( DEFAULT_INSTRUCTIONS.split() )  if self.instance.pk else "N/A"
         if self.instance.pk :
             instructions = ' '.join( instance.get_instructions().split() );
+            directory_name = instance.name.split('.')[-1];
+        self.fields['directory_name'].initial = instance.name.split('.')[-1];
         self.fields['actual_instructions'].initial = instructions if self.instance.pk else "N/A"
-        #print(f"SELF.CUSTOM_DATA = {self.custom_data}")
 
 
 
 
     class Meta:
         model = Assistant
-        fields = ['instructions','actual_instructions', 'temperature']
+        fields = ['instructions','actual_instructions', 'temperature','directory_name']
         help_texts = {
+            'directory_name' : "Only the last directory can be renmamed; all children will be renamed",
             'temperature': f"<p/>Default temperature = {settings.DEFAULT_TEMPERATURE}",
             'instructions' : f"<b> Incremental instructions: </b>  <br>Leave or make blank to inherit default; <br> Start the field with 'append: XXX...' to append 'XXX...' to default; <br>Any other non-blank string completely replaces the default instructions.'<br> The entire instructions used by the assistant is shown below."
 
         }
+
+
+
 
 
 def delete_assistant(request, pk):
@@ -216,12 +222,46 @@ def delete_assistant(request, pk):
 def edit_assistant(request, pk):
     assistant = get_object_or_404(Assistant, pk=pk)
     if request.method == 'POST':
-        #print(f"POST_REQUEST = {request.POST}")
         deletions = request.POST.getlist('deletion')
         if deletions :
             for f in deletions :
                 #print(f"DELETE THE FILE {f}")
                 assistant.delete_file(f)
+        new_tail = request.POST.getlist('directory_name',[None])[0]
+        old_tail = assistant.name.split('.')[-1];
+        if True or not old_tail == new_tail :
+            old_name = assistant.name;
+            new = ( assistant.name.split('.')[:-1]  )
+            new.append(new_tail)
+            new_name = '.'.join(new)
+            pattern = r'^%s\..+$' % old_name
+
+
+            tree = Assistant.objects.filter(name__regex=pattern).all()
+            p = r'^%s' % old_name 
+            for a in tree :
+                n = re.sub( p , new_name, a.name)
+                a.name = n
+                a.save(update_fields=['name']);
+            n = re.sub( p, new_name, assistant.name)
+            assistant.name = new_name
+            
+            pattern = r'^%s(\..*$|$)' % old_name
+            tree = Thread.objects.filter(name__regex=pattern).all()
+            p = r'^%s' % old_name 
+            for a in tree :
+                n = re.sub( p , new_name, a.name)
+                a.name = n
+                a.save(update_fields=['name']);
+            #threads = Thread.objects.filter(name=old_name)
+            #if threads :
+            #    for thread in threads :
+            #        n = re.sub( p, new_name, thread.name)
+            #        print(f"FINALLY {thread.name} ->  {n}")
+            #        thread.name = new_name
+            #        #thread.save(update_fields=['name'])
+
+
         form = AssistantEditForm(request.POST, instance=assistant )
         if form.is_valid():
             form.save()

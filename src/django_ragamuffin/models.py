@@ -786,8 +786,6 @@ class Thread(models.Model) :
                 res = msg
         txt =   str( msg.content[0].text.value )
         txt = re.sub(r"【\d+:\d+†[^】]+】", "", txt)
-        print(f"TXT = ")
-        print(f"{txt}")
         ntokens = len( encoding.encode(txt ) )
         ntokens = usage.total_tokens
         tokens = encoding.encode(txt)
