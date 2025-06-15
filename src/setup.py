@@ -21,7 +21,7 @@ setup(
         'Programming Language :: Python :: 3',
     ],
     install_requires=[
-        'Django>=5.2',  # Specify Django version requirements
+        'Django>=5.1',  # Specify Django version requirements
         'openai==1.74.0'
     ],
     python_requires='>=3.11',  # Adjust as needed
