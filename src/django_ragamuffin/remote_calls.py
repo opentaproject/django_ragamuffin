@@ -68,7 +68,7 @@ def run_remote_query( context ):
         run = create_run_with_retry(thread_id, assistant_id, timeout, truncation_strategy, tools)
     else:
         run = create_run_with_retry(thread_id, assistant_id, timeout, truncation_strategy, tools)
-    interval = 1;
+    interval = 5;
     imax = settings.MAXWAIT / interval
     i = 0;
     print(f"CREATE RUN")
@@ -79,7 +79,7 @@ def run_remote_query( context ):
         elif run_status.status == "failed":
             raise Exception(f"Run failed. {run_status}")
         else:
-            time.sleep(1)
+            time.sleep(interval)
         i = i + 1;
         print(f"I = {i}")
     usage = run_status.usage

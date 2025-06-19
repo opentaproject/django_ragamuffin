@@ -1,7 +1,12 @@
 from django.contrib import admin
 from django.conf import settings
 from django import forms
-from .models import OpenAIFile  , VectorStore , Assistant, Thread, DEFAULT_INSTRUCTIONS
+from .models import OpenAIFile  , VectorStore , Assistant, Thread, DEFAULT_INSTRUCTIONS, VectorStorePool
+
+
+@admin.register(VectorStorePool)
+class VectorStorePoolAdmin(admin.ModelAdmin):
+    list_display = ('pk', 'checksum' , 'vector_store_id', 'vector_stores_pks')
 
 @admin.register(OpenAIFile)
 class OpenAIFileAdmin(admin.ModelAdmin):

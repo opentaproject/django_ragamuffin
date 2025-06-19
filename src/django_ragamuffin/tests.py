@@ -13,7 +13,7 @@ from openai import OpenAI
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 django.setup()
-from django_ragamuffin.models import OpenAIFile, VectorStore, Assistant,  Thread
+from django_ragamuffin.models import OpenAIFile, VectorStore, Assistant,  Thread, VectorStorePool, delete_pools, dump_pools
 from django.contrib.auth.models import User
 
 from django.conf import settings
@@ -43,7 +43,19 @@ class OpenAI(TestCase):
         t1 = OpenAIFile.objects.get(name=name)
         return t1
 
+    #def delete_pools(self):
+    #    # Runs after each test
+    #    print("Cleaning up...")
+    #    pools = VectorStorePool.objects.all();
+    #    for pool in pools :
+    #        print(f"DELETE POOL = {pool}")
+    #        pool.delete();
+    #    self.user.delete();
+    #    print(f"DONE WITH TEST DELETE_POOLS")
 
+
+    def tearDown( self ):
+        delete_pools();
 
 
     def setUp( self ):
@@ -123,13 +135,15 @@ class OpenAI(TestCase):
 
 
     def test_create_and_delete_vector_store_object(self):
+
+        aname = randstring('T3')
         print(f"TEST_CREATE_AND_DELETE_VECTOR_STORE_OBJECT")
         url = reverse('admin:django_ragamuffin_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
         t1 = self.create_testfile_from_string( b"test1_content_here" ,"test1.txt")
         t2 = self.create_testfile_from_string( b"test2_content_here" ,"test2.txt")
         vsname = randstring('T1')
-        vs = VectorStore(name=vsname)
+        vs = VectorStore( name=vsname)
         vs.save()
         vs.files.set([t1,t2])
         vs.save()
@@ -144,6 +158,7 @@ class OpenAI(TestCase):
         assert vs.files_ok( ) , "NO FILES SHOULD BE LEFT"
         vs.delete()
         t1.delete()
+        dump_pools("TEST4");
 
 
     def test_create_and_delete_assistant_object(self):
@@ -155,26 +170,30 @@ class OpenAI(TestCase):
         t2 = self.create_testfile_from_string( b"test2_content_here" ,"test2.txt")
         t3 = self.create_testfile_from_string( b"test3_content_here" ,"test3.txt")
         vsname = randstring('T2')
-        #vs = VectorStore(name=vsname)
-        #vs.save()
         aname = randstring('T3')
-        assistant = Assistant( name=aname)
+        assistant = Assistant(name=aname)
         assistant.instructions = 'Answer the questions and make a good guess if the answer is not totally obvious from the context!'
-        assistant.save();
-        assistant.add_raw_file( t1 )
-        file_ids = assistant.file_ids()
-        #print(f"ASSISTANT FILE_IDS1 = {file_ids}")
-        assert  assistant.files_ok()  , f"FILE_IDS_LOCAL = {file_ids} not equal to FILE_IDS_REMOTE "
+        assistant.save()
+        bname = randstring('T3b')
+        assistantb = Assistant( name=bname)
+        assistantb.instructions = 'Answer the questions and make a good guess if the answer is not totally obvious from the context!'
+        assistantb.save()
+        assistant.add_raw_file(t1)
+        assistantb.add_raw_file(t1)
+        assert  assistant.files_ok()  , "FILE_IDS_LOCAL = {file_ids} not equal to FILE_IDS_REMOTE "
         assistant.add_raw_file(t2)
-        assert  assistant.files_ok()  , f"FILE_IDS_LOCAL = {file_ids} not equal to FILE_IDS_REMOTE "
+        assistantb.add_raw_file(t2)
+        assert  assistant.files_ok()  , "FILE_IDS_LOCAL = {file_ids} not equal to FILE_IDS_REMOTE "
         assistant.add_raw_file(t3)
-        assert  assistant.files_ok()  , f"FILE_IDS_LOCAL = {file_ids} not equal to FILE_IDS_REMOTE "
-        assistant.delete_raw_file(t1)
-        assert  assistant.files_ok()  , f"FILE_IDS_LOCAL = {file_ids} not equal to FILE_IDS_REMOTE "
-        assistant.delete_raw_file(t2)
-        assert  assistant.files_ok()  , f"FILE_IDS_LOCAL = {file_ids} not equal to FILE_IDS_REMOTE "
+        assistantb.add_raw_file(t3)
+        dump_pools('T3')
+        assert  assistant.files_ok()  , "FILE_IDS_LOCAL = {file_ids} not equal to FILE_IDS_REMOTE "
         assistant.delete_raw_file(t3)
-        assert  assistant.files_ok()  , f"FILE_IDS_LOCAL = {file_ids} not equal to FILE_IDS_REMOTE "
+        assert  assistant.files_ok()  , "FILE_IDS_LOCAL = {file_ids} not equal to FILE_IDS_REMOTE "
+        assistant.delete_raw_file(t2)
+        assert  assistant.files_ok()  , "FILE_IDS_LOCAL = {file_ids} not equal to FILE_IDS_REMOTE "
+        assistant.delete_raw_file(t1)
+        assert  assistant.files_ok()  , "FILE_IDS_LOCAL = {file_ids} not equal to FILE_IDS_REMOTE "
         #print(f"NOW ADD VS2")
         #vs.files.set([t1,t2] )
         #vs.save();
@@ -195,10 +214,14 @@ class OpenAI(TestCase):
         #assert assistant.files_ok() , 'FILES_IDS_LOCAL = {file_ids}'
 
         #vs2.delete();
+        assistant.delete();
+        assistantb.delete();
+        dump_pools("TEST5");
         t1.delete();
         t2.delete();
         t3.delete();
-        assistant.delete();
+        delete_pools();
+        dump_pools("TEST6");
 
     def test_create_and_delete_thread(self):
         print(f"TEST_CREATE_AND_DELETE_THREAD")
@@ -291,3 +314,6 @@ class OpenAI(TestCase):
         t2.delete();
         t3.delete();
         assistant.delete();
+        dump_pools("FINAL1");
+        delete_pools();
+        dump_pools("FINAL2");
