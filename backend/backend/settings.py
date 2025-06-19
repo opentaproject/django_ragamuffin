@@ -181,6 +181,7 @@ LAST_MESSAGES = 99
 MAX_NUM_RESULTS = None
 MAX_TOKENS = 8000 # NOT IMPLMENTED AS OF openai==1.173.0 
 AI_MODEL = {'staff' : 'gpt-4o' , 'default' : 'gpt-4o-mini' }
+API_APP = 'localhost'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

@@ -16,11 +16,15 @@ django.setup()
 from django_ragamuffin.models import OpenAIFile, VectorStore, Assistant,  Thread
 from django.contrib.auth.models import User
 
+from django.conf import settings
+settings.API_APP = 'test'
+
 model = 'gpt-4o-mini'
 client = OpenAI()
 import string
 import random
 
+settings.API_APP = 'test'
 
 def randstring(tag, length=8):
     characters = string.ascii_letters + string.digits  # A-Z, a-z, 0-9
@@ -159,7 +163,7 @@ class OpenAI(TestCase):
         assistant.save();
         assistant.add_raw_file( t1 )
         file_ids = assistant.file_ids()
-        print(f"ASSISTANT FILE_IDS1 = {file_ids}")
+        #print(f"ASSISTANT FILE_IDS1 = {file_ids}")
         assert  assistant.files_ok()  , f"FILE_IDS_LOCAL = {file_ids} not equal to FILE_IDS_REMOTE "
         assistant.add_raw_file(t2)
         assert  assistant.files_ok()  , f"FILE_IDS_LOCAL = {file_ids} not equal to FILE_IDS_REMOTE "
@@ -226,15 +230,10 @@ class OpenAI(TestCase):
         #vs1.files.set([t1,t2,t3])
         #vs1.save()
         aname = randstring('T5')
-        print(f"A")
         assistant = Assistant( name=aname)
-        print(f"B")
         assistant.save();
-        print(f"C")
         assistant.instructions = 'Answer the questions as concisely as possible. No need for complete sentences. Make a good guess if the answer is not totally obvious from the context, but if it is not obvious, start your guess with \'It seems like\' !'
-        print(f"D")
         assistant.save()
-        print(f"E")
         assistant.add_raw_files([t1,t2,t3])
         file_ids = assistant.file_ids()
         assert  assistant.files_ok()  , f"FILE_IDS_LOCAL = {file_ids} not equal to FILE_IDS_REMOTE "

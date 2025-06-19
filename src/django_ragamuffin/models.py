@@ -1,4 +1,5 @@
 from django.db import models
+from openai import OpenAI
 from pathlib import Path
 from django.db import transaction
 import random, string
@@ -22,19 +23,20 @@ import re
 
 import os
 logger = logging.getLogger(__name__)
-client = openai.OpenAI(api_key=settings.AI_KEY)
+#client = openai.OpenAI(api_key=settings.AI_KEY)
 
 upload_storage = FileSystemStorage(settings.OPENAI_UPLOAD_STORAGE, base_url=settings.MEDIA_URL )
 
 from openai import OpenAIError, RateLimitError, APIError, Timeout
 
-def delete_vector_store_and_wait(vector_store_id, timeout=60, interval=2):
+def remote_wait_delete_vector_store(vector_store_id, timeout=settings.MAXWAIT, interval=2):
     # Initiate delete
-    try :
-        client.vector_stores.delete(vector_store_id)
-    except Exception as err :
-        print(f"ERROR {str(err)}")
-        return
+    client = OpenAIClient()
+    #try :
+    #    client.vector_stores.delete(vector_store_id)
+    #except Exception as err :
+    #    print(f"ERROR {str(err)}")
+    #    return
 
     # Poll until deletion confirmed
     start_time = time.time()
@@ -51,8 +53,9 @@ def delete_vector_store_and_wait(vector_store_id, timeout=60, interval=2):
 
 
 
-def wait_for_vector_store_ready(client, vector_store_id, timeout=settings.MAXWAIT):
+def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=settings.MAXWAIT):
     start_time = time.time()
+    client = OpenAIClient()
     while True:
         vs = client.vector_stores.retrieve(vector_store_id=vector_store_id)
         if vs.status == "completed":
@@ -65,7 +68,7 @@ def wait_for_vector_store_ready(client, vector_store_id, timeout=settings.MAXWAI
         time.sleep(1)
     i = 0;
     imax = settings.MAXWAIT / interval;
-    #wait_for_vector_store_ready(client, vector_store_id, timeout=settings.MAXWAIT):
+    #remote_wait_for_vector_store_ready(client, vector_store_id, timeout=settings.MAXWAIT):
     while i < imax :
         file_list = client.vector_stores.files.list(vector_store_id=vector_store_id)
         statuses = [file.status for file in file_list.data]
@@ -219,6 +222,102 @@ def chunk_mmd(linestring):
     s = re.sub(r"},","},\n",s)
     return s.encode('utf-8')
 
+#class VectorStorePool( models.Model )
+#    checksum = models.CharField(blank=True, max_length=255,unique=True)
+#    vector_stores = models.ForeignKey(VectorStore, on_delete=models.SET_NULL, null=True,blank=True)
+
+class OpenAIClient( OpenAI ):
+
+    #def vss = models.ForeignKey(VectorStore, on_delete=models.SET_NULL, null=True)
+
+
+    def __init__(self, **kwargs):
+        # Pass the API key and any kwargs to the parent OpenAI constructor
+        super().__init__(api_key=settings.AI_KEY, **kwargs)
+
+    def delete_vector_store(self, vs, vector_store_id) :
+        assert vs.vector_store_id == vector_store_id, "FAIL1"
+        vector_store_id = vs.vector_store_id
+        checksum = vs.get_checksum()
+        print(f"OK1 {checksum}")
+        try :
+            self.vector_stores.delete(vector_store_id)
+        except Exception as err :
+            print(f"ERROR {str(err)}")
+        remote_wait_delete_vector_store(vector_store_id, timeout=settings.MAXWAIT, interval=2)
+        return
+
+
+    def vector_stores_retrieve(self, vs, vector_store_id) :
+        assert vs.vector_store_id == vector_store_id, "FAIL2"
+        vector_store_id = vs.vector_store_id
+        checksum = vs.get_checksum()
+        print(f"OK2 {checksum}")
+        return self.vector_stores.retrieve(vector_store_id)
+
+
+    def vector_stores_files_list(  self, vs, vector_store_id ):
+        assert vs.vector_store_id == vector_store_id, "FAIL3"
+        vector_store_id = vs.vector_store_id
+        checksum = vs.get_checksum()
+        print(f"OK3 {checksum}")
+        vector_store_files = self.vector_stores.files.list( vector_store_id=vector_store_id)
+        assert checksum == vs.get_checksum() , "FAIL3b"
+        return vector_store_files
+
+    def vector_stores_create( self,  name, metadata ):
+        vector_store = self.vector_stores.create(name=name,metadata=metadata )
+        remote_wait_for_vector_store_ready( self, vector_store.id )
+        return vector_store
+
+    def delete_file_from_vs( self,  vs, vector_store_id, file_id ):
+        assert vs.vector_store_id == vector_store_id, "FAIL4"
+        vector_store_id = vs.vector_store_id
+        checksum = vs.get_checksum()
+        print(f"OK4 {checksum}")
+        #print(f"CLIENT_DELETE_FILE")
+        try :
+            self.vector_stores.files.delete(vector_store_id=vector_store_id,file_id=file_id)
+            remote_wait_for_vector_store_ready(self, vector_store_id, timeout=settings.MAXWAIT)
+        except  openai.NotFoundError as e: 
+            print(f"OPENAI_FILE_{file_id} NOT FOUND TO DELETE")
+        try :
+            self.files.delete( file_id )
+        except  openai.NotFoundError as e: 
+            print(f"OPENAI_FILE_{file_id} NOT FOUND TO DELETE")
+        assert checksum == vs.get_checksum() , "FAIL4b"
+        print(f"OK4b {checksum}")
+
+    def delete_file_globally( self , file_id ):
+        try :
+            self.files.delete(file_id)
+            #print(f"NOW DELETE SUCCEEDED {file_id}")
+        except openai.NotFoundError as e:
+            #print(f"NOW_DELETE FAILED {file_id} ")
+            pass
+
+    def vector_stores_files_delete( self, vs, vector_store_id, file_id ):
+        assert vs.vector_store_id == vector_store_id, "FAIL5"
+        checksum = vs.get_checksum()
+        print(f"OK5 {checksum}")
+        vector_store_id = vs.vector_store_id
+        self.vector_stores.files.delete( vector_store_id=vector_store_id , file_id=file_id)
+        remote_wait_for_vector_store_ready(self, vector_store_id, timeout=settings.MAXWAIT)
+        assert checksum == vs.get_checksum() , "FAIL5b"
+        return
+
+    def vector_stores_files_create( self, vs, vector_store_id , file_id ):
+        assert vs.vector_store_id == vector_store_id, "FAIL6"
+        checksum = vs.get_checksum()
+        print(f"OK6 {checksum}")
+        vector_store_id = vs.vector_store_id
+        self.vector_stores.files.create( vector_store_id=vector_store_id , file_id=file_id   )
+        remote_wait_for_vector_store_ready(self, vector_store_id=vector_store_id, timeout=settings.MAXWAIT)
+        assert checksum == vs.get_checksum() , "FAIL6b"
+        return
+
+
+
 
 
 
@@ -294,28 +393,38 @@ class OpenAIFile(models.Model) :
 
 @receiver(pre_delete, sender=OpenAIFile)
 def custom_delete_openaifile(sender, instance, **kwargs):
+    #print(f"CUSTOM_DELETE_OPENAIFILE")
     pk = instance.pk
     try :
         shutil.rmtree(instance.path)
     except Exception as e:
         logger.error(f" FILE/ {instance.path} DOES NOT EXIST")
         return
-    vst = VectorStore.objects.filter(files=instance)
+    vst = VectorStore.objects.filter(files=instance).all();
+    #print(f"VST = {vst}")
+    client = OpenAIClient()
     if hasattr( instance, "file_ids") :
+        #print(f"A")
         file_ids = instance.file_ids
+        #print(f"FILE_IDS = {file_ids}")
         for file_id in file_ids :
-            for vs in vst.all() :
-                print(f"CUSTOM_DELETE_FILE VS = {vs}")
+            for vs in vst :
+                #print(f"CUSTOM_DELETE_FILE VS = {vs}")
                 vector_store_id = vs.vector_store_id
-                try  :
-                    client.vector_stores.files.delete(vector_store_id=vector_store_id,file_id=file_id)
-                except  openai.NotFoundError as e: 
-                    pass
+                client.delete_file_from_vs(vs,  vector_store_id, file_id )
                 vs.save();
             try :
-                client.files.delete(file_id)
-            except openai.NotFoundError as e:
+                client.delete_file_globally(  file_id)
+                #print(f"DELETE SUCCEEDED")
+            except openaiNotFoundError as e:
+                #print(f"DELETE FAILED")
                 pass
+            #try :
+            #    print(f"NOW DELETE {file_id}")
+            #    client.files.delete(file_id)
+            #except openai.NotFoundError as e:
+            #    print(f"{str(e)}")
+            #    pass
 
 class VectorStore( models.Model ):
     checksum = models.CharField(blank=True, max_length=255)
@@ -372,11 +481,9 @@ class VectorStore( models.Model ):
 
     def get_checksum(self):
         cksums = self.file_checksums();
-        if not cksums :
-            return ''
         ckstring = ''.join(cksums).encode()
         checksum = hashlib.md5(ckstring).hexdigest()
-        print(f"GET CHECKSUM  cksums={cksums} {self} = {checksum}")
+        #print(f"GET CHECKSUM  cksums={cksums} {self} = {checksum}")
         return checksum
 
 
@@ -384,8 +491,8 @@ class VectorStore( models.Model ):
         vs = self
         file_ids = vs.file_ids()
         vector_store_id = vs.vector_store_id
-        vector_store =  client.vector_stores.retrieve(vector_store_id)
-        vector_store_files = client.vector_stores.files.list( vector_store_id=vector_store.id)
+        client = OpenAIClient()
+        vector_store_files = client.vector_stores_files_list( vs, vector_store_id=vector_store_id)
         remote_ids = []
         for f in vector_store_files:
             remote_ids.append( f.id)
@@ -398,16 +505,19 @@ class VectorStore( models.Model ):
         super().save(*args,**kwargs)
         checksum = self.get_checksum();
         if is_new :
-            vector_store = client.vector_stores.create(name=self.name,metadata={"api_key": settings.AI_KEY[-8:] } )
+            client = OpenAIClient()
+            vector_store = client.vector_stores_create( name=self.name,metadata={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] , "checksum" : checksum } )
             self.vector_store_id = vector_store.id
-            wait_for_vector_store_ready( client, self.vector_store_id )
         super().save(*args,**kwargs)
+
+
 
 @receiver(pre_delete, sender=VectorStore)
 def custom_delete_vector_store(sender, instance, **kwargs):
+    client = OpenAIClient();
     try :
         vector_store_id = instance.vector_store_id
-        delete_vector_store_and_wait(vector_store_id )
+        client.delete_vector_store( instance, vector_store_id )
     except openai.NotFoundError as e:
         pass
 
@@ -552,6 +662,7 @@ class Assistant( models.Model ):
 
     def save( self, *args, **kwargs ):
         is_new = self._state.adding and not self.pk
+        client = OpenAIClient()
         try :
             if not self.model :
                 self.model = get_current_model( )
@@ -577,7 +688,7 @@ class Assistant( models.Model ):
                 instructions=instructions, 
                 model=self.model,
                 temperature=temperature,
-                tools=[{"type": "file_search"}],metadata={"api_key": settings.AI_KEY[-8:] } )
+                tools=[{"type": "file_search"}],metadata={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] } )
             self.assistant_id = assistant.id
             super().save(update_fields=['assistant_id'])
 
@@ -700,15 +811,18 @@ class Assistant( models.Model ):
         return f
 
     def remote_files( self, *args, **kwargs ) :
+        client = OpenAIClient()
         assistant = self
         assistant_id = assistant.assistant_id
         remote_assistant = openai.beta.assistants.retrieve(assistant_id)
         tool_resources = remote_assistant.tool_resources
         remote_ids = [];
         vector_store_ids = tool_resources.file_search.vector_store_ids
+        client = OpenAIClient()
         for vector_store_id in vector_store_ids :
+            vs = VectorStore.objects.get(vector_store_id=vector_store_id)
             vector_store =  client.vector_stores.retrieve(vector_store_id)
-            vector_store_files = client.vector_stores.files.list( vector_store_id=vector_store.id)
+            vector_store_files = client.vector_stores_files_list(vs, vector_store_id=vector_store.id)
             for f in vector_store_files:
                 remote_ids.append( f.id)
         return remote_ids
@@ -747,6 +861,7 @@ class Thread(models.Model) :
     def save( self, *args, **kwargs ):
         is_new = self._state.adding  and not self.pk
         self.messages = self.messages
+        client = OpenAIClient();
         super().save(*args, **kwargs)  # Save first, so file is processed
         if is_new  :
             thread = client.beta.threads.create(); 
@@ -811,16 +926,18 @@ class Thread(models.Model) :
 @receiver(pre_delete, sender=Assistant)
 def custom_delete_assistant(sender, instance, **kwargs):
     pk = instance.pk
+    client = OpenAIClient();
     try :
         assistant_id = instance.assistant_id
         assistant = openai.beta.assistants.retrieve(assistant_id)
         tool_resources = assistant.tool_resources
         vector_store_ids = tool_resources.file_search.vector_store_ids
+        client = OpenAIClient()
         if vector_store_ids :
             vector_store_id = vector_store_ids[0];
-            vector_store =  client.vector_stores.retrieve(vector_store_id)
+            vector_store =  client.vector_stores_retrieve(vector_store_id)
             if vector_store.name == assistant.id : # THIS IS HERE BECAUSE MULTIPL VECTOR STORES CAN'T BE USED BY AN ASSISTANT
-                delete_vector_store_and_wait(vector_store_id)
+                client.delete_vector_store( vector_store_id)
         res = client.beta.assistants.delete(assistant_id)
     except Exception as err :
         print(f"ERROR = {str(err)}")
@@ -840,6 +957,7 @@ def handle_assistants_changed(sender, instance, action, **kwargs):
 
     assistant_id = instance.assistant_id
     rebuild = False
+    client = OpenAIClient()
     if action == "post_remove":
         vector_stores = instance.vector_stores.all();
         assistant_id = instance.assistant_id
@@ -847,9 +965,9 @@ def handle_assistants_changed(sender, instance, action, **kwargs):
         tool_resources = assistant.tool_resources
         try :
             vector_store_id = tool_resources.file_search.vector_store_ids[0]
-            vector_store =  client.vector_stores.retrieve(vector_store_id)
+            vector_store =  client.vector_stores_retrieve(vector_store_id)
             if vector_store.name == assistant_id  :
-                delete_vector_store_and_wait(vector_store_id)
+                client.vector_store_delete( vector_store_id)
         except  Exception as err :
             print(f" VECTOR_STORE ERROR DELTING ON POST_REMOVE")
             pass
@@ -897,55 +1015,39 @@ def handle_assistants_changed(sender, instance, action, **kwargs):
 
 @receiver(m2m_changed, sender=VectorStore.files.through)
 def handle_files_changed(sender, instance, action, reverse, model, pk_set, **kwargs):
-    print(f"HANDLE_SENDER_VECTOR_STORE action={action}")
+    #print(f"HANDLE_SENDER_VECTOR_STORE action={action}")
+    client = OpenAIClient()
     if action in {"pre_add", "pre_remove", "pre_clear"}:
         #old_ = [i[0] for i in set( instance.files.values_list('file_ids', flat=True) ) ]
         #print(f"OLD = {old_}")
         #old = [ i[0] for i in old_]
         #print(f"OLD = {old_}")
         instance._old_file_ids =  [i[0] for i in instance.files.values_list('file_ids', flat=True)  ]
+        instance._old_checksum = instance.checksum;
     elif action == "post_add" or action == 'post_remove' :
         if getattr(instance, '_updating_from_m2m', False):
             return
         old_file_ids  =  getattr(instance, '_old_file_ids', [] )
+        old_checksum  =  getattr(instance, '_old_checksum');
         new_file_ids =  [i[0] for i in  instance.files.values_list('file_ids', flat=True)  ]
         instance._updating_from_m2m = True
         vector_store_id = instance.vector_store_id
-        #vector_store_files = client.vector_stores.files.list( vector_store_id=vector_store_id)
-        #old_file_ids = []
-        #for vector_store_file in vector_store_files :
-        #    file_id = vector_store_file.id
-        #    old_file_ids.append(file_id)
-        #pks = [];
-        #ids = [];
-        #for f in instance.files.all() :
-        #    pks.append( f.pk )
-        #    ids.extend( f.file_ids );
+        vs = instance
         added_files = list( set( new_file_ids) - set( old_file_ids ) )
         subtracted_files = list( set( old_file_ids)  - set( new_file_ids) )
-        print(f"ADDED_FILES = {set(added_files)}")
-        print(f"SUBTRACTED_FILES = {set(subtracted_files)}")
+        #print(f"ADDED_FILES = {set(added_files)}")
+        #print(f"SUBTRACTED_FILES = {set(subtracted_files)}")
         for file_id in subtracted_files :
-            client.vector_stores.files.delete( vector_store_id=vector_store_id, file_id=file_id)
+            client.vector_stores_files_delete( vs, vector_store_id , file_id)
         for file_id in added_files :
-            client.vector_stores.files.create( vector_store_id=vector_store_id, file_id=file_id,  )
-        interval = 5;
-        imax = settings.MAXWAIT / interval;
-        i = 0;
-        wait_for_vector_store_ready(client, vector_store_id, timeout=settings.MAXWAIT)
-        #while i < imax :
-        #    file_list = client.vector_stores.files.list(vector_store_id=vector_store_id)
-        #    statuses = [file.status for file in file_list.data]
-        #    if all(status == "completed" for status in statuses):
-        #        break
-        #    elif any(status == "failed" for status in statuses):
-        #        raise Exception(f"❌ Some files failed to process! {statuses}")
-        #    else:
-        #        time.sleep(5)  # Wait before polling again
-        #    i = i + 1 ;
-        #time.sleep(5)
+            client.vector_stores_files_create( vs, vector_store_id , file_id  )
+        #interval = 5;
+        #imax = settings.MAXWAIT / interval;
+        #i = 0;
+        #remote_wait_for_vector_store_ready(client, vector_store_id, timeout=settings.MAXWAIT)
 
         instance.checksum = instance.get_checksum();
         instance.save(update_fields=['checksum'])
+        print(f"OLD_CHECKSUM = {old_checksum}  NEW_CHECKSUM = {instance.checksum}")
         del instance._updating_from_m2m
 
