@@ -98,9 +98,10 @@ def run_remote_query( context ):
     else :
         txt =   str( msg.content[0].text.value )
         txt = re.sub(r"【\d+:\d+†[^】]+】", "", txt)
-    encoding = tiktoken.encoding_for_model(settings.AI_MODEL['staff'])
+    encoding = tiktoken.encoding_for_model(settings.AI_MODELS['staff'])
     ntokens = len( encoding.encode(txt ) )
-    ntokens = usage.total_tokens
+    if hasattr( usage, 'total_tokens') :
+        ntokens = usage.total_tokens
     tokens = encoding.encode(txt)
     time_spent = int( time.time() - now  + 0.5 )
     characters = string.ascii_letters + string.digits  # a-zA-Z0-9

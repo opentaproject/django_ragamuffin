@@ -202,8 +202,8 @@ def query_view(request,subpath):
     #    vs = create_or_retrieve_vector_store( name, [t1])
     #    assistant = create_or_retrieve_assistant( name  , vs )
     #    return assistant
-    assistant = get_assistant(name)
-    if assistant == None :
+    assistant = get_assistant(name,request.user)
+    if not assistant :
         return HttpResponseForbidden(f"No assistant <b>{name} </b> exists.")
     model = assistant.model
     thread = create_or_retrieve_thread( assistant, name , user )

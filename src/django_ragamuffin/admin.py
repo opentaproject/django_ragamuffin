@@ -1,11 +1,11 @@
 from django.contrib import admin
 from django.conf import settings
 from django import forms
-from .models import OpenAIFile  , VectorStore , Assistant, Thread, DEFAULT_INSTRUCTIONS, VectorStorePool
+from .models import OpenAIFile  , VectorStore , Assistant, Thread, DEFAULT_INSTRUCTIONS, RemoteVectorStore
 
 
-@admin.register(VectorStorePool)
-class VectorStorePoolAdmin(admin.ModelAdmin):
+@admin.register(RemoteVectorStore)
+class RemoteVectorStoreAdmin(admin.ModelAdmin):
     list_display = ('pk', 'checksum' , 'vector_store_id', 'vector_stores_pks')
 
 @admin.register(OpenAIFile)
@@ -15,8 +15,8 @@ class OpenAIFileAdmin(admin.ModelAdmin):
 
 @admin.register(VectorStore)
 class VectorStoreAdmin(admin.ModelAdmin):
-    list_display = ('id', 'name', 'vector_store_id', 'checksum', 'list_file_ids')  # Add your custom method here
-    readonly_fields = ('checksum','vector_store_id')
+    list_display = ('id', 'name', 'vsid', 'checksum', 'list_file_ids')  # Add your custom method here
+    readonly_fields = ('checksum','vsid')
 
     def get_readonly_fields(self, request, obj=None):
         if obj:  # editing an existing object
@@ -43,7 +43,7 @@ class MyAssistantForm(forms.ModelForm):
 
     class Meta:
         model = Assistant
-        fields = ['name','instructions','vector_stores','assistant_id','json_field','model','temperature','actual_instructions' ,]
+        fields = ['name','model','instructions','vector_stores','assistant_id','json_field','temperature','actual_instructions' ,]
         help_texts = {
             'temperature': f"Default temperature = {settings.DEFAULT_TEMPERATURE}",
             'instructions' : f"Leave blank for default; start with 'append: XXX...' to append 'XXX...' to default; Any other non-blank string completely replaces the default instructions.'"
@@ -53,7 +53,7 @@ class MyAssistantForm(forms.ModelForm):
 @admin.register(Assistant)
 class AssistantAdmin(admin.ModelAdmin):
     form = MyAssistantForm 
-    list_display = ('id', 'name', 'assistant_id', 'file_names','file_pks', 'list_vector_store_ids')  # Add your custom method here
+    list_display = ('id', 'name','model', 'assistant_id', 'file_names','file_pks', 'list_vector_store_ids')  # Add your custom method here
 
     def list_vector_store_ids(self, obj):
         return ", ".join(str(f.name ) for f in obj.vector_stores.all())

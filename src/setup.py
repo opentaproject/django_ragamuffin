@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='django_ragamuffin',  
-    version='1.88.0.01',  
+    version='1.92.0.01',  
     packages=find_packages(),
     include_package_data=True,  # Important for static files/migrations
     license='MIT License',  # Choose your license
@@ -22,7 +22,7 @@ setup(
     ],
     install_requires=[
         'Django>=5.1',  # Specify Django version requirements
-        'openai==1.88.0'
+        'openai==1.92.0'
     ],
     python_requires='>=3.11',  # Adjust as needed
 )

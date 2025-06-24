@@ -4,6 +4,7 @@ import pypandoc
 import markdown2
 from pathlib import Path
 import subprocess
+from django.conf import settings
 import os
 import string
 import random
@@ -104,31 +105,36 @@ CHOICES = {0 : 'Unread' ,
 
 
 
-def get_assistant( name):
-    assistants = Assistant.objects.filter(name=name)
+def get_assistant( name,user):
+    assistants = Assistant.objects.filter(name=name).all();
+    print(f"GET_ASSISTANT assistants = {assistants}")
+    if not assistants and not user.is_staff :
+        return None
+    if user.is_staff :
+        model = settings.AI_MODELS['staff']
+    else :
+        model = settings.AI_MODELS['default']
+    assistants_ = Assistant.objects.filter(name=name, model=model).all()
+    if assistants_ :
+        return  assistants_[0]
     if assistants :
-        assistant = assistants[0];
-        return assistant
+        a = assistants[0];
+        return a.clone(name,model=model)
     base = '.'.join(name.split('.')[:-1])
+    print(f"BASE = {base}")
     if base == '' :
         return None
-    #print(f"BASE= {base}")
     subdir = name.split('.')[-1];
-    #print(f"SUBDIR = {subdir}")
-    base_assistant = get_assistant( base );
-    #print(f"BASE_ASSITANT = {base_assistant}")
+    base_assistant = get_assistant( base ,user );
     if base_assistant :
-        assistant = base_assistant.clone( name )
+        assistant = base_assistant.clone( name , model=model)
     else :
-        if request.user.is_staff :
-            assistant = Assistant(name=name);
-            vs = VectorStore(name=name);
-            vs.save();
-            assistant.save();
-            assistant.vector_stores.set([vs.pk])
-            assistant.save();
-        else :
-            assistant = None
+        assistant = Assistant(name=name,model=model);
+        vs = VectorStore(name=name);
+        vs.save();
+        assistant.save();
+        assistant.vector_stores.set([vs.pk])
+        assistant.save();
     return assistant 
 
 def thread_to_pdf( thread , prints ):

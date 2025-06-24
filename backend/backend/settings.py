@@ -164,7 +164,7 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 import os
 AI_KEY =  os.environ.get("OPENAI_API_KEY",None)
-AI_MODEL = os.environ.get('AI_MODEL','gpt-4o')
+AI_MODEL = os.environ.get('AI_MODEL','gpt-4o-mini')
 OPENAI_UPLOAD_STORAGE =  os.environ.get("OPENAI_UPLOAD_STORAGE",'/tmp/openaifiles')
 os.makedirs(OPENAI_UPLOAD_STORAGE, exist_ok=True)
 INSTALLED_APPS.append('django_ragamuffin')
@@ -180,7 +180,7 @@ DEFAULT_TEMPERATURE = 0.2;
 LAST_MESSAGES = 99
 MAX_NUM_RESULTS = None
 MAX_TOKENS = 8000 # NOT IMPLMENTED AS OF openai==1.173.0 
-AI_MODEL = {'staff' : 'gpt-4o' , 'default' : 'gpt-4o-mini' }
+AI_MODELS = {'staff' : 'gpt-4o-mini' , 'default' : AI_MODEL }
 API_APP = 'localhost'
 
 # Default primary key field type
@@ -210,3 +210,35 @@ AUTH_PASSWORD_VALIDATORS = [
     #     'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     # },
 ]
+import sys
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,  # keeps default Django logs
+
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'stream': sys.stdout,  # 👈 directs logs to stdout
+        },
+    },
+
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
+
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'ERROR',  # or DEBUG/INFO depending on what you want
+            'propagate': False,
+        },
+        # Your app-specific logger (optional)
+        'django_ragamuffin': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    }
+}

@@ -9,7 +9,6 @@ distro==1.9.0
 Django==5.2
 django-grappelli==4.0.2
 django-pytest==0.2.0
--e git+https://github.com/opentaproject/django_ragamuffin.git@a48cee6af8730b4f9b51a8d29ba2378177f3e126#egg=django_ragamuffin&subdirectory=src
 djhtml==3.0.8
 docutils==0.21.2
 h11==0.16.0
