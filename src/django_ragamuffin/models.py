@@ -196,6 +196,9 @@ def chunk_mmd(linestring):
     s = re.sub(r"},","},\n",s)
     return s.encode('utf-8')
 
+
+
+
 class OpenAIClient( OpenAI ):
 
 
@@ -203,7 +206,7 @@ class OpenAIClient( OpenAI ):
     def __init__(self, **kwargs):
         super().__init__(api_key=settings.AI_KEY, **kwargs)
 
-    def get_or_create_remote_vector_store_info(self, vs , old_checksum=None):
+    def get_or_update_remote_vector_store(self, vs , old_checksum=None,old_file_ids=[]):
         logger.info(f"OLD_CHECKSUM = {old_checksum} NEW_CHECKSUM={vs.checksum} ")
         new_checksum = vs.get_checksum();
         #if old_checksum :
@@ -213,25 +216,76 @@ class OpenAIClient( OpenAI ):
         #        old_remote_vector_store.vector_stores.remove( vs.pk )
         checksum = vs.get_checksum()
         new_checksum = checksum
-        logger.info(f"OLD_CHECKSUM = {old_checksum} NEW_CHECKSUM={vs.checksum} ")
+        #print(f"OLD_CHECKSUM = {old_checksum} NEW_CHECKSUM={vs.checksum} ")
         new_file_ids =  [i[0] for i in  vs.files.values_list('file_ids', flat=True)  ]
+        #print(f"OLD_IDS = {old_file_ids} NEW_IDS={new_file_ids} ")
+        pks = [ i.pk for i in vs.files.all() ]
+        #print(f"NEW_FILE_PKS = {pks}")
         remote_vector_stores = RemoteVectorStore.objects.filter(checksum=new_checksum).all()
         if remote_vector_stores :
             remote_vector_store = remote_vector_stores[0]
             new_vector_store_id = remote_vector_store.vector_store_id
             vs.remote_vector_store = remote_vector_stores[0]
+            new_vector_store_id =    remote_vector_store.vector_store_id
+            vs.vsid = new_vector_store_id
+            vs.remote_vector_store = remote_vector_store
+            vs.save();
+            return new_vector_store_id
             #remote_vector_store.vector_stores.add(vs)
         else :
-            name = randstring('vss')
-            new_vector_store = self.vector_stores.create(name=name,file_ids=new_file_ids , 
-                metadata={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] , "checksum" : new_checksum } )
-            remote_wait_for_vector_store_ready(self, new_vector_store.id, timeout=settings.MAXWAIT)
-            new_vector_store_id = new_vector_store.id
-            logger.info(f"CREATE NEW REMOTE_VECTOR_STORE WITH {checksum} {new_vector_store_id}")
-            new_remote_vector_store, created   = RemoteVectorStore.objects.get_or_create(checksum=checksum,vector_store_id=new_vector_store_id);
-            #new_remote_vector_store.vector_stores.add( vs);
-            new_remote_vector_store.save();
-            vs.remote_vector_store = new_remote_vector_store
+            remote_vector_stores = RemoteVectorStore.objects.filter(checksum=old_checksum).all()
+            if  False and remote_vector_stores :
+                remote_vector_store = remote_vector_stores[0]
+                vector_store_id = remote_vector_store.vector_store_id
+                deleted_files = list( set( old_file_ids) - set( new_file_ids) )
+                #print(f" FILES TO BE DELETED {deleted_files}");
+                for f in deleted_files:
+                    try :
+                        self.vector_stores.files.delete(vector_store_id=vector_store_id, file_id=f)
+                        remote_wait_for_vector_store_ready(self, vector_store_id, timeout=settings.MAXWAIT)
+                    except openai.NotFoundError as e:
+                        logger.info(f"File {f} not found in vector store {vector_store_id}: {e}")
+                        continue
+                added_files = list( set( new_file_ids) - set( old_file_ids) )
+                #print(f"Files to be added = {added_files}")
+                #print(f"VECTOR_STORE_ID = {vector_store_id}")
+                #print(f"VS NAME = {vs.name}")
+                vs.checksum = new_checksum
+                if not added_files == []:
+                    self.vector_stores.file_batches.create( vector_store_id=vector_store_id, file_ids=added_files, 
+                        metadata={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] , "checksum" : new_checksum } )
+                    remote_wait_for_vector_store_ready(self, vector_store_id, timeout=settings.MAXWAIT)
+                #print(f"NEW_CHECKSUM = {new_checksum}")
+                remote_vector_store.checksum = new_checksum;
+                new_vector_store_id = remote_vector_store.vector_store_id
+                remote_vector_store.save();
+
+            else :
+                #print(f"OLD CHECKSUM DOES NOT EXIST")
+                #LIST VS: vss-23bCXLC0 vs_6866fd6acd5c8191ad163e2abb73c68c {'api_key': '9c_BWB8A', 'api_app': 'test', 'checksum': 'd41d8cd98f00b204e9800998ecf8427e'}
+                # LIST VS: vss-KfSfYb46 vs_6866fcd6361c8191ad97ffc17aaebe29 {'api_key': '9c_BWB8A', 'api_app': 'test', 'checksum': 'd41d8cd98f00b204e9800998ecf8427e'}
+                #name = randstring('vss')
+                name = checksum
+                #print(f"CREATING {name} with FILE_IDS = {new_file_ids}")
+                new_remote_vector_store = self.vector_stores.create(name=name,file_ids=new_file_ids , 
+                    metadata={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] , "checksum" : new_checksum } )
+                remote_wait_for_vector_store_ready(self, new_remote_vector_store.id, timeout=settings.MAXWAIT)
+                rvs = new_remote_vector_store
+                #logger.info(f"CREATE NEW REMOTE_VECTOR_STORE WITH {checksum} {new_vector_store_id}")
+                #new_remote_vector_stores =  RemoteVectorStore.objects.filter(checksum=checksum).all()
+                #if new_remote_vector_stores :
+                #    new_remote_vector_store = new_remote_vector_stores[0]
+                #    new_remote_vector_store.vector_store_id = new_vector_store_id
+                #else :
+                new_remote_vector_store, created   = RemoteVectorStore.objects.get_or_create(checksum=checksum,vector_store_id=rvs.id);
+                new_remote_vector_store.save();
+                #print(f"CREATED_NEW_VECTOR_STORE {new_remote_vector_store} {new_remote_vector_store.checksum} {new_remote_vector_store.vector_store_id}")
+                vs.vector_store_id = rvs.id
+                vs.remote_vector_store = new_remote_vector_store
+                vs.vsid = rvs.id
+                vs.save()
+                new_vector_store_id = rvs.id
+        #print(f"FINISHED CREATING VS CHECKSUM = {vs.name} {vs.checksum} {vs.remote_vector_store}")
         return new_vector_store_id
 
 
@@ -305,7 +359,8 @@ class OpenAIClient( OpenAI ):
         assert vs.get_vector_store_id() == vector_store_id, "FAIL6"
         checksum = vs.get_checksum()
         vector_store_id = vs.get_vector_store_id()
-        self.vector_stores.files.create( vector_store_id=vector_store_id , file_id=file_id   )
+        self.vector_stores.files.create( vector_store_id=vector_store_id , file_id=file_id , 
+             metadata={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] , "checksum" : new_checksum }  )
         remote_wait_for_vector_store_ready(self, vector_store_id=vector_store_id, timeout=settings.MAXWAIT)
         assert checksum == vs.get_checksum() , "FAIL6b"
         return vector_store_id
@@ -354,7 +409,7 @@ class OpenAIFile(models.Model) :
                 shutil.copy2(src, dst)
             data = self.file.read()
             self.checksum = hashlib.md5(data).hexdigest()
-            uploaded_file = openai.files.create( file=open( dst, "rb"), purpose="assistants")
+            uploaded_file = openai.files.create( file=open( dst, "rb"), purpose="assistants"  )
             self.file_ids = [uploaded_file.id ]
             self.path = os.path.dirname( self.file.path )
 
@@ -397,7 +452,7 @@ def custom_delete_openaifile(sender, instance, **kwargs):
                 vs.files.remove( o )
                 vs.save(update_fields=['checksum'] );
                 vs.checksum = vs.get_checksum();
-                vsid =  client.get_or_create_remote_vector_store_info( vs )
+                vsid =  client.get_or_update_remote_vector_store( vs )
                 vs.vsid = vsid
                 vs.save()
                 new_checksum = vs.checksum
@@ -416,7 +471,7 @@ def custom_delete_openaifile(sender, instance, **kwargs):
     #vst = instance.vector_stores.all();
     #logger.info(f"VST FINALLY = {vst}")
     #for vs in vst :
-    #    vsid =  client.get_or_create_remote_vector_store_info( vs )
+    #    vsid =  client.get_or_update_remote_vector_store( vs )
     #    logger.info(f"VSID TEST {vs.vsid} == {vsid}")
     client.delete_file_globally( file_id )
     try :
@@ -434,6 +489,18 @@ class RemoteVectorStore( models.Model ) :
     def vector_stores_pks(self ):
         pks = [ i.pk for i in self.vector_stores.all() ]
         return pks
+    def file_names(self):
+        client = OpenAIClient()
+        vs_files = client.vector_stores.files.list(vector_store_id=self.vector_store_id)
+        names = [];
+        for vs_file in vs_files.data:
+            file_id = vs_file.id
+            file_obj = client.files.retrieve(file_id)
+            #print(f"{file_obj.filename} — {file_id}")
+            names.append(file_obj.filename)
+        return names
+
+
 
 
 
@@ -516,13 +583,13 @@ class VectorStore( models.Model ):
         client = OpenAIClient()
         if is_new:
             try:
-                vector_store_id = client.get_or_create_remote_vector_store_info(self)
+                vector_store_id = client.get_or_update_remote_vector_store(self)
                 self.vsid = vector_store_id
             except openai.OpenAIError as e:
-                logger.error(f"OpenAIError in get_or_create_remote_vector_store_info: {e}")
+                logger.error(f"OpenAIError in get_or_update_remote_vector_store: {e}")
                 raise
             except Exception as e:
-                logger.error(f"Unexpected error in get_or_create_remote_vector_store_info: {e}")
+                logger.error(f"Unexpected error in get_or_update_remote_vector_store: {e}")
                 raise
         super().save(*args, **kwargs)
     def get_checksum(self):
@@ -541,7 +608,7 @@ class VectorStore( models.Model ):
         logger.info(f"FILES OK CHECK VECTOR_STORE_ID = {vector_store_id}")
         for f in vector_store_files:
             remote_ids.append( f.id)
-        logger.info(f"FILESOK for { vs.get_vector_store_id()} ? LOCAL={file_ids} == REMOTE={remote_ids}")
+        #print(f"FILESOK for { vs.get_vector_store_id()} ? LOCAL={file_ids} == REMOTE={remote_ids}")
         return set( file_ids) == set( remote_ids) 
 
     def save( self, *args, **kwargs ):
@@ -550,7 +617,7 @@ class VectorStore( models.Model ):
         checksum = self.get_checksum();
         client = OpenAIClient()
         if is_new :
-            vector_store_id = client.get_or_create_remote_vector_store_info( self )
+            vector_store_id = client.get_or_update_remote_vector_store( self )
             self.vsid = vector_store_id
         super().save(*args,**kwargs)
 
@@ -775,7 +842,9 @@ class Assistant( models.Model ):
                 instructions=instructions, 
                 model=self.model,
                 temperature=temperature,
-                tools=[{"type": "file_search"}],metadata={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] } )
+                tools=[{"type": "file_search"}],
+                metadata={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] }
+                )
             self.assistant_id = assistant.id
             super().save(update_fields=['assistant_id'])
 
@@ -1165,17 +1234,17 @@ def handle_files_changed(sender, instance, action, reverse, model, pk_set, **kwa
         return
     client = OpenAIClient()
     if action in {"pre_add", "pre_remove", "pre_clear"}:
-        #instance._old_file_ids =  instance.file_ids() # [i[0] for i in instance.files.values_list('file_ids', flat=True)  ]
+        instance._old_file_ids =  instance.file_ids() # [i[0] for i in instance.files.values_list('file_ids', flat=True)  ]
         instance._old_checksum = instance.get_checksum();
         pass
 
     elif action == "post_add" or action == 'post_remove' :
-        #old_file_ids  =  getattr(instance, '_old_file_ids', [] )
+        old_file_ids  =  getattr(instance, '_old_file_ids', [] )
         old_checksum  =  getattr(instance, '_old_checksum', None);
+        instance.checksum = instance.get_checksum();
         #new_file_ids =  [i[0] for i in  instance.files.values_list('file_ids', flat=True)  ]
         instance._updating_from_m2m = True
-        instance.vsid = client.get_or_create_remote_vector_store_info( instance , old_checksum)
-        instance.checksum = instance.get_checksum();
+        instance.vsid = client.get_or_update_remote_vector_store( instance , old_checksum,old_file_ids)
         #instance.save(update_fields=['checksum','vsid']);
         instance.save();
         del instance._updating_from_m2m

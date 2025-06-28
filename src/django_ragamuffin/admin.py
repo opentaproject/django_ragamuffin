@@ -6,7 +6,17 @@ from .models import OpenAIFile  , VectorStore , Assistant, Thread, DEFAULT_INSTR
 
 @admin.register(RemoteVectorStore)
 class RemoteVectorStoreAdmin(admin.ModelAdmin):
-    list_display = ('pk', 'checksum' , 'vector_store_id', 'vector_stores_pks')
+    list_display = ('pk', 'checksum' ,'list_file_names', 'vector_store_id', 'vector_stores_pks', )
+    list_display = ('pk', 'vector_store_id','checksum','list_file_names', 'vector_stores_pks', )
+
+    def list_file_names(self, obj):
+        return ", ".join(obj.file_names())
+
+    list_file_names.short_description = "File Names"
+
+
+
+
 
 @admin.register(OpenAIFile)
 class OpenAIFileAdmin(admin.ModelAdmin):

@@ -10,6 +10,7 @@ import string
 import random
 from django_ragamuffin.models import VectorStore, Assistant
 from django.utils.safestring import mark_safe
+from django.http import FileResponse
 
 head = " \
 \\documentclass{article}\n\

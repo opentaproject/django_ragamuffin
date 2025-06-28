@@ -6,12 +6,20 @@ import sys
 from openai import OpenAI
 
 model = 'gpt-4o-mini'
+client = OpenAI()
+#
+# MAKE SURE YOU HAVE ENVIRONMENT SET
+#
+#export OPENAI_API_KEY=sk-proj...
+#export OPENAI_PROJECT_ID=proj_...
+#export OPENAI_ORG_ID=org-...
+
+
 
 def nuke(delete=False):
     action = 'DELETE ' if delete else 'LIST'
     print(f"\n{action}VECTOR STORES")
 
-    client = OpenAI()
     vector_stores = client.vector_stores.list()
     for vector_store in vector_stores:
         vector_store_id = vector_store.id

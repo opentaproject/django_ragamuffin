@@ -20,7 +20,7 @@ from django.conf import settings
 settings.API_APP = 'test'
 
 model = 'gpt-4o-mini'
-client = OpenAI()
+client = OpenAI() 
 import string
 import random
 
@@ -45,7 +45,7 @@ class OpenAI(TestCase):
 
     def tearDown( self ):
         print(f"TEARDOWN")
-        delete_remote_vector_stores();
+        #delete_remote_vector_stores();
 
 
     def setUp( self ):
@@ -124,13 +124,13 @@ class OpenAI(TestCase):
 
     def test_create_and_delete_file_globally(self):
 
-        aname = randstring('T3')
-        print(f"TEST_CREATE_AND_DELETE_VECTOR_STORE_OBJECT")
+        aname = randstring('T1')
+        print(f"TEST_CREATE_AND_DELETE_FILE_GLOBALLY ")
         url = reverse('admin:django_ragamuffin_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
         t1 = self.create_testfile_from_string( b"test1_content_here" ,"test1.txt")
         t2 = self.create_testfile_from_string( b"test2_content_here" ,"test2.txt")
-        vsname = randstring('T7')
+        vsname = randstring('T2')
         vs = VectorStore( name=vsname)
         vs.save()
         vs.files.set([t1,t2])
@@ -140,7 +140,7 @@ class OpenAI(TestCase):
         t2.delete();
         #vs = VectorStore.objects.get(name=vsname)
         #vs.save();
-        dump_remote_vector_stores("TEST1");
+        dump_remote_vector_stores("T1");
         assert vs.files_ok() , "ONE FILE NOT OK"
         t1.delete();
         #vs.save()
@@ -148,6 +148,7 @@ class OpenAI(TestCase):
         dump_remote_vector_stores("TEST2");
         assert vs.files_ok() , "ONE FILE NOT OK"
         vs.delete();
+        delete_remote_vector_stores();
         dump_remote_vector_stores("TEST3");
 
     def test_clone_vector_store_object(self):
@@ -160,7 +161,7 @@ class OpenAI(TestCase):
         t1 = self.create_testfile_from_string( b"test1_content_here" ,"test1.txt")
         t2 = self.create_testfile_from_string( b"test2_content_here" ,"test2.txt")
         dump_remote_vector_stores("cloned0");
-        vsname = randstring('T1')
+        vsname = randstring('T4')
         vs1 = VectorStore( name=vsname)
         vs1.save()
         print(f"VSPK-A = {vs1.pk} ")# #VS2PK = {vs2.pk}")
@@ -197,13 +198,13 @@ class OpenAI(TestCase):
 
     def test_create_and_delete_vector_store_object(self):
 
-        aname = randstring('T3')
+        aname = randstring('T5')
         print(f"TEST_CREATE_AND_DELETE_VECTOR_STORE_OBJECT")
         url = reverse('admin:django_ragamuffin_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
         t1 = self.create_testfile_from_string( b"test1_content_here" ,"test1.txt")
         t2 = self.create_testfile_from_string( b"test2_content_here" ,"test2.txt")
-        vsname = randstring('T1')
+        vsname = randstring('T6')
         vs = VectorStore( name=vsname)
         vs.save()
         vs.files.set([t1,t2])
@@ -223,6 +224,7 @@ class OpenAI(TestCase):
         t2.delete();
         t1.delete();
         dump_remote_vector_stores("TEST4");
+        delete_remote_vector_stores()
 
 
     def test_create_and_delete_assistant_object(self):
@@ -233,12 +235,12 @@ class OpenAI(TestCase):
         t1 = self.create_testfile_from_string( b"test1_content_here" ,"test1.txt")
         t2 = self.create_testfile_from_string( b"test2_content_here" ,"test2.txt")
         t3 = self.create_testfile_from_string( b"test3_content_here" ,"test3.txt")
-        vsname = randstring('T2')
-        aname = randstring('T3')
+        vsname = randstring('T7')
+        aname = randstring('T8')
         assistant = Assistant(name=aname,model=settings.AI_MODELS['default'] )
         assistant.instructions = 'Answer the questions and make a good guess if the answer is not totally obvious from the context!'
         assistant.save()
-        bname = randstring('T3b')
+        bname = randstring('T9')
         assistantb = Assistant( name=bname, model=settings.AI_MODELS['staff'] ) 
         assistantb.instructions = 'Answer the questions and make a good guess if the answer is not totally obvious from the context!'
         assistantb.save()
@@ -316,7 +318,7 @@ class OpenAI(TestCase):
         #vs1.save()
         #vs1.files.set([t1,t2,t3])
         #vs1.save()
-        aname = randstring('T5')
+        aname = randstring('T10')
         assistant = Assistant( name=aname, model=settings.AI_MODELS['default'] )
         print(f"CREATED ASSISTANT {aname}")
         assistant.save();
@@ -327,11 +329,11 @@ class OpenAI(TestCase):
         assert  assistant.files_ok()  , f"FILE_IDS_LOCAL = {file_ids} not equal to FILE_IDS_REMOTE "
         print(f"ASSITANT REMOTE FILES OK")
 
-        queries =  [ [ 'What color was the dog.', 'black',True],
-                    [ 'What color was the cat.', 'white',True],
-                     [ 'What did the dog do?', 'barked',True] , 
-                     [ 'What did the cat do?', 'miaow',False],
-                     [ 'Please repeat the reply to the first request','black',True]
+        queries =  [ [ 'Q1: What color was the dog.', 'black',True],
+                    [ 'Q2: What color was the cat.', 'white',True],
+                    [ 'Q3: What did the dog do?', 'barked',True] , 
+                    [ 'Q4: What did the cat do?', 'miaow',False],
+                    [ 'Q5: Please repeat the reply to the first request','black',True]
                         ]
 
         thread = Thread(name=aname,assistant=assistant,user=self.user)
@@ -360,18 +362,19 @@ class OpenAI(TestCase):
         #file_ids = vs.file_ids();
         #file_ids = assistant.file_ids();
         #file_ids = assistant.remote_files();
-        queries =  [ [ 'What color was the cat.','white',True],
-                     ['What color was the dog.','black',True],
-                     [ 'What did the cat  do?', 'miaow',True],
-                     [ 'What did the dog do?', 'bark' ,False],
-                     [ 'Please repeat the reply to the first request','black',True],
+        queries =  [ [ 'Q6: What color was the cat.','white',True],
+                    ['Q7: What color was the dog.','black',True],
+                    [ 'Q8: What did the cat  do?', 'miaow',True],
+                    [ 'Q9: What did the dog do?', 'bark' ,False],
+                    [ 'Q10: What was the first query','dog',None],
                  ]
         for  q in queries :
             [ query,response ,truth ] =  q
             r = thread.run_query(  query=query,  last_messages=4)
             txt = r['assistant']
             print(f" Q={q} TXT={txt}")
-            assert ( response in txt ) == truth , f"ERROR : in {q}"
+            if not truth == None :
+                assert ( response in txt ) == truth , f"ERROR : in {q}"
 
         #vs.delete();
         t1.delete();

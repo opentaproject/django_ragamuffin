@@ -31,13 +31,13 @@ def create_run_with_retry(thread_id, assistant_id, timeout, truncation_strategy,
             )
             return run  # success
         except RateLimitError as e:
-            print(f"Rate limit hit. Attempt {attempt}/{max_retries}. Retrying in {delay} seconds...")
+            logger.error(f"Rate limit hit. Attempt {attempt}/{max_retries}. Retrying in {delay} seconds...")
         except APIError  as e:
-            print(f"Transient API error on attempt {attempt}/{max_retries}: {e}. Retrying in {delay} seconds...")
+            logger.error(f"Transient API error on attempt {attempt}/{max_retries}: {e}. Retrying in {delay} seconds...")
         except Timeout as e:
-            print(f"Transient API error on attempt {attempt}/{max_retries}: {e}. Retrying in {delay} seconds...")
+            logger.error(f"Transient API error on attempt {attempt}/{max_retries}: {e}. Retrying in {delay} seconds...")
         except Exception as e:
-            print(f"Non-retryable error: {e}")
+            logger.error(f"Non-retryable error: {e}")
             raise  # re-raise non-rate-limit exceptions
         time.sleep(delay)
         delay *= 2  # exponential backoff
@@ -49,7 +49,6 @@ def create_run_with_retry(thread_id, assistant_id, timeout, truncation_strategy,
 def run_remote_query( context ):
 
     now = time.time();
-    print(f"KWARGS = {context}")
     openai = context['openai']; 
     thread_id = context['thread_id'];
     assistant_id = context['assistant_id'];
@@ -71,7 +70,7 @@ def run_remote_query( context ):
     interval = 5;
     imax = settings.MAXWAIT / interval
     i = 0;
-    print(f"CREATE RUN")
+    print(f"RUN QUERY {query}")
     while i < imax :
         run_status = openai.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
         if run_status.status == "completed":
