@@ -489,15 +489,21 @@ class RemoteVectorStore( models.Model ) :
     def vector_stores_pks(self ):
         pks = [ i.pk for i in self.vector_stores.all() ]
         return pks
-    def file_names(self):
+    def slow_file_names(self):
         client = OpenAIClient()
         vs_files = client.vector_stores.files.list(vector_store_id=self.vector_store_id)
         names = [];
         for vs_file in vs_files.data:
             file_id = vs_file.id
             file_obj = client.files.retrieve(file_id)
-            #print(f"{file_obj.filename} — {file_id}")
             names.append(file_obj.filename)
+        return names
+
+    def file_names(self):
+        vss = VectorStore.objects.filter(checksum=self.checksum).all();
+        names = [];
+        for v in vss :
+            names.extend( v.file_names() );
         return names
 
 
@@ -529,7 +535,6 @@ class VectorStore( models.Model ):
 
     def clone( self, newname, *args, **kwargs):
         vector_stores = VectorStore.objects.filter( name=newname).all();
-        #assert  len( vector_stores) == 0 , f"CREATE VECTOR STORE WITH NAME {newname} ; VECTOR_STORE ALREADY EXISTS"
         if vector_stores :
             vector_store = vector_stores[0]
         else :
@@ -548,6 +553,14 @@ class VectorStore( models.Model ):
         for f in files.all():
             ids.extend( f.file_ids )
         return ids
+
+    def file_names(self, *args, **kwargs ):
+        files = self.files
+        n = []
+        for f in files.all():
+            n.append( f.name)
+        return n
+
 
     def ntokens( self, *args, **kwargs ):
         files = self.files
