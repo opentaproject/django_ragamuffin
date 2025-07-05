@@ -87,7 +87,8 @@ def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=settings
 
 def validate_file_extension(value):
     ext = os.path.splitext(value.name)[-1].lower()
-    if ext not in ['.md','.txt','.pdf','.tex']:
+    print(f"EXT = {ext}")
+    if ext not in ['.md','.txt','.pdf','.tex','.xml']:
         raise ValidationError(f"Unsupported file extension '{ext}'.")
 
 def hashed_upload_to(instance, filename):
@@ -140,10 +141,12 @@ def create_or_retrieve_thread( assistant, name, user ) :
 
 
 def upload_or_retrieve_openai_file( name ,src ):
+    print(f"UPLOAD {name}")
     os.makedirs( os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), exist_ok=True )
     dst = os.path.join(os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), src)
     name = dst.split('/')[-1];
     ts = OpenAIFile.objects.filter(name=name)
+    print(f"A")
     if not ts :
         if not src == dst :
             shutil.copy2(src, dst)
@@ -386,32 +389,53 @@ class OpenAIFile(models.Model) :
 
     def save( self, *args, **kwargs ):
         is_new = self._state.adding  and not self.pk
+        print(f"FILE SAVE {self.file}")
         name =  f"{self.file}".split('/')[-1]
         super().save(*args, **kwargs)  # Save first, so file is processed
-        if is_new and self.file:
+        if ( is_new and self.file ):
             fn = self.file.name 
             self.name = self.file.name.split('/')[-1]
             src = self.file.path
             extension = src.split('.')[-1];
+            print(f"EXTENSION = {extension}")
             if extension == 'pdf' :
                 txt = mathpix( src ,format_out='mmd')
+            elif extension == 'xml' :
+                print(f"READ XML")
+                txt = ( open(src,'r').read() )
             else :
                 txt = ( open(src,'rb').read() ).decode('utf-8')
-            chunks = chunk_mmd(txt)
+            if extension == 'pdf' :
+                chunks = chunk_mmd(txt)
+            else :
+                chunks = txt.encode()
+            print(f"CHUNKS = {chunks}")
             chunkdir = os.path.join( os.path.dirname( src ), 'chunks')
             os.makedirs( chunkdir, exist_ok=True )
             srcbase = Path( os.path.basename(src) )
-            jbase = srcbase.with_suffix('.json')
+            if extension == 'xml' :
+                jbase = srcbase.with_suffix('.xml')
+            else :
+                jbase = srcbase.with_suffix('.json')
             dst = os.path.join( chunkdir, jbase )
+            print(f"A")
             if chunks :
+                print("A1")
                 open( dst, "wb").write( chunks)
             else :
+                print(f"A2")
                 shutil.copy2(src, dst)
+            print(f"A3")
             data = self.file.read()
+            print(f"A4")
             self.checksum = hashlib.md5(data).hexdigest()
+            print(f"A5")
             uploaded_file = openai.files.create( file=open( dst, "rb"), purpose="assistants"  )
+            print(f"A6")
             self.file_ids = [uploaded_file.id ]
+            print(f"A7")
             self.path = os.path.dirname( self.file.path )
+            print(f"A8 {self.file.path}")
 
             def get_ntokens( file_path):
                 valid_text = ''
@@ -428,9 +452,13 @@ class OpenAIFile(models.Model) :
 
 
 
+            print(f"A9")
             self.ntokens = get_ntokens( dst )
+            print(f"A10")
             self.name = name
+            print(f"A11")
             super().save(*args, **kwargs) # Then update with true hashed path
+            print(f"A12")
 
 
 
@@ -473,8 +501,8 @@ def custom_delete_openaifile(sender, instance, **kwargs):
     #for vs in vst :
     #    vsid =  client.get_or_update_remote_vector_store( vs )
     #    logger.info(f"VSID TEST {vs.vsid} == {vsid}")
-    client.delete_file_globally( file_id )
     try :
+        client.delete_file_globally( file_id )
         shutil.rmtree(instance.path)
     except Exception as e:
         logger.info(f" FILE/ {instance.path} DOES NOT EXIST")

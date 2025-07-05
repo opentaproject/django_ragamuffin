@@ -237,7 +237,7 @@ LOGGING = {
         # Your app-specific logger (optional)
         'django_ragamuffin': {
             'handlers': ['console'],
-            'level': 'ERROR',
+            'level': 'INFO',
             'propagate': False,
         },
     }
