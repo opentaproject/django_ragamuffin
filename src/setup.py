@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='django_ragamuffin',  
-    version='1.92.0.01',  
+    version='1.92.0.02',  
     packages=find_packages(),
     include_package_data=True,  # Important for static files/migrations
     license='MIT License',  # Choose your license
