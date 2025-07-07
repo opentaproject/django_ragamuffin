@@ -1,4 +1,4 @@
 echo fix setup.py
 rm -rf build/ dist/ *.egg-info
 python -m build
-#twine upload dist/*
+twine upload dist/*
