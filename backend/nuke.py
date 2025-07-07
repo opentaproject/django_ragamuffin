@@ -16,34 +16,38 @@ def nuke(delete=False):
     for vector_store in vector_stores:
         vector_store_id = vector_store.id
         vector_store_files = client.vector_stores.files.list(vector_store_id=vector_store_id)
-        print(f"  {action} VS: {vector_store.name} {vector_store_id} {vector_store.metadata}")
-        for vector_store_file in vector_store_files:
-            file_id = vector_store_file.id
-            print(f"    file: {file_id}")
+        md = vector_store.metadata;
+        if 'api_app' in md  and md['api_app'] == 'tests' :
+            print(f"  {action} VS: {vector_store.name} {vector_store_id} {vector_store.metadata}")
+            for vector_store_file in vector_store_files:
+                file_id = vector_store_file.id
+                print(f"    file: {file_id}")
+                if delete:
+                    try:
+                        client.vector_stores.files.delete(vector_store_id=vector_store_id, file_id=file_id)
+                    except Exception as e:
+                        print(f"FILE ERROR {file_id}: {e}")
             if delete:
                 try:
-                    client.vector_stores.files.delete(vector_store_id=vector_store_id, file_id=file_id)
+                    client.vector_stores.delete(vector_store_id=vector_store_id)
                 except Exception as e:
-                    print(f"FILE ERROR {file_id}: {e}")
-        if delete:
-            try:
-                client.vector_stores.delete(vector_store_id=vector_store_id)
-            except Exception as e:
-                print(f"VECTOR_STORE_ERROR {vector_store_id}: {e}")
+                    print(f"VECTOR_STORE_ERROR {vector_store_id}: {e}")
 
     print(f"\n{action}ASSISTANTS")
     assistants = openai.beta.assistants.list()
     for assistant in assistants:
         assistant_id = assistant.id
-        print(f"  {action} AS: {assistant.name} {assistant_id} {assistant.metadata}")
-        vs = assistant.tool_resources.file_search.vector_store_ids
-        print(f"      VS: {vs}")
-        time.sleep(0.5)
-        if delete:
-            try:
-                client.beta.assistants.delete(assistant_id)
-            except Exception as e:
-                print(f"ASSISTANT ERROR {assistant_id}: {e}")
+        md= assistant.metadata;
+        if 'api_app' in md and md['api_app'] == 'tests' :
+            print(f"  {action} AS: {assistant.name} {assistant_id} {assistant.metadata}")
+            vs = assistant.tool_resources.file_search.vector_store_ids
+            print(f"      VS: {vs}")
+            time.sleep(0.5)
+            if delete:
+                try:
+                    client.beta.assistants.delete(assistant_id)
+                except Exception as e:
+                    print(f"ASSISTANT ERROR {assistant_id}: {e}")
 
     print(f"\n{action}FILES")
     files = client.files.list()
