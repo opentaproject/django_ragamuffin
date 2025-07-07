@@ -1,5 +1,0 @@
-[build-system]
-requires = ["setuptools>=65", "wheel"]
-build-backend = "setuptools.build_meta"
-[options.package_data]
-* = templates/*.html
