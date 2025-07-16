@@ -10,7 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
-from .util import create_database_if_not_exists
+import psycopg2
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+
 
 
 from pathlib import Path
@@ -95,9 +97,10 @@ PGDATABASE = os.environ.get('PGDATABASE')
 PGDATABASE_NAME = os.environ.get('PGDATABASE_NAME','default')
 
 
+DJANGO_RAGAMUFFIN_DB = os.environ.get("DJANGO_RAGAMUFFIN_DB",None) 
 
 DATABASES = {
-     PGDATABASE_NAME : {
+     'default' : {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": PGDATABASE,
         "USER": PGUSER,
@@ -106,6 +109,15 @@ DATABASES = {
         "PORT": 5432,
         "ATOMIC_REQUESTS": ATOMIC_REQUESTS,
     },
+    'django_ragamuffin': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': DJANGO_RAGAMUFFIN_DB,
+        'USER': PGUSER,
+        'PASSWORD': PGPASSWORD,
+        'HOST': 'localhost',
+        'PORT': '5432',
+        'ATOMIC_REQUESTS' : ATOMIC_REQUESTS
+    }
 }
 
 db = DATABASES[PGDATABASE_NAME];
@@ -117,7 +129,11 @@ superuser = os.environ.get("SUPERUSER", 'super')
 superuser_password = os.environ.get("SUPERUSER_PASSWORD",'')
 SUPERUSER=superuser
 SUPERUSER_PASSWORD=superuser_password
-create_database_if_not_exists(db_name, host,user, password , superuser, superuser_password) 
+#create_database_if_not_exists(db_name, host,user, password , superuser, superuser_password) 
+
+
+
+
 
 
 
@@ -237,8 +253,35 @@ LOGGING = {
         # Your app-specific logger (optional)
         'django_ragamuffin': {
             'handlers': ['console'],
-            'level': 'INFO',
+            'level': 'ERROR',
             'propagate': False,
         },
     }
 }
+
+#if "pytest" in sys.modules:
+#    # You're running under pytest
+#    print("Pytest is running")
+#    # For example:
+#    DEBUG = True
+#    RUNTESTS = True;
+#    DATABASE_ROUTERS = ['django_ragamuffin.db_routers.RagamuffinRouter']
+#else :
+#    print(f"Pytest is not running")
+#    RUNTESTS = False
+RUNTESTS = "pytest" in sys.modules
+if not RUNTESTS :
+    DATABASE_ROUTERS = ['django_ragamuffin.db_routers.RagamuffinRouter']
+
+
+#db = DATABASES['django_ragamuffin'];
+#db_name = db['NAME'];
+#host = db['HOST'];
+#user = db['USER'];
+#password = db['PASSWORD']
+#superuser = os.environ.get("SUPERUSER", 'super')
+#superuser_password = os.environ.get("SUPERUSER_PASSWORD",'')
+#SUPERUSER=superuser
+#SUPERUSER_PASSWORD=superuser_password
+#create_database_if_not_exists(db_name, host,user, password , superuser, superuser_password) 
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")

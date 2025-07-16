@@ -44,7 +44,20 @@ class AssistantEditForm(forms.ModelForm):
 
         }
 
+
 def upload_file_view(request,pk):
+    if request.method == 'POST' and request.FILES.get('myfile'):
+        files = request.FILES.getlist('myfile')
+        for f in files :
+            filename = f.name 
+            assistant =  Assistant.objects.get(pk=pk)
+            file_url = assistant.add_file( filename, f)
+            r = render(request, 'django_ragamuffin/upload.html', {'file_url': file_url})
+        return redirect(f"/django_ragamuffin/assistant/{pk}/edit/")
+
+    return render(request, 'django_ragamuffin/upload.html')
+
+def old_upload_file_view(request,pk):
     if request.method == 'POST' and request.FILES.get('myfile'):
         uploaded_file = request.FILES['myfile']
         filename = uploaded_file.name 
@@ -81,7 +94,6 @@ def delete_assistant(request, pk):
 
 def edit_assistant(request, pk):
     assistant = get_object_or_404(Assistant, pk=pk)
-    print(f"POST = {request.POST}")
     if request.method == 'POST':
         deletions = request.POST.getlist('deletion')
         if deletions :
@@ -90,12 +102,11 @@ def edit_assistant(request, pk):
                 assistant.delete_file(f)
         new_tail = request.POST.getlist('directory_name',[None])[0]
         old_tail = assistant.name.split('.')[-1];
-        print(f"OLD_TAIL = {old_tail} NEW_TAIL={new_tail}")
+        #print(f"OLD_TAIL = {old_tail} NEW_TAIL={new_tail}")
         if not old_tail == new_tail :
             def rename_assistants( assistant,  new_tail ):
                 old_name = assistant.name;
                 new = ( assistant.name.split('.')[:-1]  )
-                print(f"NEW = {new} {type(new)} ")
                 if not new_tail  == None :
                     new.append(new_tail)
                     new_name = '.'.join(new)

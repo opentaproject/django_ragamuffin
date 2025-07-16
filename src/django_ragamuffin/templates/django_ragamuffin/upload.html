@@ -3,7 +3,7 @@
 <body>
 <form method="POST" enctype="multipart/form-data">
   {% csrf_token %}
-  <input type="file" name="myfile" required>
+  <input type="file" name="myfile" multiple required>
   <button type="submit">Upload File</button>
 </form>
 {% if file_url %}

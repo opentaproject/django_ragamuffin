@@ -87,7 +87,6 @@ def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=settings
 
 def validate_file_extension(value):
     ext = os.path.splitext(value.name)[-1].lower()
-    print(f"EXT = {ext}")
     if ext not in ['.md','.txt','.pdf','.tex']:
         raise ValidationError(f"Unsupported file extension '{ext}'.")
 
@@ -141,12 +140,10 @@ def create_or_retrieve_thread( assistant, name, user ) :
 
 
 def upload_or_retrieve_openai_file( name ,src ):
-    print(f"UPLOAD {name}")
     os.makedirs( os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), exist_ok=True )
     dst = os.path.join(os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), src)
     name = dst.split('/')[-1];
     ts = OpenAIFile.objects.filter(name=name)
-    print(f"A")
     if not ts :
         if not src == dst :
             shutil.copy2(src, dst)
@@ -389,7 +386,6 @@ class OpenAIFile(models.Model) :
 
     def save( self, *args, **kwargs ):
         is_new = self._state.adding  and not self.pk
-        print(f"FILE SAVE {self.file}")
         name =  f"{self.file}".split('/')[-1]
         super().save(*args, **kwargs)  # Save first, so file is processed
         if ( is_new and self.file ):
@@ -397,7 +393,6 @@ class OpenAIFile(models.Model) :
             self.name = self.file.name.split('/')[-1]
             src = self.file.path
             extension = src.split('.')[-1];
-            print(f"EXTENSION = {extension}")
             if extension == 'pdf' :
                 txt = mathpix( src ,format_out='mmd')
             else :
@@ -406,7 +401,6 @@ class OpenAIFile(models.Model) :
                 chunks = chunk_mmd(txt)
             else :
                 chunks = txt.encode()
-            print(f"CHUNKS = {chunks}")
             chunkdir = os.path.join( os.path.dirname( src ), 'chunks')
             os.makedirs( chunkdir, exist_ok=True )
             srcbase = Path( os.path.basename(src) )
@@ -415,24 +409,15 @@ class OpenAIFile(models.Model) :
             else :
                 jbase = srcbase.with_suffix('.' + extension )
             dst = os.path.join( chunkdir, jbase )
-            print(f"A")
             if chunks :
-                print("A1")
                 open( dst, "wb").write( chunks)
             else :
-                print(f"A2")
                 shutil.copy2(src, dst)
-            print(f"A3")
             data = self.file.read()
-            print(f"A4")
             self.checksum = hashlib.md5(data).hexdigest()
-            print(f"A5")
             uploaded_file = openai.files.create( file=open( dst, "rb"), purpose="assistants"  )
-            print(f"A6")
             self.file_ids = [uploaded_file.id ]
-            print(f"A7")
             self.path = os.path.dirname( self.file.path )
-            print(f"A8 {self.file.path}")
 
             def get_ntokens( file_path):
                 valid_text = ''
@@ -449,13 +434,9 @@ class OpenAIFile(models.Model) :
 
 
 
-            print(f"A9")
             self.ntokens = get_ntokens( dst )
-            print(f"A10")
             self.name = name
-            print(f"A11")
             super().save(*args, **kwargs) # Then update with true hashed path
-            print(f"A12")
 
 
 
@@ -615,8 +596,9 @@ class VectorStore( models.Model ):
         return checksums
 
     def save(self, *args, **kwargs):
-        is_new = self._state.adding and not self.pk
-        super().save(*args, **kwargs)
+        is_new = not self.pk
+        if is_new :
+            super().save(*args, **kwargs)
         checksum = self.get_checksum()
         client = OpenAIClient()
         if is_new:
@@ -650,8 +632,13 @@ class VectorStore( models.Model ):
         return set( file_ids) == set( remote_ids) 
 
     def save( self, *args, **kwargs ):
-        is_new = self._state.adding and not self.pk
-        super().save(*args,**kwargs)
+        #is_new = self._state.adding and not self.pk
+        is_new = not self.pk
+        if is_new :
+            print(f"SELF = {self}")
+            print(f"ARGS = {args}")
+            print(f"KWARGS = {kwargs}")
+            super().save(*args,**kwargs)
         checksum = self.get_checksum();
         client = OpenAIClient()
         if is_new :
@@ -709,10 +696,10 @@ class Assistant( models.Model ):
     temperature = models.FloatField(null=True, blank=True)
 
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=['name', 'model'], name='unique_name_model')
-        ]
+    #class Meta:
+    #    constraints = [
+    #        models.UniqueConstraint(fields=['name', 'model'], name='unique_name_model')
+    #    ]
 
     def __str__(self):
         return f"{self.name}"
@@ -854,6 +841,7 @@ class Assistant( models.Model ):
             
 
     def save( self, *args, **kwargs ):
+        print(f"SAVE ASSISTANT")
         is_new = self._state.adding and not self.pk
         client = OpenAIClient()
         try :
@@ -885,17 +873,25 @@ class Assistant( models.Model ):
                 )
             self.assistant_id = assistant.id
             super().save(update_fields=['assistant_id'])
-
-            def attach_vector_store():
-                if not self.vector_stores.exists():
-                    vs = VectorStore( name=self.name);
-                    vs.save();
-                    self.vector_stores.add(vs)
-
-            transaction.on_commit(attach_vector_store) 
+            print(f"DOES NOT EXIST")
+            vss = VectorStore.objects.filter( name=self.name);
+            if vss :
+                vs = vss[0]
+            else :
+                vs = VectorStore(name=self.name)
+            print(f"VS NEW  = {vs}")
+            vs.save();
+            print(f"VS SAVED")
+            self.vector_stores.set([vs])
+            print(f"NOEW ADD TO VECTOR_STORES {vs} ")
+            self.save();
+            print("DONE SAVEING")
+            transaction.on_commit(self.save ) 
+            print(f"SELF = {self}")
 
         else :
-            super().save( *args, **kwargs)
+            print(f"IS NOT NEW")
+            #super().save( *args, **kwargs)
 
 
             assistant_id = self.assistant_id
@@ -927,6 +923,7 @@ class Assistant( models.Model ):
     #    return assistant;
 
     def clone( self, newname, model=None ):
+        print(f"CLONE ASSISTANT {newname}")
         if model == None :
             model = self.model
         logger.info(f"CLONE_ASSISTANT {self.name} into {newname}")
@@ -944,7 +941,12 @@ class Assistant( models.Model ):
             else :
                 vnew = VectorStore(name=newname)
                 vnew.save();
-        assistant , _ = Assistant.objects.get_or_create(name=newname,model=model)
+        assistants = Assistant.objects.filter( name=newname, model=model)
+        if assistants :
+            assistant = assistants[0];
+        else :
+            assistant = Assistant( name=newname, model=model)
+        #assistant , _ = Assistant.objects.get_or_create(name=newname,model=model)
         assistant.instructions = self.instructions;
         assistant.json_field = self.json_field;
         assistant.model = model
@@ -1077,10 +1079,10 @@ class Thread(models.Model) :
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
     max_tokens = models.IntegerField( blank=True, null=True)
 
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=['name', 'user'], name='unique_thread')
-        ]
+    #class Meta:
+    #    constraints = [
+    #        models.UniqueConstraint(fields=['name', 'user'], name='unique_thread')
+    #    ]
     
 
     def __str__(self):

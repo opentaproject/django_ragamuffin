@@ -11,6 +11,8 @@ import random
 from django_ragamuffin.models import VectorStore, Assistant
 from django.utils.safestring import mark_safe
 from django.http import FileResponse
+import logging
+logger = logging.getLogger(__name__)
 
 head = " \
 \\documentclass{article}\n\
@@ -108,7 +110,7 @@ CHOICES = {0 : 'Unread' ,
 
 def get_assistant( name,user):
     assistants = Assistant.objects.filter(name=name).all();
-    print(f"GET_ASSISTANT assistants = {assistants}")
+    logger.info(f"GET_ASSISTANT assistants = {assistants}")
     if not assistants and not user.is_staff :
         return None
     if user.is_staff :
@@ -122,7 +124,6 @@ def get_assistant( name,user):
         a = assistants[0];
         return a.clone(name,model=model)
     base = '.'.join(name.split('.')[:-1])
-    print(f"BASE = {base}")
     if base == '' :
         return None
     subdir = name.split('.')[-1];

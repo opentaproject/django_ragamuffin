@@ -1,4 +1,6 @@
 from django.test import TestCase
+from django.apps import AppConfig
+
 import hashlib
 import django
 import time
@@ -10,8 +12,11 @@ from django.core.exceptions import ObjectDoesNotExist
 import tiktoken
 import openai
 from openai import OpenAI
-
+from django.conf import settings
+import pytest
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+
+
 django.setup()
 from django_ragamuffin.models import OpenAIFile, VectorStore, Assistant,  Thread,  delete_remote_vector_stores, dump_remote_vector_stores
 from django.contrib.auth.models import User
@@ -33,7 +38,9 @@ def randstring(tag, length=8):
 
 class OpenAI(TestCase):
 
+    @pytest.mark.django_db
     def create_testfile_from_string( self, s , name ):
+        print(f"TEST1")
         url = reverse('admin:django_ragamuffin_openaifile_add')  # use your app and model name
         test_file1 = SimpleUploadedFile( name , s , content_type="text/plain")
         csum = hashlib.md5( s  ).hexdigest()
@@ -43,23 +50,27 @@ class OpenAI(TestCase):
         t1 = OpenAIFile.objects.get(name=name)
         return t1
 
+    @pytest.mark.django_db
     def tearDown( self ):
         print(f"TEARDOWN")
         #delete_remote_vector_stores();
 
 
+    @pytest.mark.django_db
     def setUp( self ):
-        #print(f"DO SETUP")
+        print(f"DO SETUP")
         User = get_user_model()
         self.admin_user = User.objects.create_superuser( username='admin', email='admin@example.com', password='adminpass')
         self.client.login(username='admin', password='adminpass')
         self.user = User.objects.create_user(username='testuser', password='testpass')
 
+    @pytest.mark.django_db
     def test_user_exists(self):
         print(f"TEST_USER_EXISTS")
         user_exists = User.objects.filter(username='testuser').exists()
         self.assertTrue(user_exists)
 
+    @pytest.mark.django_db
     def test_create_and_delete_file_object(self):
         print(f"TEST_CREATE_AND_DELETE_FILE_OBJECTS")
         url = reverse('admin:django_ragamuffin_openaifile_changelist')  # use your app and model name
@@ -93,6 +104,7 @@ class OpenAI(TestCase):
 
 
 
+    @pytest.mark.django_db
     def test_create_and_delete_two_openai_file_objects(self):
         print(f"TEST_CREATE_AND_DELETE_TWO_OPENAI..")
         url = reverse('admin:django_ragamuffin_openaifile_changelist')  # use your app and model name
@@ -122,6 +134,7 @@ class OpenAI(TestCase):
 
 
 
+    @pytest.mark.django_db
     def test_create_and_delete_file_globally(self):
 
         aname = randstring('T1')
@@ -151,6 +164,7 @@ class OpenAI(TestCase):
         delete_remote_vector_stores();
         dump_remote_vector_stores("TEST3");
 
+    @pytest.mark.django_db
     def test_clone_vector_store_object(self):
         dump_remote_vector_stores("cloned-2");
         aname = randstring('T3')
@@ -196,6 +210,7 @@ class OpenAI(TestCase):
 
 
 
+    @pytest.mark.django_db
     def test_create_and_delete_vector_store_object(self):
 
         aname = randstring('T5')
@@ -227,6 +242,7 @@ class OpenAI(TestCase):
         delete_remote_vector_stores()
 
 
+    @pytest.mark.django_db
     def test_create_and_delete_assistant_object(self):
         print(f"TEST_CREATE_AND_DELETE_ASSISTANT_OBJECT")
         url = reverse('admin:django_ragamuffin_openaifile_changelist')  # use your app and model name
@@ -289,6 +305,7 @@ class OpenAI(TestCase):
         delete_remote_vector_stores();
         dump_remote_vector_stores("TEST6");
 
+    @pytest.mark.django_db
     def test_create_and_delete_thread(self):
         print(f"TEST_CREATE_AND_DELETE_THREAD")
         import tiktoken
