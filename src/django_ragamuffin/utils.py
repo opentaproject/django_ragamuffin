@@ -131,12 +131,14 @@ def get_assistant( name,user):
     if base_assistant :
         assistant = base_assistant.clone( name , model=model)
     else :
-        assistant = Assistant(name=name,model=model);
-        vs = VectorStore(name=name);
-        vs.save();
-        assistant.save();
-        assistant.vector_stores.set([vs.pk])
-        assistant.save();
+        for m in settings.AI_MODELS.values()  :
+            assistant = Assistant(name=name,model=m);
+            vs = VectorStore(name=name);
+            vs.save();
+            assistant.save();
+            assistant.vector_stores.set([vs.pk])
+            assistant.save();
+        assistant = Assistant.objects.get(name=name,model=model)
     return assistant 
 
 def thread_to_pdf( thread , prints ):

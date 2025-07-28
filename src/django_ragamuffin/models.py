@@ -941,19 +941,17 @@ class Assistant( models.Model ):
             else :
                 vnew = VectorStore(name=newname)
                 vnew.save();
-        assistants = Assistant.objects.filter( name=newname, model=model)
-        if assistants :
-            assistant = assistants[0];
-        else :
-            assistant = Assistant( name=newname, model=model)
-        #assistant , _ = Assistant.objects.get_or_create(name=newname,model=model)
-        assistant.instructions = self.instructions;
-        assistant.json_field = self.json_field;
-        assistant.model = model
-        assistant.temperature = self.temperature;
-        assistant.save();
-        assistant.vector_stores.set([vnew.pk])
-        assistant.save();
+        assistants = Assistant.objects.filter( name=newname )
+        #for assistant in assistants :
+        for m in settings.AI_MODELS.values() :
+            assistant , _ = Assistant.objects.get_or_create(name=newname,model=m)
+            assistant.instructions = self.instructions;
+            assistant.json_field = self.json_field;
+            assistant.model = m
+            assistant.temperature = self.temperature;
+            assistant.save();
+            assistant.vector_stores.set([vnew.pk])
+            assistant.save();
         logger.info(f"RETURNING CLONED ASSISTANT")
         return assistant;
 
