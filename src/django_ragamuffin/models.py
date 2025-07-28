@@ -685,6 +685,10 @@ DEFAULT_INSTRUCTIONS = """Answer only questions about the enclosed document.
     If a link does not exist, just say that such an image does not exist. '
     """
 
+class QUser(models.Model ):
+    username = models.CharField(max_length=255,blank=True)
+    is_staff = models.BooleanField(default=False)
+
 
 class Assistant( models.Model ):
     name =   models.CharField(max_length=255,blank=True)
