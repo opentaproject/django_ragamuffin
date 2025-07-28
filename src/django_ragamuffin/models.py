@@ -1079,6 +1079,7 @@ class Thread(models.Model) :
     messages = models.JSONField( default=dict ,  blank=True, null=True)
     assistant = models.ForeignKey(Assistant, on_delete=models.SET_NULL, null=True, related_name="threads")
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+    quser = models.ForeignKey(QUser, null=True, blank=True, on_delete=models.SET_NULL)
     max_tokens = models.IntegerField( blank=True, null=True)
 
     #class Meta:
