@@ -8,7 +8,7 @@ import inspect
 class RagamuffinRouter:
     def db_for_read(self, model, **hints):
         if model._meta.app_label == 'django_ragamuffin':
-            #print(f"READ {model._meta.app_label} hints={hints}")
+            print(f"READ {model._meta.app_label} hints={hints}")
             frames = inspect.stack()  # [0] is current, [1] is caller
             for frame in frames :
                 if 'src' in frame.filename :

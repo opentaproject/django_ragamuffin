@@ -20,6 +20,7 @@ timeout = settings.MAXWAIT
 
 def create_run_with_retry(thread_id, assistant_id, timeout, truncation_strategy, tools, max_retries=5):
     delay = 2  # initial delay in seconds
+    print(f"CREATE RUN WITH ASSISTANT_ID = {assistant_id}")
     for attempt in range(1, max_retries + 1):
         try:
             run = openai.beta.threads.runs.create(
@@ -48,6 +49,7 @@ def create_run_with_retry(thread_id, assistant_id, timeout, truncation_strategy,
 
 def run_remote_query( context ):
 
+    print(f"CONTEXT = {context}")
     now = time.time();
     openai = context['openai']; 
     thread_id = context['thread_id'];
@@ -63,6 +65,7 @@ def run_remote_query( context ):
 
     truncation_strategy = { "type": "last_messages", "last_messages": last_messages }
     tools=[ { "type": "file_search", "file_search": { "max_num_results": max_num_results , "ranking_options": { "score_threshold": 0.0 } } } ]
+    print(f"TOOLS = {tools} TRUNCATION_STRATEGY = {truncation_strategy}")
     if last_messages is None:
         run = create_run_with_retry(thread_id, assistant_id, timeout, truncation_strategy, tools)
     else:
@@ -96,6 +99,7 @@ def run_remote_query( context ):
         txt =  f"Request timed out after {settings.MAXWAIT} seconds; try again ; try to change the question."
     else :
         txt =   str( msg.content[0].text.value )
+        print(f"TXT = {txt}")
         txt = re.sub(r"【\d+:\d+†[^】]+】", "", txt)
     encoding = tiktoken.encoding_for_model(settings.AI_MODELS['staff'])
     ntokens = len( encoding.encode(txt ) )

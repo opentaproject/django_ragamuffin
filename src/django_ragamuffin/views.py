@@ -10,7 +10,7 @@ import re
 
 from .forms import QueryForm
 from .utils import doarchive, CHOICES, get_assistant, mathfix, thread_to_pdf
-from .models import create_or_retrieve_thread
+from .models import create_or_retrieve_thread, QUser
 from django_ragamuffin.models import Assistant, Thread
 
 class AssistantEditForm(forms.ModelForm):
@@ -172,7 +172,11 @@ def feedback_view(request,subpath):
     index = int( request.POST.getlist('newmessage_index')[0] )
     post_thread =  re.sub(r'\.','_',request.POST.getlist('thread')[0])
     thread_name = ( '.'.join( post_thread.split('/')[2:] ) ).rstrip('.');
-    threads = Thread.objects.filter(name=thread_name,user=request.user)
+    user,  created  = QUser.objects.get_or_create(username=request.user.username)
+    if created :
+        user.is_staff = request.user.is_staff
+        user.save();
+    threads = Thread.objects.filter(name=thread_name,user=user)
     thread = threads[0]
     comment = ''
     comments =  request.POST.getlist('comment')
@@ -204,7 +208,11 @@ def query_view(request,subpath):
     choices = CHOICES
     choice = 0;
     response = None
-    user = request.user
+    user,  created  = QUser.objects.get_or_create(username=request.user.username)
+    if created :
+        user.is_staff = request.user.is_staff
+        user.save();
+
 
 
     #def setup_default_assistant(src):
@@ -213,7 +221,7 @@ def query_view(request,subpath):
     #    vs = create_or_retrieve_vector_store( name, [t1])
     #    assistant = create_or_retrieve_assistant( name  , vs )
     #    return assistant
-    assistant = get_assistant(name,request.user)
+    assistant = get_assistant(name,user)
     if not assistant :
         return HttpResponseForbidden(f"No assistant <b>{name} </b> exists.")
     model = assistant.model

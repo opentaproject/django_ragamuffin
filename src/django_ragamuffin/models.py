@@ -632,8 +632,8 @@ class VectorStore( models.Model ):
         return set( file_ids) == set( remote_ids) 
 
     def save( self, *args, **kwargs ):
-        #is_new = self._state.adding and not self.pk
-        is_new = not self.pk
+        is_new = self._state.adding and not self.pk
+        #is_new = not self.pk
         if is_new :
             print(f"SELF = {self}")
             print(f"ARGS = {args}")
@@ -669,7 +669,7 @@ def custom_delete_remote_vector_store(sender, instance, **kwargs):
 def get_current_model( user=None ):
     if user == None :
         model = settings.AI_MODELS['default']
-    elif user.is_superuser :
+    elif user.is_staff: 
         model = settings.AI_MODELS['staff']
     else :
         model = settings.AI_MODELS['default']
@@ -947,11 +947,11 @@ class Assistant( models.Model ):
                 vnew.save();
         assistants = Assistant.objects.filter( name=newname )
         #for assistant in assistants :
-        for m in settings.AI_MODELS.values() :
-            assistant , _ = Assistant.objects.get_or_create(name=newname,model=m)
+        vals = list( set( list( settings.AI_MODELS.values() ) ) )
+        for m in vals :
+            assistant , created = Assistant.objects.get_or_create(name=newname,model=m)
             assistant.instructions = self.instructions;
             assistant.json_field = self.json_field;
-            assistant.model = m
             assistant.temperature = self.temperature;
             assistant.save();
             assistant.vector_stores.set([vnew.pk])

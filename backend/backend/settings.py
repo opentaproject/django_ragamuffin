@@ -196,7 +196,7 @@ DEFAULT_TEMPERATURE = 0.2;
 LAST_MESSAGES = 99
 MAX_NUM_RESULTS = None
 MAX_TOKENS = 8000 # NOT IMPLMENTED AS OF openai==1.173.0 
-AI_MODELS = {'staff' : 'gpt-4o-mini' , 'default' : AI_MODEL }
+AI_MODELS = {'staff' : 'gpt-4o', 'default' : AI_MODEL }
 API_APP = 'localhost'
 
 # Default primary key field type
@@ -285,3 +285,4 @@ if not RUNTESTS :
 #SUPERUSER_PASSWORD=superuser_password
 #create_database_if_not_exists(db_name, host,user, password , superuser, superuser_password) 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")
+print(f"DATABASES = {DATABASES}")

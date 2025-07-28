@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.conf import settings
 from django import forms
-from .models import OpenAIFile  , VectorStore , Assistant, Thread, DEFAULT_INSTRUCTIONS, RemoteVectorStore
+from .models import OpenAIFile  , VectorStore , Assistant, Thread, DEFAULT_INSTRUCTIONS, RemoteVectorStore, QUser
 
 
 @admin.register(RemoteVectorStore)
@@ -22,6 +22,10 @@ class RemoteVectorStoreAdmin(admin.ModelAdmin):
 class OpenAIFileAdmin(admin.ModelAdmin):
     list_display = ('pk', 'name', 'file_ids', 'checksum', 'date')
     readonly_fields = ('checksum','name','path','file_ids')
+
+@admin.register(QUser)
+class OpenAIFileAdmin(admin.ModelAdmin):
+    list_display = ('pk', 'username', 'is_staff')
 
 @admin.register(VectorStore)
 class VectorStoreAdmin(admin.ModelAdmin):
