@@ -519,7 +519,7 @@ class RemoteVectorStore( models.Model ) :
 class VectorStore( models.Model ):
     checksum = models.CharField(blank=True, max_length=255)
     vsid = models.CharField(max_length=255,blank=True)
-    name =  models.CharField(max_length=255,unique=True)
+    name =  models.CharField(max_length=255 ) # ,unique=True)
     files = models.ManyToManyField( OpenAIFile , related_name='vector_stores')
     remote_vector_store = models.ForeignKey( 
         RemoteVectorStore ,
@@ -595,7 +595,7 @@ class VectorStore( models.Model ):
         checksums.sort()
         return checksums
 
-    def save(self, *args, **kwargs):
+    def old_save(self, *args, **kwargs):
         is_new = not self.pk
         if is_new :
             super().save(*args, **kwargs)
@@ -612,6 +612,25 @@ class VectorStore( models.Model ):
                 logger.error(f"Unexpected error in get_or_update_remote_vector_store: {e}")
                 raise
         super().save(*args, **kwargs)
+
+    def save(self, *args, **kwargs):
+        is_new = self._state.adding and not self.pk
+
+        if is_new:
+            print(f"SELF = {self}")
+            print(f"ARGS = {args}")
+            print(f"KWARGS = {kwargs}")
+
+        self.checksum = self.get_checksum()
+        client = OpenAIClient()
+
+        if is_new:
+            vector_store_id = client.get_or_update_remote_vector_store(self)
+            self.vsid = vector_store_id
+
+        super().save(*args, **kwargs)
+
+
     def get_checksum(self):
         cksums = self.file_checksums();
         ckstring = ''.join(cksums).encode()
@@ -633,7 +652,6 @@ class VectorStore( models.Model ):
 
     def save( self, *args, **kwargs ):
         is_new = self._state.adding and not self.pk
-        #is_new = not self.pk
         if is_new :
             print(f"SELF = {self}")
             print(f"ARGS = {args}")
@@ -741,10 +759,9 @@ class Assistant( models.Model ):
         vss = self.vector_stores.all()
         if len(vss) == 0:
             vs = VectorStore(name=self.name)
-            vs.save()
+            vs.save(using='django_ragamuffin')
             self.vector_stores.add(vs)
-            vs.save()
-            self.save()
+            self.save(using='django_ragamuffin')
         else:
             vs = vss[0]
             logger.info(f"VSOLD = {vs.get_vector_store_id()}")
@@ -1245,9 +1262,15 @@ def handle_assistants_changed(sender, instance, action, **kwargs):
         file_ids.sort() 
         file_pks = list( set( file_pks ) )
         vsname = instance.name
-        vs, created = VectorStore.objects.get_or_create(name=vsname)
+        vss = VectorStore.objects.filter(name=vsname).all().order_by('-id')
+        if vss :
+            print(f"VSS = {vss}")
+            vs = vss[0]
+        else :
+            vs = VectorStore(name=vsname)
+            vs.save()
         vs.files.set(file_pks)
-        logger.info(f"SAVED FILE_PKS created={created} {file_pks}")
+        logger.info(f"SAVED FILE_PKS {file_pks}")
         vs.save();
         logger.info(f"VS NAME = {vs.name}")
         vector_store_id = vs.get_vector_store_id()
