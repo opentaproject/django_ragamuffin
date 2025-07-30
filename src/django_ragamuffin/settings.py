@@ -3,6 +3,7 @@ import sys
 from django.conf import settings
 AI_KEY =  os.environ.get("OPENAI_API_KEY",None)
 AI_MODEL = os.environ.get('AI_MODEL','gpt-4o-mini')
+AI_MODEL = 'gpt-4o-mini'
 OPENAI_UPLOAD_STORAGE =  os.environ.get("OPENAI_UPLOAD_STORAGE",'/tmp/openaifiles')
 os.makedirs(OPENAI_UPLOAD_STORAGE, exist_ok=True)
 API_APP = 'localhost'
@@ -28,7 +29,7 @@ DEFAULT_TEMPERATURE = 0.2;
 LAST_MESSAGES = 99
 MAX_NUM_RESULTS = None
 MAX_TOKENS = 8000 # NOT IMPLMENTED AS OF openai==1.173.0 
-AI_MODELS = {'staff' : 'gpt-4o-mini' , 'default' : AI_MODEL }
+AI_MODELS = {'staff' : 'gpt-4o' , 'default' : AI_MODEL }
 MEDIA_ROOT = OPENAI_UPLOAD_STORAGE
 if not 'django_ragamuffin' in settings.LOGGING['loggers'] :
     settings.LOGGING['loggers']['django_ragamuffin'] = {
@@ -56,6 +57,6 @@ OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 AI_KEY =  OPENAI_API_KEY
 USE_CHATGPT =  os.environ.get("USE_CHATGPT",False) == 'True'
 #AI_MODEL = os.environ.get('AI_MODEL','gpt-3.5-turbo')
-AI_MODEL = os.environ.get('AI_MODEL','gpt-4o-mini')
+#AI_MODEL = os.environ.get('AI_MODEL','gpt-4o-mini')
 DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 RUNTESTS = "pytest" in sys.modules

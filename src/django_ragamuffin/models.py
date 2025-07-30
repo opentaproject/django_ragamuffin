@@ -203,6 +203,10 @@ class QUser(models.Model ):
     username = models.CharField(max_length=255,blank=True)
     is_staff = models.BooleanField(default=False)
 
+    def __str__(self):
+        return f"{self.username}"
+
+
 
 class OpenAIClient( OpenAI ):
 
@@ -1233,15 +1237,16 @@ def handle_assistants_changed(sender, instance, action, **kwargs):
     if action == "post_remove":
         logger.info(f"POST_REMOVE")
         vector_stores = instance.vector_stores.all();
-        vs = vector_stores[0];
         assistant_id = instance.assistant_id
         assistant = openai.beta.assistants.retrieve(assistant_id)
         tool_resources = assistant.tool_resources
         try :
-            vector_store_id = tool_resources.file_search.vector_store_ids[0]
-            vector_store =  client.vector_stores_retrieve(vs, vector_store_id)
-            if vector_store.name == assistant.name:
-                client.vector_store_delete( vector_store_id)
+            if vector_stores :
+                vs = vector_stores[0]
+                vector_store_id = tool_resources.file_search.vector_store_ids[0]
+                vector_store =  client.vector_stores_retrieve(vs, vector_store_id)
+                if vector_store.name == assistant.name:
+                    client.vector_store_delete( vector_store_id)
         except  Exception as err :
             logger.info(f" VECTOR_STORE ERROR DELTING ON POST_REMOVE")
             pass
