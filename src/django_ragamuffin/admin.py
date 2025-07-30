@@ -16,6 +16,10 @@ class RemoteVectorStoreAdmin(admin.ModelAdmin):
 
 
 
+@admin.register(QUser)
+class QUserAdmin(admin.ModelAdmin):
+    list_display = ('pk', 'username', 'is_staff')
+
 
 
 @admin.register(OpenAIFile)
@@ -23,9 +27,6 @@ class OpenAIFileAdmin(admin.ModelAdmin):
     list_display = ('pk', 'name', 'file_ids', 'checksum', 'date')
     readonly_fields = ('checksum','name','path','file_ids')
 
-@admin.register(QUser)
-class OpenAIFileAdmin(admin.ModelAdmin):
-    list_display = ('pk', 'username', 'is_staff')
 
 @admin.register(VectorStore)
 class VectorStoreAdmin(admin.ModelAdmin):
@@ -77,11 +78,8 @@ class AssistantAdmin(admin.ModelAdmin):
 
 class MyThreadForm(forms.ModelForm):
     class Meta:
-        model = Assistant
+        model = Thread
         fields = '__all__'
-        help_texts = {
-            'max_tokens': f"Not implmented; it is unavailable as of openai 1.73.0 "
-        }
 
 @admin.register(Thread)
 class ThreadAdmin(admin.ModelAdmin):

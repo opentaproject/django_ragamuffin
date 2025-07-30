@@ -199,6 +199,11 @@ def chunk_mmd(linestring):
 
 
 
+class QUser(models.Model ):
+    username = models.CharField(max_length=255,blank=True)
+    is_staff = models.BooleanField(default=False)
+
+
 class OpenAIClient( OpenAI ):
 
 
@@ -702,10 +707,6 @@ DEFAULT_INSTRUCTIONS = """Answer only questions about the enclosed document.
     Since it is visible, dont  say something like "You can view the picture ... ". 
     If a link does not exist, just say that such an image does not exist. '
     """
-
-class QUser(models.Model ):
-    username = models.CharField(max_length=255,blank=True)
-    is_staff = models.BooleanField(default=False)
 
 
 class Assistant( models.Model ):

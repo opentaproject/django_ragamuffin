@@ -30,11 +30,12 @@ MAX_NUM_RESULTS = None
 MAX_TOKENS = 8000 # NOT IMPLMENTED AS OF openai==1.173.0 
 AI_MODELS = {'staff' : 'gpt-4o-mini' , 'default' : AI_MODEL }
 MEDIA_ROOT = OPENAI_UPLOAD_STORAGE
-settings.LOGGING['loggers']['django_ragamuffin'] = {
+if not 'django_ragamuffin' in settings.LOGGING['loggers'] :
+    settings.LOGGING['loggers']['django_ragamuffin'] = {
             'handlers': ['console'],
             'level': 'ERROR',
             'propagate': False,
-        }
+            }
 
 
 RUNTESTS = "pytest" in sys.modules

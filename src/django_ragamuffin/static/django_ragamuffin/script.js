@@ -204,7 +204,7 @@ $(document).ready(function () {
 
     $.ajax({
       type: "POST",
-      url: "/feedback/",
+      url: "/django_ragamuffin/feedback/",
       data: $(this).serialize(),
       headers: {
         "X-CSRFToken": $("input[name=csrfmiddlewaretoken]").val(),
