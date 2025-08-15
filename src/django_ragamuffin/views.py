@@ -11,7 +11,7 @@ import re
 from .forms import QueryForm
 from .utils import doarchive, CHOICES, get_assistant, mathfix, thread_to_pdf
 from .models import create_or_retrieve_thread, QUser
-from django_ragamuffin.models import MyAssistant, Thread
+from django_ragamuffin.models import MyAssistant, MyThread
 
 class MyAssistantEditForm(forms.ModelForm):
 
@@ -130,14 +130,14 @@ def edit_assistant(request, pk):
                 vs.name = n;
                 vs.save();
                 pattern = r'^%s(\..*$|$)' % old_name
-                tree = Thread.objects.filter(name__regex=pattern).all()
+                tree = MyThread.objects.filter(name__regex=pattern).all()
                 p = r'^%s' % old_name 
                 for a in tree :
                     n = re.sub( p , new_name, a.name)
                     a.name = n
                     a.save(update_fields=['name']);
             rename_assistants( assistant, new_tail )           
-            #threads = Thread.objects.filter(name=old_name)
+            #threads = MyThread.objects.filter(name=old_name)
             #if threads :
             #    for thread in threads :
             #        n = re.sub( p, new_name, thread.name)
@@ -176,7 +176,7 @@ def feedback_view(request,subpath):
     user = QUser.objects.get(username=request.user.username)
     print(f"USER = {user} {user.username}")
     print(f"THREAD_NAME = {thread_name}")
-    threads = Thread.objects.filter(name=thread_name,user=user).all()
+    threads = MyThread.objects.filter(name=thread_name,user=user).all()
     print(f"THREADS = {threads}")
     thread = threads[0]
     comment = ''

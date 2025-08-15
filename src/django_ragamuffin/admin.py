@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.conf import settings
 from django import forms
-from .models import OpenAIFile  , VectorStore , MyAssistant, Thread, DEFAULT_INSTRUCTIONS, RemoteVectorStore, QUser
+from .models import OpenAIFile  , VectorStore , MyAssistant, MyThread, DEFAULT_INSTRUCTIONS, RemoteVectorStore, QUser
 
 
 @admin.register(RemoteVectorStore)
@@ -76,13 +76,13 @@ class MyAssistantAdmin(admin.ModelAdmin):
     list_vector_store_ids.short_description = "VectorStore names"
     
 
-class MyThreadForm(forms.ModelForm):
+class MyMyThreadForm(forms.ModelForm):
     class Meta:
-        model = Thread
+        model = MyThread
         fields = '__all__'
 
-@admin.register(Thread)
-class ThreadAdmin(admin.ModelAdmin):
-    form = MyThreadForm;
+@admin.register(MyThread)
+class MyThreadAdmin(admin.ModelAdmin):
+    form = MyMyThreadForm;
     list_display = ('id', 'name', 'user', 'thread_id', 'assistant')  # Add your custom method here
 

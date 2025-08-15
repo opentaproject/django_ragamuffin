@@ -125,12 +125,12 @@ def create_or_retrieve_assistant( name , vs ):
 
 def create_or_retrieve_thread( assistant, name, user ) :
     if user.pk :
-        threads = Thread.objects.filter(name=name,user=user)
+        threads = MyThread.objects.filter(name=name,user=user)
     else :
         user = None
-    threads = Thread.objects.filter(name=name,user=user)
+    threads = MyThread.objects.filter(name=name,user=user)
     if not threads :
-        thread = Thread(name=name,user=user)
+        thread = MyThread(name=name,user=user)
     else :
         thread = threads[0]
     thread.save()
@@ -200,6 +200,7 @@ def chunk_mmd(linestring):
     chunks = split_long_chunks( chunks );
     s = re.sub(r"},","},\n",s)
     return s.encode('utf-8')
+
 
 
 
@@ -1182,6 +1183,11 @@ class Thread(models.Model) :
         return msg
 
 
+
+class MyThread( Thread) :
+
+    def __str__(self):
+        return f"{self.name}"
 
 
 
