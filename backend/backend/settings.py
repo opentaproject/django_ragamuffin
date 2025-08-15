@@ -180,7 +180,7 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 import os
 AI_KEY =  os.environ.get("OPENAI_API_KEY",None)
-AI_MODEL = os.environ.get('AI_MODEL','gpt-5')
+AI_MODEL = os.environ.get('AI_MODEL','gpt-4o')
 OPENAI_UPLOAD_STORAGE =  os.environ.get("OPENAI_UPLOAD_STORAGE",'/tmp/openaifiles')
 os.makedirs(OPENAI_UPLOAD_STORAGE, exist_ok=True)
 INSTALLED_APPS.append('django_ragamuffin')
@@ -196,7 +196,7 @@ DEFAULT_TEMPERATURE = 0.2;
 LAST_MESSAGES = 99
 MAX_NUM_RESULTS = None
 MAX_TOKENS = 8000 # NOT IMPLMENTED AS OF openai==1.173.0 
-AI_MODELS = {'staff' : 'gpt-5', 'default' : AI_MODEL }
+AI_MODELS = {'staff' : 'gpt-4o', 'default' : AI_MODEL }
 API_APP = 'localhost'
 
 # Default primary key field type
