@@ -8,7 +8,7 @@ from django.conf import settings
 import os
 import string
 import random
-from django_ragamuffin.models import VectorStore, Assistant
+from django_ragamuffin.models import VectorStore, MyAssistant
 from django.utils.safestring import mark_safe
 from django.http import FileResponse
 import logging
@@ -109,7 +109,7 @@ CHOICES = {0 : 'Unread' ,
 
 
 def get_assistant( name,user):
-    assistants = Assistant.objects.filter(name=name).all();
+    assistants = MyAssistant.objects.filter(name=name).all();
     logger.info(f"GET_ASSISTANT assistants = {assistants}")
     if not assistants and not user.is_staff :
         return None
@@ -117,7 +117,7 @@ def get_assistant( name,user):
         model = settings.AI_MODELS['staff']
     else :
         model = settings.AI_MODELS['default']
-    assistants_ = Assistant.objects.filter(name=name, model=model).all()
+    assistants_ = MyAssistant.objects.filter(name=name, model=model).all()
     if assistants_ :
         return  assistants_[0]
     if assistants :
@@ -132,13 +132,13 @@ def get_assistant( name,user):
         assistant = base_assistant.clone( name , model=model)
     else :
         for m in settings.AI_MODELS.values()  :
-            assistant = Assistant(name=name,model=m);
+            assistant = MyAssistant(name=name,model=m);
             vs = VectorStore(name=name);
             vs.save();
             assistant.save();
             assistant.vector_stores.set([vs.pk])
             assistant.save();
-        assistant = Assistant.objects.get(name=name,model=model)
+        assistant = MyAssistant.objects.get(name=name,model=model)
     return assistant 
 
 def thread_to_pdf( thread , prints ):

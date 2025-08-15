@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.conf import settings
 from django import forms
-from .models import OpenAIFile  , VectorStore , Assistant, Thread, DEFAULT_INSTRUCTIONS, RemoteVectorStore, QUser
+from .models import OpenAIFile  , VectorStore , MyAssistant, Thread, DEFAULT_INSTRUCTIONS, RemoteVectorStore, QUser
 
 
 @admin.register(RemoteVectorStore)
@@ -57,7 +57,7 @@ class MyAssistantForm(forms.ModelForm):
         self.fields['actual_instructions'].initial = instructions if self.instance.pk else "N/A"
 
     class Meta:
-        model = Assistant
+        model = MyAssistant
         fields = ['name','model','instructions','vector_stores','assistant_id','json_field','temperature','actual_instructions' ,]
         help_texts = {
             'temperature': f"Default temperature = {settings.DEFAULT_TEMPERATURE}",
@@ -65,10 +65,10 @@ class MyAssistantForm(forms.ModelForm):
         }
 
 
-@admin.register(Assistant)
-class AssistantAdmin(admin.ModelAdmin):
+@admin.register(MyAssistant)
+class MyAssistantAdmin(admin.ModelAdmin):
     form = MyAssistantForm 
-    list_display = ('id', 'name','model', 'assistant_id', 'file_names','file_pks', 'list_vector_store_ids')  # Add your custom method here
+    list_display = ('id', 'name','model', 'assistant_id', 'file_names','file_pks', 'file_ids', 'remote_files','list_vector_store_ids')  # Add your custom method here
 
     def list_vector_store_ids(self, obj):
         return ", ".join(str(f.name ) for f in obj.vector_stores.all())

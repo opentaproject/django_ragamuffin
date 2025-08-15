@@ -11,9 +11,9 @@ import re
 from .forms import QueryForm
 from .utils import doarchive, CHOICES, get_assistant, mathfix, thread_to_pdf
 from .models import create_or_retrieve_thread, QUser
-from django_ragamuffin.models import Assistant, Thread
+from django_ragamuffin.models import MyAssistant, Thread
 
-class AssistantEditForm(forms.ModelForm):
+class MyAssistantEditForm(forms.ModelForm):
 
     actual_instructions = forms.CharField(disabled=True, required=False, widget=forms.Textarea(attrs={'disabled': 'disabled'}),)
     directory_name = forms.CharField(required=False, help_text=mark_safe('<div class="instructions"> Change name of the directory </div> ') )
@@ -35,7 +35,7 @@ class AssistantEditForm(forms.ModelForm):
 
 
     class Meta:
-        model = Assistant
+        model = MyAssistant
         fields = ['instructions','actual_instructions', 'temperature','directory_name']
         help_texts = {
             'directory_name' : "Only the last directory can be renmamed; all children will be renamed",
@@ -50,7 +50,7 @@ def upload_file_view(request,pk):
         files = request.FILES.getlist('myfile')
         for f in files :
             filename = f.name 
-            assistant =  Assistant.objects.get(pk=pk)
+            assistant =  MyAssistant.objects.get(pk=pk)
             file_url = assistant.add_file( filename, f)
             r = render(request, 'django_ragamuffin/upload.html', {'file_url': file_url})
         return redirect(f"/django_ragamuffin/assistant/{pk}/edit/")
@@ -61,7 +61,7 @@ def old_upload_file_view(request,pk):
     if request.method == 'POST' and request.FILES.get('myfile'):
         uploaded_file = request.FILES['myfile']
         filename = uploaded_file.name 
-        assistant =  Assistant.objects.get(pk=pk)
+        assistant =  MyAssistant.objects.get(pk=pk)
         file_url = assistant.add_file( filename, uploaded_file)
         r = render(request, 'django_ragamuffin/upload.html', {'file_url': file_url})
         return redirect(f"/assistant/{pk}/edit/")
@@ -70,7 +70,7 @@ def old_upload_file_view(request,pk):
 
 
 def delete_assistant(request, pk):
-    assistant = get_object_or_404(Assistant, pk=pk)
+    assistant = get_object_or_404(MyAssistant, pk=pk)
     children = assistant.children()
     if children :
         referer = request.META.get('HTTP_REFERER', '/')
@@ -93,7 +93,7 @@ def delete_assistant(request, pk):
     #return render(request, 'django_ragamuffin/edit_assistant.html', {'form': form, 'assistant': assistant, 'custom_data' : form.custom_data  })
 
 def edit_assistant(request, pk):
-    assistant = get_object_or_404(Assistant, pk=pk)
+    assistant = get_object_or_404(MyAssistant, pk=pk)
     if request.method == 'POST':
         deletions = request.POST.getlist('deletion')
         if deletions :
@@ -113,7 +113,7 @@ def edit_assistant(request, pk):
                 else :
                     new_name = old_name
                 pattern = r'^%s\..+$' % old_name
-                tree = Assistant.objects.filter(name__regex=pattern).all()
+                tree = MyAssistant.objects.filter(name__regex=pattern).all()
                 p = r'^%s' % old_name 
                 for a in tree :
                     n = re.sub( p , new_name, a.name)
@@ -146,12 +146,12 @@ def edit_assistant(request, pk):
             #        #thread.save(update_fields=['name'])
 
 
-        form = AssistantEditForm(request.POST, instance=assistant )
+        form = MyAssistantEditForm(request.POST, instance=assistant )
         if form.is_valid():
             form.save()
             return redirect('edit_assistant', pk=assistant.pk)  # or another success URL
     else:
-        form = AssistantEditForm(instance=assistant, custom_data=assistant.files() )
+        form = MyAssistantEditForm(instance=assistant, custom_data=assistant.files() )
     #print(f"FORM_CUSTOM_DATA = {form.custom_data}")
     return render(request, 'django_ragamuffin/edit_assistant.html', {'form': form, 'assistant': assistant, 'custom_data' : form.custom_data  })
 
