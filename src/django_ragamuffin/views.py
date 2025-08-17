@@ -266,6 +266,7 @@ def query_view(request,subpath):
                 if txt is None:
                     msg = thread.run_query(query=query, last_messages=last_messages, max_num_results=max_num_results)
                     txt = msg['assistant']
+                    summary = msg.get('summary','NONE3')
                     ntokens = msg['ntokens']
             except (KeyError, AttributeError, ValueError) as e:
                 txt = f"ERROR {type(e).__name__}: {str(e)}"
@@ -290,7 +291,9 @@ def query_view(request,subpath):
        'model' : item.get('model', model) ,  
        'max_num_results' : item.get('max_num_results' , max_num_results ),
        'last_messages' : item.get('last_messages' , last_messages)  ,
+       'summary' : item.get('summary','None'),
        'time_spent' : item.get('time_spent', time_spent) }  for index, item in enumerate( messages ) ];
+    summary = f[-1].get('summary','None')
     p = assistant.parent();
     children = assistant.children();
     parent = assistant.parent();
@@ -306,6 +309,7 @@ def query_view(request,subpath):
         'choices' : choices ,
         'choice' : choice ,
         'ntokens' : ntokens,
+        'summary' : summary,
         'model' : model ,
         'assistant_pk' : assistant.pk ,
         'max_num_results' : max_num_results,

@@ -40,6 +40,16 @@
                 overflow-wrap: break-word;
                 max-width: 100%;
             }
+
+            .wrap-summary{
+		padding: 10px,
+                word-wrap: break-word;
+		color: green;
+                overflow-wrap: break-word;
+                max-width: 100%;
+		margin-top: 10px;
+		border: 1px solid #aaa;
+            }
             .container {
                 display: flex;
                 width: 100%;
@@ -147,6 +157,9 @@
                                             [<span class="innerChoice" id="choice-{{m.index}}">{{m.choice}}</span>]
                                             <div class="innerDiv" style="display: none"> {{m.assistant | safe }}
                                                 <div class='verbatim'> tokens={{m.ntokens}} model={{ m.model }} dt={{ m.time_spent }}s saved_messages={{ m.last_messages }} chunks={{ m.max_num_results }}  </div>
+						{% if user.is_staff %}
+						<div class='wrap-summary'> {{ m.summary | safe }} </div> 
+						{% endif %}
                                             </div>
                                             <div class="mindex" style="display: none"> {{m.index }} </div>
                                             {{m.user|truncatechars:30}} <em> <span id="comment-{{m.index}}" class="innerComment">{{ m.comment}}</span> </em>   </button>
@@ -199,6 +212,9 @@
                         <div style="border: 1px dashed gray; background-color: #f9f9f9; padding: 1rem;">
                             <div id='response' class='wrap-text' > {{ response| safe }}
                                 <div class='verbatim'> ntokens={{ntokens}} model={{ model }} dt={{ time_spent }}s saved_messages={{ last_messages }} chunks={{ max_num_results }}  </div>
+				{% if user.is_staff %}
+	<div class='wrap-summary'> {{ summary | safe }} </div> 
+				{% endif %}
                             </div>
                         </div>
                         {% if choice == 0 %}

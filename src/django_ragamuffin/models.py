@@ -1251,7 +1251,14 @@ class MyThread( Thread) :
         else :
             max_tokens = settings.MAX_TOKENS
         timeout = settings.MAXWAIT
-        context = {'openai' : openai, 'instructions' : instructions, 'model' : model, 'thread_id': thread_id, 'assistant_id' : assistant_id, 'query': query, 'last_messages' : last_messages, 'max_num_results' : max_num_results}
+        if len( self.messages  ) > 0 :
+            previous_response_id = self.messages[-1].get('response_id',None)
+        else :
+            previous_response_id = None
+        context = {'openai' : openai, 'instructions' : instructions, 'model' : model, 
+                    'thread_id': thread_id, 'assistant_id' : assistant_id, 'query': query, 
+                    'last_messages' : last_messages, 'max_num_results' : max_num_results, 
+                    'previous_response_id' : previous_response_id }
 
         def my_run_remote_query( context ) :
             print(f"CONTEXT = {context}")
@@ -1262,6 +1269,7 @@ class MyThread( Thread) :
             query = context['query'];
             last_messages=context['last_messages'];
             max_num_results = context['max_num_results']
+            previous_response_id = context.get('previous_response_id',None)
             model = 'gpt-5'
             print(f"MODEL = {model}")
             print(f"QUERY = {query}")
@@ -1269,6 +1277,7 @@ class MyThread( Thread) :
             RESPONSE = openai.responses.create(
                 model=model,
                 input=query,
+                previous_response_id=previous_response_id,
                 instructions=instructions,
                 reasoning={"effort": "medium",'summary': 'auto'},
                 tools=[{"type": "file_search",
@@ -1277,15 +1286,21 @@ class MyThread( Thread) :
                 )
             #print(f"RESPONSE = {RESPONSE}")
             output = RESPONSE.output
+            response_id = RESPONSE.id
             #print(f"OUTPUT = {output}")
             summary = 'Null'
             #print(f"SUMMARY = {summary}")
             ntokens = RESPONSE.usage.total_tokens
             txt = ''
+            summary = 'no summary available'
             for o in output :
                 print(f"O = {o}")
                 if hasattr(o,'summary'):
-                    summary = f"{o.summary}"
+                    summary = o.summary[0]
+                    if hasattr(summary,'text' ):
+                        summary = summary.text
+                    else :
+                        summary = f"{summary}"
                 if hasattr(o,'content') :
                     ocs = o.content;
                     print(f"OCS = {ocs} {type(ocs)}")
@@ -1307,6 +1322,7 @@ class MyThread( Thread) :
                 'last_messages' : last_messages,
                 'max_num_results' : max_num_results,
                 'summary' : summary,
+                'response_id' : response_id,
                 'hash' : h }
 
             return msg
