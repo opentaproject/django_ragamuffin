@@ -214,7 +214,7 @@
                             <div id='response' class='wrap-text' > {{ response| safe }}
                                 <div class='verbatim'> ntokens={{ntokens}} model={{ model }} dt={{ time_spent }}s saved_messages={{ last_messages }} chunks={{ max_num_results }}  </div>
 				{% if user.is_staff %}
-	<div id='markdown' class='wrap-summary'> {{ summary | safe }} </div> 
+	<div class='wrap-summary'> {{ summary | safe }} </div> 
 				{% endif %}
                             </div>
                         </div>
@@ -249,12 +249,9 @@
         </div>
     </body>
     <script src="{% static 'django_ragamuffin/script.js' %}"></script>
-    <script>
-  const div = document.getElementById("markdown");
-  // take the raw markdown
-  const rawMarkdown = div.innerText;
-  // parse into HTML
-  div.innerHTML = marked.parse(rawMarkdown);
+<script>
+  const elems = document.querySelectorAll(".wrap-summary");
+  elems.forEach(el => { el.innerHTML = marked.parse( el.innerText ) ;  }  );
 </script>
 
 
@@ -262,3 +259,4 @@
 
 
 </html>
+

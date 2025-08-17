@@ -1300,7 +1300,7 @@ class MyThread( Thread) :
                     summaries = o.summary
                     for s in summaries :
                         if hasattr(s ,'text' ):
-                            summary = summary + s.text + '<br>\n'
+                            summary = summary + s.text + '<br><br>\n'
                         else :
                             summary = summary  + f"{s}"
                 if hasattr(o,'content') :
