@@ -1119,6 +1119,77 @@ class Thread(models.Model) :
 
 
 
+    #def save( self, *args, **kwargs ):
+    #    is_new = self._state.adding  and not self.pk
+    #    self.messages = self.messages
+    #    client = OpenAIClient();
+    #    super().save(*args, **kwargs)  # Save first, so file is processed
+    #    if is_new  :
+    #        thread = client.beta.threads.create(); 
+    #        thread_id = thread.id
+    #        self.thread_id = thread_id
+    #        self.messages = []
+    #        super().save(*args, **kwargs) # Then update with true hashed path
+    #    elif 'update_fields' in kwargs :
+    #        thread_id = self.thread_id
+    #        old_thread_id = thread_id
+    #        new_thread =  client.beta.threads.create(); 
+    #        new_thread_id = new_thread.id
+    #        if self.messages :
+    #            for msg in self.messages:
+    #                for role in ['user','assistant'] :
+    #                    openai.beta.threads.messages.create(
+    #                        thread_id=new_thread_id,
+    #                        role=role,
+    #                        content=msg[role]
+    #                    )
+    #                    
+    #        self.thread_id = new_thread_id
+    #        self.messages = self.messages
+    #        super().save(*args, **kwargs)
+
+
+
+    #def run_query( self, *args, **kwargs  ):
+    #    last_messages = kwargs.get('last_messages',settings.LAST_MESSAGES)
+    #    max_num_results = kwargs.get('max_num_results',settings.MAX_NUM_RESULTS)
+    #    query= kwargs['query']
+    #    now = time.time();
+    
+    #    """ last_messages is either None for auto or an integer for length of thread history to keep at OpenAI. 
+    #    The entire history is kept in the local database"""
+    #    assistant = self.assistant
+    #    if not assistant.model == get_current_model( self.user ):
+    #        assistant.model = get_current_model( self.user )
+    #        assistant.save();
+    #    assistant_id = assistant.assistant_id
+    #    model = assistant.model
+    #    thread = self
+    #    thread_id = thread.thread_id
+    
+    #    encoding = tiktoken.encoding_for_model(settings.AI_MODELS['staff'])
+    #    if thread.max_tokens :
+    #        max_tokens = thread.max_tokens
+    #    else :
+    #        max_tokens = settings.MAX_TOKENS
+    #    timeout = settings.MAXWAIT
+    #    context = {'openai' : openai, 'thread_id': thread_id, 'assistant_id' : assistant_id, 'query': query, 'last_messages' : last_messages, 'max_num_results' : max_num_results}
+    #    msg = run_remote_query( context)
+    #    if 'timed out' in msg['assistant'] :
+    #        logger.error(f"TIMED OUT SO RETRY")
+    #        msg = run_remote_query( context)
+    #    thread.messages.append(msg) 
+    #    thread.save()
+    #    return msg
+
+
+
+class MyThread( Thread) :
+
+    def __str__(self):
+        return f"{self.name}"
+
+
     def save( self, *args, **kwargs ):
         is_new = self._state.adding  and not self.pk
         self.messages = self.messages
@@ -1182,12 +1253,6 @@ class Thread(models.Model) :
         thread.save()
         return msg
 
-
-
-class MyThread( Thread) :
-
-    def __str__(self):
-        return f"{self.name}"
 
 
 
