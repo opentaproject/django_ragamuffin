@@ -1244,11 +1244,55 @@ class MyThread( Thread) :
         else :
             max_tokens = settings.MAX_TOKENS
         timeout = settings.MAXWAIT
-        context = {'openai' : openai, 'thread_id': thread_id, 'assistant_id' : assistant_id, 'query': query, 'last_messages' : last_messages, 'max_num_results' : max_num_results}
-        msg = run_remote_query( context)
-        if 'timed out' in msg['assistant'] :
-            logger.error(f"TIMED OUT SO RETRY")
-            msg = run_remote_query( context)
+        context = {'openai' : openai, 'model' : model, 'thread_id': thread_id, 'assistant_id' : assistant_id, 'query': query, 'last_messages' : last_messages, 'max_num_results' : max_num_results}
+
+        def my_run_remote_query( context ) :
+            print(f"CONTEXT = {context}")
+            now = time.time();
+            openai = context['openai']; 
+            thread_id = context['thread_id'];
+            assistant_id = context['assistant_id'];
+            query = context['query'];
+            last_messages=context['last_messages'];
+            max_num_results = context['max_num_results']
+
+            print(f"MODEL = {model}")
+            print(f"QUERY = {query}")
+            RESPONSE = openai.responses.create(
+                model=model,
+                input=query,
+                )
+            print(f"RESPONSE = {RESPONSE}")
+            output = RESPONSE.output
+            print(f"OUTPUT = {output}")
+            txt = ''
+            for o in output :
+                print(f"O = {o}")
+                if hasattr(o,'content') :
+                    ocs = o.content;
+                    print(f"OCS = {ocs} {type(ocs)}")
+                    for oc in ocs :
+                        print(f"OC = {oc}")
+                        if hasattr(oc,'text') :
+                            print(f"TEXT = {oc.text}")
+                            txt = txt + oc.text
+
+            print(f"txt = {txt }")
+            ntokens = 99;
+            time_spent = 99;
+            hash = '123'
+            msg =  {'user' : query, 'assistant' : txt,
+                'ntokens' : ntokens ,
+                'model' : model,
+                'time_spent' : time_spent ,
+                'last_messages' : last_messages,
+                'max_num_results' : max_num_results,
+                'hash' : hash }
+
+            return msg
+
+        msg = my_run_remote_query( context)
+        print(f"MSG = {msg}")
         thread.messages.append(msg) 
         thread.save()
         return msg
