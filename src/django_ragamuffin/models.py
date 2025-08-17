@@ -1235,6 +1235,7 @@ class MyThread( Thread) :
             assistant.save();
         assistant_id = assistant.assistant_id
         vector_stores = assistant.vector_stores.all()
+        instructions = assistant.get_instructions()
         vss = [];
         for vs in vector_stores :
             print(f"VECTOR_STORE = {vs}")
@@ -1250,7 +1251,7 @@ class MyThread( Thread) :
         else :
             max_tokens = settings.MAX_TOKENS
         timeout = settings.MAXWAIT
-        context = {'openai' : openai, 'model' : model, 'thread_id': thread_id, 'assistant_id' : assistant_id, 'query': query, 'last_messages' : last_messages, 'max_num_results' : max_num_results}
+        context = {'openai' : openai, 'instructions' : instructions, 'model' : model, 'thread_id': thread_id, 'assistant_id' : assistant_id, 'query': query, 'last_messages' : last_messages, 'max_num_results' : max_num_results}
 
         def my_run_remote_query( context ) :
             print(f"CONTEXT = {context}")
@@ -1264,9 +1265,11 @@ class MyThread( Thread) :
 
             print(f"MODEL = {model}")
             print(f"QUERY = {query}")
+            print(f"INSTRUCTIONS = {instructions}")
             RESPONSE = openai.responses.create(
                 model=model,
                 input=query,
+                instructions=instructions,
                 tools=[{"type": "file_search",
                         "vector_store_ids": vss  # your vector store id
                         }]
