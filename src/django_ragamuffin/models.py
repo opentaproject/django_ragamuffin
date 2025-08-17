@@ -1261,7 +1261,7 @@ class MyThread( Thread) :
                     'previous_response_id' : previous_response_id }
 
         def my_run_remote_query( context ) :
-            print(f"CONTEXT = {context}")
+            #print(f"CONTEXT = {context}")
             now = time.time();
             openai = context['openai']; 
             thread_id = context['thread_id'];
@@ -1271,9 +1271,9 @@ class MyThread( Thread) :
             max_num_results = context['max_num_results']
             previous_response_id = context.get('previous_response_id',None)
             model = 'gpt-5'
-            print(f"MODEL = {model}")
-            print(f"QUERY = {query}")
-            print(f"INSTRUCTIONS = {instructions}")
+            #print(f"MODEL = {model}")
+            #print(f"QUERY = {query}")
+            #print(f"INSTRUCTIONS = {instructions}")
             RESPONSE = openai.responses.create(
                 model=model,
                 input=query,
@@ -1294,7 +1294,7 @@ class MyThread( Thread) :
             txt = ''
             summary = 'no summary available'
             for o in output :
-                print(f"O = {o}")
+                #print(f"O = {o}")
                 if hasattr(o,'summary'):
                     summary = ''
                     summaries = o.summary
@@ -1305,15 +1305,15 @@ class MyThread( Thread) :
                             summary = summary  + f"{s}"
                 if hasattr(o,'content') :
                     ocs = o.content;
-                    print(f"OCS = {ocs} {type(ocs)}")
+                    #print(f"OCS = {ocs} {type(ocs)}")
                     if ocs :
                         for oc in ocs :
-                            print(f"OC = {oc}")
+                            #print(f"OC = {oc}")
                             if hasattr(oc,'text') :
-                                print(f"TEXT = {oc.text}")
+                                #print(f"TEXT = {oc.text}")
                                 txt = txt + oc.text
 
-            print(f"txt = {txt }")
+            #print(f"txt = {txt }")
             time_spent = int( time.time() - now  + 0.5 )
             characters = string.ascii_letters + string.digits  # a-zA-Z0-9
             h = ''.join(random.choices(characters, k=8))
@@ -1330,7 +1330,7 @@ class MyThread( Thread) :
             return msg
 
         msg = my_run_remote_query( context)
-        print(f"MSG = {msg}")
+        #print(f"MSG = {msg}")
         thread.messages.append(msg) 
         thread.save()
         return msg
@@ -1426,7 +1426,7 @@ def handle_assistants_changed(sender, instance, action, **kwargs):
         vsname = instance.name
         vss = VectorStore.objects.filter(name=vsname).all().order_by('-id')
         if vss :
-            print(f"VSS = {vss}")
+            #print(f"VSS = {vss}")
             vs = vss[0]
         else :
             vs = VectorStore(name=vsname)
@@ -1447,9 +1447,9 @@ def handle_assistants_changed(sender, instance, action, **kwargs):
         except Exception as e:
             logger.error(f"CLIENT CANNOT UPDATE ASSISTANT {str(e)}")
 
-    print(f"SAVE {instance}")
+    #print(f"SAVE {instance}")
     instance.save()
-    print(f"SAVED {instance}")
+    #print(f"SAVED {instance}")
     del instance._updating_from_m2m
 
 

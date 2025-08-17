@@ -161,8 +161,8 @@ FILENAME = "../README.md"
 @csrf_exempt
 @login_required
 def feedback_view(request,subpath):
-    print(f"SUBPATH IN FEEDBACK= {subpath}")
-    print(f"SUBPATH IN QUERYVIEW = {subpath}")
+    #print(f"SUBPATH IN FEEDBACK= {subpath}")
+    #print(f"SUBPATH IN QUERYVIEW = {subpath}")
     subpath_ = re.sub( r"\.","_",subpath )
     segments = subpath_.split('/')
     last_messages = settings.LAST_MESSAGES;
@@ -170,14 +170,14 @@ def feedback_view(request,subpath):
     name = ( '.'.join( segments ) ).rstrip('.')
     choice = 0;
     index = int( request.POST.getlist('newmessage_index')[0] )
-    print(f"POST LIST THREAD = {request.POST.getlist('thread')}")
+    #print(f"POST LIST THREAD = {request.POST.getlist('thread')}")
     post_thread =  re.sub(r'\.','_',request.POST.getlist('thread')[0])
     thread_name = ( '.'.join( post_thread.split('/')[3:] ) ).rstrip('.');
     user = QUser.objects.get(username=request.user.username)
-    print(f"USER = {user} {user.username}")
-    print(f"THREAD_NAME = {thread_name}")
+    #print(f"USER = {user} {user.username}")
+    #print(f"THREAD_NAME = {thread_name}")
     threads = MyThread.objects.filter(name=thread_name,user=user).all()
-    print(f"THREADS = {threads}")
+    #print(f"THREADS = {threads}")
     thread = threads[0]
     comment = ''
     comments =  request.POST.getlist('comment')
