@@ -293,7 +293,10 @@ def query_view(request,subpath):
        'last_messages' : item.get('last_messages' , last_messages)  ,
        'summary' : item.get('summary','None'),
        'time_spent' : item.get('time_spent', time_spent) }  for index, item in enumerate( messages ) ];
-    summary = f[-1].get('summary','None')
+    if f:
+        summary = f[-1].get('summary','None')
+    else :
+        summary = ''
     p = assistant.parent();
     children = assistant.children();
     parent = assistant.parent();

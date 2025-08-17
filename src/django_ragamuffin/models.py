@@ -1296,11 +1296,13 @@ class MyThread( Thread) :
             for o in output :
                 print(f"O = {o}")
                 if hasattr(o,'summary'):
-                    summary = o.summary[0]
-                    if hasattr(summary,'text' ):
-                        summary = summary.text
-                    else :
-                        summary = f"{summary}"
+                    summary = ''
+                    summaries = o.summary
+                    for s in summaries :
+                        if hasattr(s ,'text' ):
+                            summary = summary + s.text + '<br>\n'
+                        else :
+                            summary = summary  + f"{s}"
                 if hasattr(o,'content') :
                     ocs = o.content;
                     print(f"OCS = {ocs} {type(ocs)}")
