@@ -1262,7 +1262,7 @@ class MyThread( Thread) :
             query = context['query'];
             last_messages=context['last_messages'];
             max_num_results = context['max_num_results']
-
+            model = 'gpt-5'
             print(f"MODEL = {model}")
             print(f"QUERY = {query}")
             print(f"INSTRUCTIONS = {instructions}")
@@ -1270,36 +1270,44 @@ class MyThread( Thread) :
                 model=model,
                 input=query,
                 instructions=instructions,
+                reasoning={"effort": "medium",'summary': 'auto'},
                 tools=[{"type": "file_search",
                         "vector_store_ids": vss  # your vector store id
                         }]
                 )
-            print(f"RESPONSE = {RESPONSE}")
+            #print(f"RESPONSE = {RESPONSE}")
             output = RESPONSE.output
-            print(f"OUTPUT = {output}")
+            #print(f"OUTPUT = {output}")
+            summary = 'Null'
+            #print(f"SUMMARY = {summary}")
+            ntokens = RESPONSE.usage.total_tokens
             txt = ''
             for o in output :
                 print(f"O = {o}")
+                if hasattr(o,'summary'):
+                    summary = f"{o.summary}"
                 if hasattr(o,'content') :
                     ocs = o.content;
                     print(f"OCS = {ocs} {type(ocs)}")
-                    for oc in ocs :
-                        print(f"OC = {oc}")
-                        if hasattr(oc,'text') :
-                            print(f"TEXT = {oc.text}")
-                            txt = txt + oc.text
+                    if ocs :
+                        for oc in ocs :
+                            print(f"OC = {oc}")
+                            if hasattr(oc,'text') :
+                                print(f"TEXT = {oc.text}")
+                                txt = txt + oc.text
 
             print(f"txt = {txt }")
-            ntokens = 99;
-            time_spent = 99;
-            hash = '123'
+            time_spent = int( time.time() - now  + 0.5 )
+            characters = string.ascii_letters + string.digits  # a-zA-Z0-9
+            h = ''.join(random.choices(characters, k=8))
             msg =  {'user' : query, 'assistant' : txt,
                 'ntokens' : ntokens ,
                 'model' : model,
                 'time_spent' : time_spent ,
                 'last_messages' : last_messages,
                 'max_num_results' : max_num_results,
-                'hash' : hash }
+                'summary' : summary,
+                'hash' : h }
 
             return msg
 
