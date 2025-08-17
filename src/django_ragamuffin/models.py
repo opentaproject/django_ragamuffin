@@ -1234,6 +1234,12 @@ class MyThread( Thread) :
             assistant.model = get_current_model( self.user )
             assistant.save();
         assistant_id = assistant.assistant_id
+        vector_stores = assistant.vector_stores.all()
+        vss = [];
+        for vs in vector_stores :
+            print(f"VECTOR_STORE = {vs}")
+            print(f"VSID = {vs.vsid}")
+            vss.append(vs.vsid)
         model = assistant.model
         thread = self
         thread_id = thread.thread_id
@@ -1261,6 +1267,9 @@ class MyThread( Thread) :
             RESPONSE = openai.responses.create(
                 model=model,
                 input=query,
+                tools=[{"type": "file_search",
+                        "vector_store_ids": vss  # your vector store id
+                        }]
                 )
             print(f"RESPONSE = {RESPONSE}")
             output = RESPONSE.output
