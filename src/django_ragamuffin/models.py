@@ -134,7 +134,7 @@ def create_or_retrieve_thread( assistant, name, user ) :
     else :
         thread = threads[0]
     thread.save()
-    thread.assistant = assistant
+    thread.myassistant = assistant
     thread.save()
     return thread
 
@@ -794,15 +794,15 @@ class Assistant( models.Model ):
         logger.error("D")
         assistant_id = self.assistant_id
         logger.error(f"E")
-        client = OpenAIClient()
-        client.beta.assistants.update(
-            assistant_id=assistant_id,
-            tool_resources={
-                "file_search": {
-                    "vector_store_ids": [vs.get_vector_store_id()],
-                }
-            }
-        )
+        #client = OpenAIClient()
+        #client.beta.assistants.update(
+        #    assistant_id=assistant_id,
+        #    tool_resources={
+        #        "file_search": {
+        #            "vector_store_ids": [vs.get_vector_store_id()],
+        #        }
+        #    }
+        #)
         logger.error(f"F")
         self.save();
         logger.error(f"G")
@@ -814,15 +814,15 @@ class Assistant( models.Model ):
         vs.save();
         self.vector_stores.set([vs])
         assistant_id = self.assistant_id 
-        client = OpenAIClient()
-        client.beta.assistants.update(
-            assistant_id=assistant_id,
-            tool_resources={
-                "file_search": {
-                    "vector_store_ids": [vs.get_vector_store_id()],
-                }
-            }
-        )
+        #client = OpenAIClient()
+        #client.beta.assistants.update(
+        #    assistant_id=assistant_id,
+        #    tool_resources={
+        #        "file_search": {
+        #            "vector_store_ids": [vs.get_vector_store_id()],
+        #        }
+        #    }
+        #)
         self.save();
         return
 
@@ -901,14 +901,17 @@ class Assistant( models.Model ):
         vs_empty = False;
         instructions = self.get_instructions();
         if is_new :
-            assistant = client.beta.assistants.create( name=self.name,
-                instructions=instructions, 
-                model=self.model,
-                temperature=temperature,
-                tools=[{"type": "file_search"}],
-                metadata={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] }
-                )
-            self.assistant_id = assistant.id
+            #assistant = client.beta.assistants.create( name=self.name,
+            #    instructions=instructions, 
+            #    model=self.model,
+            #    temperature=temperature,
+            #    tools=[{"type": "file_search"}],
+            #    metadata={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] }
+            #    )
+            #self.assistant_id = assistant.id
+            characters = string.ascii_letters + string.digits  # a-zA-Z0-9
+            h = ''.join(random.choices(characters, k=8))
+            self.assistant_id = 'myasst_' + h
             super().save(update_fields=['assistant_id'])
             print(f"DOES NOT EXIST")
             vss = VectorStore.objects.filter( name=self.name);
@@ -932,13 +935,13 @@ class Assistant( models.Model ):
 
 
             assistant_id = self.assistant_id
-            if not old_instructions  ==  instructions :
-                client.beta.assistants.update(assistant_id, instructions=instructions)
-            if not old_temperature ==  temperature :
-                client.beta.assistants.update(assistant_id, temperature=temperature)
-            if not old_model ==  self.model :
-                logger.error("OLD_MODEL {old_model} != {self.model}")
-                client.beta.assistants.update(assistant_id, model=self.model)
+            #if not old_instructions  ==  instructions :
+            #    client.beta.assistants.update(assistant_id, instructions=instructions)
+            #if not old_temperature ==  temperature :
+            #    client.beta.assistants.update(assistant_id, temperature=temperature)
+            #if not old_model ==  self.model :
+            #    logger.error("OLD_MODEL {old_model} != {self.model}")
+            #    client.beta.assistants.update(assistant_id, model=self.model)
 
 
 
@@ -1258,7 +1261,9 @@ class MyThread( Thread) :
         thread = self
         thread_id = thread.thread_id
     
-        encoding = tiktoken.encoding_for_model(settings.AI_MODELS['staff'])
+        #encoding = tiktoken.encoding_for_model(settings.AI_MODELS['staff'])
+        encoding = tiktoken.get_encoding("cl100k_base")
+
         if thread.max_tokens :
             max_tokens = thread.max_tokens
         else :
@@ -1358,9 +1363,10 @@ def custom_delete_assistant(sender, instance, **kwargs):
     client = OpenAIClient();
     try :
         assistant_id = instance.assistant_id
-        assistant = openai.beta.assistants.retrieve(assistant_id)
-        tool_resources = assistant.tool_resources
-        vector_store_ids = tool_resources.file_search.vector_store_ids
+        #assistant = openai.beta.assistants.retrieve(assistant_id)
+        #tool_resources = assistant.tool_resources
+        #vector_store_ids = tool_resources.file_search.vector_store_ids
+        vector_store_ids = instance.get_remote_vector_stores()
         client = OpenAIClient()
         if vector_store_ids :
             vs = VectorStore.objects.get(name=instance.name)
@@ -1368,7 +1374,7 @@ def custom_delete_assistant(sender, instance, **kwargs):
             vector_store =  client.vector_stores_retrieve(vs,vector_store_id)
             if vector_store.name == assistant.id : # THIS IS HERE BECAUSE MULTIPL VECTOR STORES CAN'T BE USED BY AN ASSISTANT
                 client.delete_vector_store( vector_store_id)
-        res = client.beta.assistants.delete(assistant_id)
+        #res = client.beta.assistants.delete(assistant_id)
     except Exception as err :
         logger.error(f"ERROR = {str(err)}")
 
