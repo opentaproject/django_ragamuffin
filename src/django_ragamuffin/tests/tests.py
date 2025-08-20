@@ -18,7 +18,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 
 
 django.setup()
-from django_ragamuffin.models import OpenAIFile, VectorStore, Assistant,  Thread,  delete_remote_vector_stores, dump_remote_vector_stores
+from django_ragamuffin.models import OpenAIFile, VectorStore, MyAssistant,  MyThread,  delete_remote_vector_stores, dump_remote_vector_stores, QUser
 from django.contrib.auth.models import User
 
 from django.conf import settings
@@ -63,6 +63,7 @@ class OpenAI(TestCase):
         self.admin_user = User.objects.create_superuser( username='admin', email='admin@example.com', password='adminpass')
         self.client.login(username='admin', password='adminpass')
         self.user = User.objects.create_user(username='testuser', password='testpass')
+        self.quser = QUser.objects.create(username=self.user.username)
 
     @pytest.mark.django_db
     def test_user_exists(self):
@@ -253,11 +254,11 @@ class OpenAI(TestCase):
         t3 = self.create_testfile_from_string( b"test3_content_here" ,"test3.txt")
         vsname = randstring('T7')
         aname = randstring('T8')
-        assistant = Assistant(name=aname,model=settings.AI_MODELS['default'] )
+        assistant = MyAssistant(name=aname,model=settings.AI_MODELS['default'] )
         assistant.instructions = 'Answer the questions and make a good guess if the answer is not totally obvious from the context!'
         assistant.save()
         bname = randstring('T9')
-        assistantb = Assistant( name=bname, model=settings.AI_MODELS['staff'] ) 
+        assistantb = MyAssistant( name=bname, model=settings.AI_MODELS['staff'] ) 
         assistantb.instructions = 'Answer the questions and make a good guess if the answer is not totally obvious from the context!'
         assistantb.save()
         assistant.add_raw_file(t1)
@@ -336,7 +337,7 @@ class OpenAI(TestCase):
         #vs1.files.set([t1,t2,t3])
         #vs1.save()
         aname = randstring('T10')
-        assistant = Assistant( name=aname, model=settings.AI_MODELS['default'] )
+        assistant = MyAssistant( name=aname, model=settings.AI_MODELS['default'] )
         print(f"CREATED ASSISTANT {aname}")
         assistant.save();
         assistant.instructions = 'Answer the questions as concisely as possible. No need for complete sentences. Make a good guess if the answer is not totally obvious from the context, but if it is not obvious, start your guess with \'It seems like\' !'
@@ -353,7 +354,8 @@ class OpenAI(TestCase):
                     [ 'Q5: Please repeat the reply to the first request','black',True]
                         ]
 
-        thread = Thread(name=aname,assistant=assistant,user=self.user)
+        thread = MyThread(name=aname,assistant=assistant,user=self.quser)
+        thread.messages = None
         thread.save()
         for  q in queries :
             print(f"Q {q}")
@@ -376,14 +378,20 @@ class OpenAI(TestCase):
         #self.client.post( url ,  {'file': test_file3}, follow=True)
         #t3 = OpenAIFile.objects.get(name="test3.txt")
         assistant.add_raw_file(t3)
+        thread.messages = None
+        thread.save()
+        #threads = assistant.threads.all();
+        #for thread in threads :
+        #    thread.messages = []
         #file_ids = vs.file_ids();
         #file_ids = assistant.file_ids();
         #file_ids = assistant.remote_files();
-        queries =  [ [ 'Q6: What color was the cat.','white',True],
-                    ['Q7: What color was the dog.','black',True],
+        queries =  [ 
+                    [ 'Q6: What color was the cat.','white',True],
+                    [ 'Q7: What color was the dog.','black',True],
                     [ 'Q8: What did the cat  do?', 'miaow',True],
-                    [ 'Q9: What did the dog do?', 'bark' ,False],
-                    [ 'Q10: What was the first query','dog',None],
+                    [ 'Q9: What did the dog do?', 'barked' ,False],
+                    [ 'Q10: What was the first query','cat',True],
                  ]
         for  q in queries :
             [ query,response ,truth ] =  q

@@ -1273,7 +1273,7 @@ class MyThread( Thread) :
         else :
             max_tokens = settings.MAX_TOKENS
         timeout = settings.MAXWAIT
-        if len( self.messages  ) > 0 :
+        if self.messages  :
             previous_response_id = self.messages[-1].get('response_id',None)
         else :
             previous_response_id = None
@@ -1352,7 +1352,10 @@ class MyThread( Thread) :
 
         msg = my_run_remote_query( context)
         #print(f"MSG = {msg}")
-        thread.messages.append(msg) 
+        if thread.messages :
+            thread.messages.append(msg) 
+        else :
+            thread.messages = [msg]
         thread.save()
         return msg
 
@@ -1365,6 +1368,7 @@ def custom_delete_assistant(sender, instance, **kwargs):
     pk = instance.pk
     client = OpenAIClient();
     try :
+        assistant = instance
         assistant_id = instance.assistant_id
         #assistant = openai.beta.assistants.retrieve(assistant_id)
         #tool_resources = assistant.tool_resources
@@ -1375,7 +1379,8 @@ def custom_delete_assistant(sender, instance, **kwargs):
             vs = VectorStore.objects.get(name=instance.name)
             vector_store_id = vector_store_ids[0];
             vector_store =  client.vector_stores_retrieve(vs,vector_store_id)
-            if vector_store.name == assistant.id : # THIS IS HERE BECAUSE MULTIPL VECTOR STORES CAN'T BE USED BY AN ASSISTANT
+            print(f"VECTOR_STORE_NAME = {vector_store.name} assistant_name = {assistant.name}")
+            if vector_store.name == assistant.name : # THIS IS HERE BECAUSE MULTIPL VECTOR STORES CAN'T BE USED BY AN ASSISTANT
                 client.delete_vector_store( vector_store_id)
         #res = client.beta.assistants.delete(assistant_id)
     except Exception as err :
