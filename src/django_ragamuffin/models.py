@@ -1212,24 +1212,28 @@ class MyThread( Thread) :
         client = OpenAIClient();
         super().save(*args, **kwargs)  # Save first, so file is processed
         if is_new  :
-            thread = client.beta.threads.create(); 
-            thread_id = thread.id
+            #thread = client.beta.threads.create(); 
+            characters = string.ascii_letters + string.digits  # a-zA-Z0-9
+            h = ''.join(random.choices(characters, k=8))
+            thread_id ='mythread1_' + h
             self.thread_id = thread_id
             self.messages = []
             super().save(*args, **kwargs) # Then update with true hashed path
         elif 'update_fields' in kwargs :
             thread_id = self.thread_id
             old_thread_id = thread_id
-            new_thread =  client.beta.threads.create(); 
-            new_thread_id = new_thread.id
-            if self.messages :
-                for msg in self.messages:
-                    for role in ['user','assistant'] :
-                        openai.beta.threads.messages.create(
-                            thread_id=new_thread_id,
-                            role=role,
-                            content=msg[role]
-                        )
+            #new_thread =  client.beta.threads.create(); 
+            characters = string.ascii_letters + string.digits  # a-zA-Z0-9
+            h = ''.join(random.choices(characters, k=8))
+            new_thread_id = 'myhthread2_' + h
+            #if self.messages :
+            #    for msg in self.messages:
+            #        for role in ['user','assistant'] :
+            #            openai.beta.threads.messages.create(
+            #                thread_id=new_thread_id,
+            #                role=role,
+            #                content=msg[role]
+            #            )
                         
             self.thread_id = new_thread_id
             self.messages = self.messages
@@ -1288,8 +1292,7 @@ class MyThread( Thread) :
             last_messages=context['last_messages'];
             max_num_results = context['max_num_results']
             previous_response_id = context.get('previous_response_id',None)
-            model = 'gpt-5'
-            #print(f"MODEL = {model}")
+            print(f"MODEL = {model}")
             #print(f"QUERY = {query}")
             #print(f"INSTRUCTIONS = {instructions}")
             RESPONSE = openai.responses.create(
@@ -1297,7 +1300,7 @@ class MyThread( Thread) :
                 input=query,
                 previous_response_id=previous_response_id,
                 instructions=instructions,
-                reasoning={"effort": "medium",'summary': 'auto'},
+                reasoning={"effort": "high",'summary': 'auto'},
                 tools=[{"type": "file_search",
                         "vector_store_ids": vss  # your vector store id
                         }]
@@ -1413,18 +1416,19 @@ def handle_assistants_changed(sender, instance, action, **kwargs):
         logger.error(f"POST_REMOVE")
         vector_stores = instance.vector_stores.all();
         assistant_id = instance.assistant_id
-        assistant = openai.beta.assistants.retrieve(assistant_id)
-        tool_resources = assistant.tool_resources
-        try :
-            if vector_stores :
-                vs = vector_stores[0]
-                vector_store_id = tool_resources.file_search.vector_store_ids[0]
-                vector_store =  client.vector_stores_retrieve(vs, vector_store_id)
-                if vector_store.name == assistant.name:
-                    client.vector_store_delete( vector_store_id)
-        except  Exception as err :
-            logger.error(f" VECTOR_STORE ERROR DELTING ON POST_REMOVE")
-            pass
+        #assistant = openai.beta.assistants.retrieve(assistant_id)
+        assistant = instance
+        #tool_resources = assistant.tool_resources
+        #try :
+        #    if vector_stores :
+        #        vs = vector_stores[0]
+        #        vector_store_id = tool_resources.file_search.vector_store_ids[0]
+        #        vector_store =  client.vector_stores_retrieve(vs, vector_store_id)
+        #        if vector_store.name == assistant.name:
+        #            client.vector_store_delete( vector_store_id)
+        #except  Exception as err :
+        #    logger.error(f" VECTOR_STORE ERROR DELTING ON POST_REMOVE")
+        #    pass
         rebuild = True
 
     if action == "post_add" or action == 'post_remove' : # rebuild:
@@ -1457,14 +1461,14 @@ def handle_assistants_changed(sender, instance, action, **kwargs):
         vector_store_id = vs.get_vector_store_id()
         logger.error(f"VS VECTTOR_STORE_ID {vector_store_id}")
         instance.vector_stores.set([vs.pk])
-        try :
-            assistant = client.beta.assistants.update(
-                assistant_id=assistant_id,
-                tool_resources={"file_search": {"vector_store_ids": [ vector_store_id ] }},
-                metadata={"api_key": settings.AI_KEY[-8:] } 
-                )
-        except Exception as e:
-            logger.error(f"CLIENT CANNOT UPDATE ASSISTANT {str(e)}")
+        #try :
+        #    assistant = client.beta.assistants.update(
+        #        assistant_id=assistant_id,
+        #        tool_resources={"file_search": {"vector_store_ids": [ vector_store_id ] }},
+        #        metadata={"api_key": settings.AI_KEY[-8:] } 
+        #        )
+        #except Exception as e:
+        #    logger.error(f"CLIENT CANNOT UPDATE ASSISTANT {str(e)}")
 
     #print(f"SAVE {instance}")
     instance.save()
