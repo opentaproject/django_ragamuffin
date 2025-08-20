@@ -223,6 +223,8 @@ def query_view(request,subpath):
     #    assistant = create_or_retrieve_assistant( name  , vs )
     #    return assistant
     assistant = get_assistant(name,user)
+    print(f"FILES OK? {assistant.files_ok()}")
+    print(f"REMOTE VECTOR_STORES = {assistant.get_remote_vector_stores()}")
     if not assistant :
         return HttpResponseForbidden(f"No assistant <b>{name} </b> exists.")
     model = assistant.model

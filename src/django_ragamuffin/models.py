@@ -1061,12 +1061,13 @@ class Assistant( models.Model ):
         assistant = self
         vss = self.vector_stores.all();
         for vs in vss :
-            logger.error(f"ASSISTANT VS = {vs}")
+            files = vs.files;
+            logger.error(f"ASSISTANT VS = {vs} {files}")
         assistant_id = assistant.assistant_id
-        remote_assistant = openai.beta.assistants.retrieve(assistant_id)
-        tool_resources = remote_assistant.tool_resources
+        #remote_assistant = openai.beta.assistants.retrieve(assistant_id)
+        #tool_resources = remote_assistant.tool_resources
         remote_ids = [];
-        vector_store_ids = tool_resources.file_search.vector_store_ids
+        vector_store_ids = [ item.vsid for  item in vss ]
         logger.error(f"VECTOR_STORE_IDS = {vector_store_ids}")
         for vector_store_id in vector_store_ids :
             vector_store_files = client.vector_stores.files.list( vector_store_id=vector_store_id)
@@ -1076,13 +1077,25 @@ class Assistant( models.Model ):
         return remote_ids
 
 
+    def get_remote_vector_stores( self, *args, **kwargs ):
+        client = OpenAIClient()
+        assistant = self
+        vss = self.vector_stores.all();
+        remote_ids = [ item.vsid for item in vss ]
+        print(f"REMOTE_VSIDS = {remote_ids}")
+        return remote_ids 
+
+
+
         
 
     def files_ok( self,*args, **kwargs):
         assistant = self
         vss = assistant.vector_stores.all();
         file_ids = assistant.file_ids();
+        print(f"FILE_IDS = {file_ids}")
         remote_ids = assistant.remote_files();
+        print(f"REMOTE_IDS = {remote_ids}")
         return set( remote_ids) == set( file_ids )
 
 
