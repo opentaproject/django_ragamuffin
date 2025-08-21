@@ -17,7 +17,7 @@ def nuke(delete=False):
         vector_store_id = vector_store.id
         vector_store_files = client.vector_stores.files.list(vector_store_id=vector_store_id)
         md = vector_store.metadata;
-        if 'api_app' in md  and md['api_app'] == 'tests' :
+        if 'api_app' in md  and md['api_app'] == 'test' :
             print(f"  {action} VS: {vector_store.name} {vector_store_id} {vector_store.metadata}")
             for vector_store_file in vector_store_files:
                 file_id = vector_store_file.id
@@ -38,7 +38,7 @@ def nuke(delete=False):
     for assistant in assistants:
         assistant_id = assistant.id
         md= assistant.metadata;
-        if 'api_app' in md and md['api_app'] == 'tests' :
+        if 'api_app' in md and md['api_app'] == 'test' :
             print(f"  {action} AS: {assistant.name} {assistant_id} {assistant.metadata}")
             vs = assistant.tool_resources.file_search.vector_store_ids
             print(f"      VS: {vs}")
