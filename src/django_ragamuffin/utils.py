@@ -83,7 +83,11 @@ def get_hash() :
 
 
 def doarchive( thread, msg ):
-    assistant = thread.assistant;
+    assistant = thread.assistant
+    if not assistant :
+        assistants = MyAssistant.objects.using('django_ragamuffin').filter(name=thread.name ).all()
+    if assistants :
+        assistant = assistants[0]
     h = msg.get('hash',get_hash() )
     subdir =  assistant.name.split('.')
     p = os.path.join('/subdomain-data','openai','queries', *subdir,thread.user.username,)
@@ -108,36 +112,30 @@ CHOICES = {0 : 'Unread' ,
 
 
 
-def get_assistant( name,user):
+def get_assistant( name,user=None ):
+    print(f"GET ASSISTANT NAME = {name}")
     assistants = MyAssistant.objects.filter(name=name).all();
+    print(f"ASSISTANTS = {assistants}")
     logger.info(f"GET_ASSISTANT assistants = {assistants}")
+    model = settings.AI_MODEL
     if not assistants and not user.is_staff :
         return None
-    if user.is_staff :
-        model = settings.AI_MODELS['staff']
-    else :
-        model = settings.AI_MODELS['default']
-    assistants_ = MyAssistant.objects.filter(name=name, model=model).all()
-    if assistants_ :
-        return  assistants_[0]
     if assistants :
-        a = assistants[0];
-        return a.clone(name,model=model)
+        return  assistants[0]
     base = '.'.join(name.split('.')[:-1])
     if base == '' :
         return None
     subdir = name.split('.')[-1];
-    base_assistant = get_assistant( base ,user );
+    base_assistant = get_assistant( base,user);
     if base_assistant :
-        assistant = base_assistant.clone( name , model=model)
+        assistant = base_assistant.clone( name, model )
     else :
-        for m in settings.AI_MODELS.values()  :
-            assistant = MyAssistant(name=name,model=m);
-            vs = VectorStore(name=name);
-            vs.save();
-            assistant.save();
-            assistant.vector_stores.set([vs.pk])
-            assistant.save();
+        assistant = MyAssistant(name=name,model=model);
+        vs = VectorStore(name=name);
+        vs.save();
+        assistant.save();
+        assistant.vector_stores.set([vs.pk])
+        assistant.save();
         assistant = MyAssistant.objects.get(name=name,model=model)
     return assistant 
 

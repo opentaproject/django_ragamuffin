@@ -223,11 +223,13 @@ def query_view(request,subpath):
     #    assistant = create_or_retrieve_assistant( name  , vs )
     #    return assistant
     assistant = get_assistant(name,user)
+    print(f"GET ASSISTANT RETURNS {assistant}")
     #print(f"FILES OK? {assistant.files_ok()}")
     print(f"REMOTE VECTOR_STORES = {assistant.get_remote_vector_stores()}")
     if not assistant :
         return HttpResponseForbidden(f"No assistant <b>{name} </b> exists.")
     model = assistant.model
+    print(f"MODEL = {assistant.model}")
     thread = create_or_retrieve_thread( assistant, name , user )
     data = request.POST;
     if 'delete' in request.POST.getlist('action') :
@@ -294,6 +296,8 @@ def query_view(request,subpath):
        'max_num_results' : item.get('max_num_results' , max_num_results ),
        'last_messages' : item.get('last_messages' , last_messages)  ,
        'summary' : item.get('summary','None'),
+       'response_id' : item.get('response_id','None'),
+       'previous_response_id' : item.get('previous_response_id','None'),
        'time_spent' : item.get('time_spent', time_spent) }  for index, item in enumerate( messages ) ];
     if f:
         summary = f[-1].get('summary','None')
