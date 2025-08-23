@@ -10,10 +10,10 @@ import re
 
 from .forms import QueryForm
 from .utils import doarchive, CHOICES, get_assistant, mathfix, thread_to_pdf
-from .models import create_or_retrieve_thread, QUser
-from django_ragamuffin.models import MyAssistant, MyThread
+from .models import create_or_retrieve_thread, QUser, get_current_model
+from django_ragamuffin.models import Assistant, Thread, Assistant
 
-class MyAssistantEditForm(forms.ModelForm):
+class AssistantEditForm(forms.ModelForm):
 
     actual_instructions = forms.CharField(disabled=True, required=False, widget=forms.Textarea(attrs={'disabled': 'disabled'}),)
     directory_name = forms.CharField(required=False, help_text=mark_safe('<div class="instructions"> Change name of the directory </div> ') )
@@ -35,7 +35,7 @@ class MyAssistantEditForm(forms.ModelForm):
 
 
     class Meta:
-        model = MyAssistant
+        model = Assistant
         fields = ['instructions','actual_instructions', 'temperature','directory_name']
         help_texts = {
             'directory_name' : "Only the last directory can be renmamed; all children will be renamed",
@@ -44,13 +44,25 @@ class MyAssistantEditForm(forms.ModelForm):
 
         }
 
+#def delete_file_view(request,pk):
+#    if request.method == 'POST' and request.FILES.get('myfile'):
+#        files = request.FILES.getlist('myfile')
+#        for f in files :
+#            filename = f.name 
+#            assistant =  Assistant.objects.get(pk=pk)
+#            file_url = assistant.delete_file( filename, f)
+#            r = render(request, 'django_ragamuffin/upload.html', {'file_url': file_url})
+#        return redirect(f"/django_ragamuffin/assistant/{pk}/edit/")
+#
+#    return render(request, 'django_ragamuffin/upload.html')
+
 
 def upload_file_view(request,pk):
     if request.method == 'POST' and request.FILES.get('myfile'):
         files = request.FILES.getlist('myfile')
         for f in files :
             filename = f.name 
-            assistant =  MyAssistant.objects.get(pk=pk)
+            assistant =  Assistant.objects.get(pk=pk)
             file_url = assistant.add_file( filename, f)
             r = render(request, 'django_ragamuffin/upload.html', {'file_url': file_url})
         return redirect(f"/django_ragamuffin/assistant/{pk}/edit/")
@@ -61,7 +73,7 @@ def old_upload_file_view(request,pk):
     if request.method == 'POST' and request.FILES.get('myfile'):
         uploaded_file = request.FILES['myfile']
         filename = uploaded_file.name 
-        assistant =  MyAssistant.objects.get(pk=pk)
+        assistant =  Assistant.objects.get(pk=pk)
         file_url = assistant.add_file( filename, uploaded_file)
         r = render(request, 'django_ragamuffin/upload.html', {'file_url': file_url})
         return redirect(f"/assistant/{pk}/edit/")
@@ -70,7 +82,7 @@ def old_upload_file_view(request,pk):
 
 
 def delete_assistant(request, pk):
-    assistant = get_object_or_404(MyAssistant, pk=pk)
+    assistant = get_object_or_404(Assistant, pk=pk)
     children = assistant.children()
     if children :
         referer = request.META.get('HTTP_REFERER', '/')
@@ -93,7 +105,8 @@ def delete_assistant(request, pk):
     #return render(request, 'django_ragamuffin/edit_assistant.html', {'form': form, 'assistant': assistant, 'custom_data' : form.custom_data  })
 
 def edit_assistant(request, pk):
-    assistant = get_object_or_404(MyAssistant, pk=pk)
+    assistant = get_object_or_404(Assistant, pk=pk)
+    print(f"EDIT_ASSISTANT INSTRUCTIONS = {assistant.instructions}")
     if request.method == 'POST':
         deletions = request.POST.getlist('deletion')
         if deletions :
@@ -113,7 +126,7 @@ def edit_assistant(request, pk):
                 else :
                     new_name = old_name
                 pattern = r'^%s\..+$' % old_name
-                tree = MyAssistant.objects.filter(name__regex=pattern).all()
+                tree = Assistant.objects.filter(name__regex=pattern).all()
                 p = r'^%s' % old_name 
                 for a in tree :
                     n = re.sub( p , new_name, a.name)
@@ -130,14 +143,14 @@ def edit_assistant(request, pk):
                 vs.name = n;
                 vs.save();
                 pattern = r'^%s(\..*$|$)' % old_name
-                tree = MyThread.objects.filter(name__regex=pattern).all()
+                tree = Thread.objects.filter(name__regex=pattern).all()
                 p = r'^%s' % old_name 
                 for a in tree :
                     n = re.sub( p , new_name, a.name)
                     a.name = n
                     a.save(update_fields=['name']);
             rename_assistants( assistant, new_tail )           
-            #threads = MyThread.objects.filter(name=old_name)
+            #threads = Thread.objects.filter(name=old_name)
             #if threads :
             #    for thread in threads :
             #        n = re.sub( p, new_name, thread.name)
@@ -146,12 +159,17 @@ def edit_assistant(request, pk):
             #        #thread.save(update_fields=['name'])
 
 
-        form = MyAssistantEditForm(request.POST, instance=assistant )
+        
+        assistant.save(using='django_ragamuffin')
+        form = AssistantEditForm(request.POST, instance=assistant )
         if form.is_valid():
             form.save()
             return redirect('edit_assistant', pk=assistant.pk)  # or another success URL
     else:
-        form = MyAssistantEditForm(instance=assistant, custom_data=assistant.files() )
+        form = AssistantEditForm(instance=assistant, custom_data=assistant.files() )
+        if form.is_valid() :
+            form.save()
+            return redirect('edit_assistant', pk=assistant.pk)  # or another success URL
     #print(f"FORM_CUSTOM_DATA = {form.custom_data}")
     return render(request, 'django_ragamuffin/edit_assistant.html', {'form': form, 'assistant': assistant, 'custom_data' : form.custom_data  })
 
@@ -163,6 +181,7 @@ FILENAME = "../README.md"
 def feedback_view(request,subpath):
     #print(f"SUBPATH IN FEEDBACK= {subpath}")
     #print(f"SUBPATH IN QUERYVIEW = {subpath}")
+    print(f"FEEDBACK VIEW ")
     subpath_ = re.sub( r"\.","_",subpath )
     segments = subpath_.split('/')
     last_messages = settings.LAST_MESSAGES;
@@ -176,7 +195,7 @@ def feedback_view(request,subpath):
     user = QUser.objects.get(username=request.user.username)
     #print(f"USER = {user} {user.username}")
     #print(f"THREAD_NAME = {thread_name}")
-    threads = MyThread.objects.filter(name=thread_name,user=user).all()
+    threads = Thread.objects.filter(name=thread_name,user=user).all()
     #print(f"THREADS = {threads}")
     thread = threads[0]
     comment = ''
@@ -200,7 +219,7 @@ FILENAME = "../README.md"
 @csrf_exempt
 @login_required
 def query_view(request,subpath):
-    #print(f"SUBPATH IN QUERYVIEW = {subpath}")
+    print(f"SUBPATH IN QUERYVIEW = {subpath}")
     subpath_ = re.sub( r"\.","_",subpath )
     segments = subpath_.split('/')
     last_messages = settings.LAST_MESSAGES;
@@ -222,14 +241,15 @@ def query_view(request,subpath):
     #    vs = create_or_retrieve_vector_store( name, [t1])
     #    assistant = create_or_retrieve_assistant( name  , vs )
     #    return assistant
-    assistant = get_assistant(name,user)
+    assistant = get_assistant(name)
+    print(f"ASSISTANT = {assistant}")
     print(f"GET ASSISTANT RETURNS {assistant}")
     #print(f"FILES OK? {assistant.files_ok()}")
-    print(f"REMOTE VECTOR_STORES = {assistant.get_remote_vector_stores()}")
+    #print(f"REMOTE VECTOR_STORES = {assistant.get_remote_vector_stores()}")
     if not assistant :
         return HttpResponseForbidden(f"No assistant <b>{name} </b> exists.")
-    model = assistant.model
-    print(f"MODEL = {assistant.model}")
+    model = get_current_model( request.user)
+    print(f"MODEL = {model}")
     thread = create_or_retrieve_thread( assistant, name , user )
     data = request.POST;
     if 'delete' in request.POST.getlist('action') :
@@ -237,9 +257,17 @@ def query_view(request,subpath):
         if deletes :
             messages = thread.messages;
             ideletes = [int(i) for i in deletes ];
+            deletions =  [x['response_id']  for i,x in enumerate(messages) if i in ideletes and not i == 0 ]
+            print(f"DELETIONS = {deletions}")
             culled = [x for i,x in enumerate(messages) if i not in ideletes ]
+            if None in deletions :
+                culled[-1]['previous_response_id'] = None
+                culled[-1]['response_id'] = None
+                print(f"SET A HISTORY RESET ON CULLED")
             thread.messages= culled
             thread.save(update_fields=["messages","thread_id"])
+            response = redirect(f"/django_ragamuffin/query/{assistant.name}/")
+            return response
     elif 'print' in request.POST.getlist('action') :
         prints = request.POST.getlist('entry')
         if prints :
@@ -268,6 +296,7 @@ def query_view(request,subpath):
                     break
             try:
                 if txt is None:
+                    print(f"CLEAR IN VIEWS {thread.clear}")
                     msg = thread.run_query(query=query, last_messages=last_messages, max_num_results=max_num_results)
                     txt = msg['assistant']
                     summary = msg.get('summary','NONE3')
@@ -297,13 +326,12 @@ def query_view(request,subpath):
        'last_messages' : item.get('last_messages' , last_messages)  ,
        'summary' : item.get('summary','None'),
        'response_id' : item.get('response_id','None'),
-       'previous_response_id' : item.get('previous_response_id','None'),
+       'previous_response_id' : item.get('previous_response_id',None),
        'time_spent' : item.get('time_spent', time_spent) }  for index, item in enumerate( messages ) ];
     if f:
         summary = f[-1].get('summary','None')
     else :
         summary = ''
-    p = assistant.parent();
     children = assistant.children();
     parent = assistant.parent();
     response = render(request, 'django_ragamuffin/query_form.html', {

@@ -7,6 +7,8 @@ from openai import OpenAI
 
 model = 'gpt-4o-mini'
 
+AI_KEY = os.environ.get("OPENAI_API_KEY")
+
 def nuke(delete=False):
     action = 'DELETE ' if delete else 'LIST'
     print(f"\n{action}VECTOR STORES")
@@ -17,16 +19,22 @@ def nuke(delete=False):
         vector_store_id = vector_store.id
         vector_store_files = client.vector_stores.files.list(vector_store_id=vector_store_id)
         md = vector_store.metadata;
-        if 'api_app' in md  and md['api_app'] == 'test' :
+        print(f"MD = {md['api_key']} AI_KEY = {AI_KEY}")
+        if md['api_key'] in AI_KEY : # True or 'api_app' in md  and md['api_app'] == 'test' :
             print(f"  {action} VS: {vector_store.name} {vector_store_id} {vector_store.metadata}")
             for vector_store_file in vector_store_files:
                 file_id = vector_store_file.id
                 print(f"    file: {file_id}")
                 if delete:
+                    print(f"    DELETE file: {file_id}")
                     try:
                         client.vector_stores.files.delete(vector_store_id=vector_store_id, file_id=file_id)
                     except Exception as e:
                         print(f"FILE ERROR {file_id}: {e}")
+                else :
+                    print(f"    file: {file_id}")
+
+
             if delete:
                 try:
                     client.vector_stores.delete(vector_store_id=vector_store_id)
@@ -38,7 +46,7 @@ def nuke(delete=False):
     for assistant in assistants:
         assistant_id = assistant.id
         md= assistant.metadata;
-        if 'api_app' in md and md['api_app'] == 'test' :
+        if True or 'api_app' in md and md['api_app'] == 'test' :
             print(f"  {action} AS: {assistant.name} {assistant_id} {assistant.metadata}")
             vs = assistant.tool_resources.file_search.vector_store_ids
             print(f"      VS: {vs}")
@@ -50,15 +58,15 @@ def nuke(delete=False):
                     print(f"ASSISTANT ERROR {assistant_id}: {e}")
 
     print(f"\n{action}FILES")
-    files = client.files.list()
-    for file in files:
-        file_id = file.id
-        print(f" {action} FILE: {file_id} {file.filename}")
-        if delete:
-            try:
-                client.files.delete(file_id)
-            except Exception as e:
-                print(f"FILE ERROR {file_id}: {e}")
+    #files = client.files.list()
+    #for file in files:
+    #    file_id = file.id
+    #    print(f" {action} FILE: {file_id} {file.filename}")
+    #    if delete:
+    #        try:
+    #            client.files.delete(file_id)
+    #        except Exception as e:
+    #            print(f"FILE ERROR {file_id}: {e}")
 
     print("\n✅ Done")
 

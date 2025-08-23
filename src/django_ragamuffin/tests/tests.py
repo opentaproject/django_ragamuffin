@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import TransactionTestCase as TestCase
 from django.apps import AppConfig
 
 import hashlib
@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import ObjectDoesNotExist
 import tiktoken
+from django_ragamuffin.utils import print_messages
 import openai
 from openai import OpenAI
 from django.conf import settings
@@ -18,7 +19,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 
 
 django.setup()
-from django_ragamuffin.models import OpenAIFile, VectorStore, MyAssistant,  MyThread,  delete_remote_vector_stores, dump_remote_vector_stores, QUser
+from django_ragamuffin.models import OpenAIFile, VectorStore, Assistant,  Thread,  delete_remote_vector_stores, dump_remote_vector_stores, QUser
 from django.contrib.auth.models import User
 
 from django.conf import settings
@@ -37,6 +38,7 @@ def randstring(tag, length=8):
 
 
 class OpenAI(TestCase):
+    databases = "__all__"
 
     @pytest.mark.django_db
     def create_testfile_from_string( self, s , name ):
@@ -66,13 +68,13 @@ class OpenAI(TestCase):
         self.quser = QUser.objects.create(username=self.user.username)
 
     @pytest.mark.django_db
-    def notest_user_exists(self):
+    def test_user_exists(self):
         print(f"TEST_USER_EXISTS")
         user_exists = User.objects.filter(username='testuser').exists()
         self.assertTrue(user_exists)
 
     @pytest.mark.django_db
-    def notest_create_and_delete_file_object(self):
+    def test_create_and_delete_file_object(self):
         print(f"TEST_CREATE_AND_DELETE_FILE_OBJECTS")
         url = reverse('admin:django_ragamuffin_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
@@ -106,7 +108,7 @@ class OpenAI(TestCase):
 
 
     @pytest.mark.django_db
-    def notest_create_and_delete_two_openai_file_objects(self):
+    def test_create_and_delete_two_openai_file_objects(self):
         print(f"TEST_CREATE_AND_DELETE_TWO_OPENAI..")
         url = reverse('admin:django_ragamuffin_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
@@ -136,7 +138,7 @@ class OpenAI(TestCase):
 
 
     @pytest.mark.django_db
-    def notest_create_and_delete_file_globally(self):
+    def test_create_and_delete_file_globally(self):
 
         aname = randstring('T1')
         print(f"TEST_CREATE_AND_DELETE_FILE_GLOBALLY ")
@@ -166,7 +168,7 @@ class OpenAI(TestCase):
         dump_remote_vector_stores("TEST3");
 
     @pytest.mark.django_db
-    def notest_clone_vector_store_object(self):
+    def test_clone_vector_store_object(self):
         dump_remote_vector_stores("cloned-2");
         aname = randstring('T3')
         print(f"TEST_CREATE_AND_CLONE_VECTOR_STORE_OBJECT")
@@ -212,7 +214,7 @@ class OpenAI(TestCase):
 
 
     @pytest.mark.django_db
-    def notest_create_and_delete_vector_store_object(self):
+    def test_create_and_delete_vector_store_object(self):
 
         aname = randstring('T5')
         print(f"TEST_CREATE_AND_DELETE_VECTOR_STORE_OBJECT")
@@ -244,7 +246,7 @@ class OpenAI(TestCase):
 
 
     @pytest.mark.django_db
-    def notest_create_and_delete_assistant_object(self):
+    def test_create_and_delete_assistant_object(self):
         print(f"TEST_CREATE_AND_DELETE_ASSISTANT_OBJECT")
         url = reverse('admin:django_ragamuffin_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
@@ -254,11 +256,11 @@ class OpenAI(TestCase):
         t3 = self.create_testfile_from_string( b"test3_content_here" ,"test3.txt")
         vsname = randstring('T7')
         aname = randstring('T8')
-        assistant = MyAssistant(name=aname,model=settings.AI_MODELS['default'] )
+        assistant = Assistant(name=aname )
         assistant.instructions = 'Answer the questions and make a good guess if the answer is not totally obvious from the context!'
         assistant.save()
         bname = randstring('T9')
-        assistantb = MyAssistant( name=bname, model=settings.AI_MODELS['staff'] ) 
+        assistantb = Assistant( name=bname)
         assistantb.instructions = 'Answer the questions and make a good guess if the answer is not totally obvious from the context!'
         assistantb.save()
         assistant.add_raw_file(t1)
@@ -306,7 +308,7 @@ class OpenAI(TestCase):
         delete_remote_vector_stores();
         dump_remote_vector_stores("TEST6");
 
-    @pytest.mark.django_db
+    @pytest.mark.django_db(transaction=True)
     def test_create_and_delete_thread(self):
         print(f"TEST_CREATE_AND_DELETE_THREAD")
         import tiktoken
@@ -337,7 +339,7 @@ class OpenAI(TestCase):
         #vs1.files.set([t1,t2,t3])
         #vs1.save()
         aname = randstring('T10')
-        assistant = MyAssistant( name=aname, model=settings.AI_MODELS['default'] )
+        assistant = Assistant( name=aname ) # , model=settings.AI_MODELS['default'] )
         print(f"CREATED ASSISTANT {aname}")
         assistant.save();
         assistant.instructions = 'Answer the questions as concisely as possible. No need for complete sentences. Make a good guess if the answer is not totally obvious from the context, but if it is not obvious, start your guess with \'It seems like\' !'
@@ -348,15 +350,17 @@ class OpenAI(TestCase):
         print(f"ASSITANT REMOTE FILES OK")
 
         queries =  [ [ 'Q1: What color was the dog.', 'lack',True],
-                    [ 'Q2: What color was the cat.', 'hite',True],
-                    [ 'Q3: What did the dog do?', 'arked',True] , 
+                    [ 'Q2: Please repeat the reply to the first request','lack',True],
+                    [ 'Q3: What color was the cat.', 'hite',True],
+                    [ 'Q4: What did the dog do?', 'arked',True] , 
                     [ 'Q4: What did the cat do?', 'iaow',False],
-                    [ 'Q5: Please repeat the reply to the first request','lack',True]
+                    [ 'Q6: Please repeat the reply to the first request','lack',True]
                         ]
 
-        thread = MyThread(name=aname,assistant=assistant,user=self.quser)
+        thread = Thread(name=aname,assistant=assistant,user=self.quser)
+        thread.messages = []
         #thread.messages = None
-        #thread.save()
+        thread.save()
         for  q in queries :
             print(f"Q {q}")
             [ query,response , truth ] =  q
@@ -371,9 +375,11 @@ class OpenAI(TestCase):
         print(f"D2")
         t3.delete();
         print(f"D3")
-        file_ids = assistant.file_ids()
-        print(f"D4")
+        #file_ids = assistant.file_ids()
+        #print(f"D4")
         t3 = self.create_testfile_from_string( b"the cat said miaow" ,"test3.txt")
+        #thread.messages[-1]['response_id'] = None
+        #thread.save()
         #test_file3 = SimpleUploadedFile( "test3.txt", b"The cat said miaow. ", content_type="text/plain")
         #self.client.post( url ,  {'file': test_file3}, follow=True)
         #t3 = OpenAIFile.objects.get(name="test3.txt")
@@ -385,15 +391,17 @@ class OpenAI(TestCase):
         #file_ids = assistant.file_ids();
         #file_ids = assistant.remote_files();
         queries =  [ 
-                    [ 'Q6: What color was the cat.','hite',True],
-                    [ 'Q7: What color was the dog.','lack',True],
-                    [ 'Q8: What did the cat  do?', 'iaow',True],
-                    [ 'Q9: What did the dog do?', 'arked' ,False],
-                    [ 'Q10: What was the first query','cat',True],
+                    [ 'Q7: What color was the cat.','hite',True],
+                    [ 'Q8: What color was the dog.','lack',True],
+                    [ 'Q9: What did the cat  do?', 'iaow',True],
+                    [ 'Q10: What was the first query in the conversation','cat',True ],
+                    [ 'Q11: What did the dog do?', 'arked' ,False],
                  ]
+        clear = True
         for  q in queries :
             [ query,response ,truth ] =  q
-            r = thread.run_query(  query=query,  last_messages=4)
+            r = thread.run_query(  query=query,  clear=clear, last_messages=4)
+            clear = False
             txt = r['assistant']
             print(f" Q={q} TXT={txt}")
             if not truth == None :

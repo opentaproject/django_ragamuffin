@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.conf import settings
 from django import forms
-from .models import OpenAIFile  , VectorStore , MyAssistant, MyThread, DEFAULT_INSTRUCTIONS, RemoteVectorStore, QUser
+from .models import OpenAIFile  , VectorStore , Assistant, Thread, DEFAULT_INSTRUCTIONS, RemoteVectorStore, QUser
 
 
 @admin.register(RemoteVectorStore)
@@ -43,7 +43,7 @@ class VectorStoreAdmin(admin.ModelAdmin):
 
     list_file_ids.short_description = "File Names"
     
-class MyAssistantForm(forms.ModelForm):
+class AssistantForm(forms.ModelForm):
 
     actual_instructions = forms.CharField(disabled=True, required=False, widget=forms.Textarea(attrs={'disabled': 'disabled'}),)
 
@@ -57,18 +57,18 @@ class MyAssistantForm(forms.ModelForm):
         self.fields['actual_instructions'].initial = instructions if self.instance.pk else "N/A"
 
     class Meta:
-        model = MyAssistant
-        fields = ['name','model','instructions','vector_stores','assistant_id','json_field','temperature','actual_instructions' ,]
+        model = Assistant
+        fields = ['name','instructions','vector_stores','assistant_id','json_field','temperature','actual_instructions' ,]
         help_texts = {
             'temperature': f"Default temperature = {settings.DEFAULT_TEMPERATURE}",
             'instructions' : f"Leave blank for default; start with 'append: XXX...' to append 'XXX...' to default; Any other non-blank string completely replaces the default instructions.'"
         }
 
 
-@admin.register(MyAssistant)
-class MyAssistantAdmin(admin.ModelAdmin):
-    form = MyAssistantForm 
-    list_display = ('id', 'name','model', 'assistant_id', 'file_names','file_pks', 'file_ids', 'remote_files','list_vector_store_ids')  # Add your custom method here
+@admin.register(Assistant)
+class AssistantAdmin(admin.ModelAdmin):
+    form = AssistantForm 
+    list_display = ('id', 'name', 'assistant_id', 'file_names','file_pks', 'file_ids', 'remote_files','list_vector_store_ids')  # Add your custom method here
 
     def list_vector_store_ids(self, obj):
         return ", ".join(str(f.name ) for f in obj.vector_stores.all())
@@ -76,13 +76,13 @@ class MyAssistantAdmin(admin.ModelAdmin):
     list_vector_store_ids.short_description = "VectorStore names"
     
 
-class MyMyThreadForm(forms.ModelForm):
+class MyThreadForm(forms.ModelForm):
     class Meta:
-        model = MyThread
+        model = Thread
         fields = '__all__'
 
-@admin.register(MyThread)
-class MyThreadAdmin(admin.ModelAdmin):
-    form = MyMyThreadForm;
+@admin.register(Thread)
+class ThreadAdmin(admin.ModelAdmin):
+    form = MyThreadForm;
     list_display = ('id', 'name', 'user', 'thread_id', 'assistant')  # Add your custom method here
 

@@ -260,8 +260,10 @@ LOGGING = {
 }
 
 RUNTESTS = "pytest" in sys.modules
-if not RUNTESTS :
-    DATABASE_ROUTERS = ['django_ragamuffin.db_routers.RagamuffinRouter']
+#if not RUNTESTS :
+DATABASE_ROUTERS = ['django_ragamuffin.db_routers.RagamuffinRouter']
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")
-print(f"AI_MODELS= {AI_MODELS}")
-print(f"DATABASES = {DATABASES}")
+#print(f"AI_MODELS= {AI_MODELS}")
+#print(f"DATABASES = {DATABASES}")
+print(f"AI_KEY = {AI_KEY}")
+EFFORT = 'low'

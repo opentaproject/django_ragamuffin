@@ -8,7 +8,7 @@ from django.conf import settings
 import os
 import string
 import random
-from django_ragamuffin.models import VectorStore, MyAssistant
+from django_ragamuffin.models import VectorStore, Assistant
 from django.utils.safestring import mark_safe
 from django.http import FileResponse
 import logging
@@ -85,7 +85,7 @@ def get_hash() :
 def doarchive( thread, msg ):
     assistant = thread.assistant
     if not assistant :
-        assistants = MyAssistant.objects.using('django_ragamuffin').filter(name=thread.name ).all()
+        assistants = Assistant.objects.using('django_ragamuffin').filter(name=thread.name ).all()
     if assistants :
         assistant = assistants[0]
     h = msg.get('hash',get_hash() )
@@ -109,12 +109,40 @@ CHOICES = {0 : 'Unread' ,
 
 
 
+def print_messages( thread ):
+    ms = thread.messages
+    print(f"\n")
+    clear = thread.clear
+    print(f"CLEAR = {clear}")
+    try :
+        for m in ms :
+            previous_response_id = m.get('previous_response_id','none1')
+            response_id = m.get('response_id','none2')
+            user = m.get('user','nouser')
+            response = m.get('assistant','noreponse')[0:15]
+            print(f"clear={clear} previous={previous_response_id} id={response_id} query={user} response={response}")
+    except :
+            print(f"ms = {ms}")
+    print("\n")
+
+
+
+def print_my_stack():
+    import sys,os,traceback
+    stdlib = os.path.dirname(os.__file__)
+    sitepkgs = next(p for p in sys.path if "site-packages" in p)
+    stack = traceback.extract_stack()
+    for frame in stack:
+        f = os.path.abspath(frame.filename)
+        if not f.startswith(stdlib) and not f.startswith(sitepkgs):
+            print(f"{frame.filename}:{frame.lineno} in {frame.name}")
+
 
 
 
 def get_assistant( name,user=None ):
     print(f"GET ASSISTANT NAME = {name}")
-    assistants = MyAssistant.objects.filter(name=name).all();
+    assistants = Assistant.objects.filter(name=name).all();
     print(f"ASSISTANTS = {assistants}")
     logger.info(f"GET_ASSISTANT assistants = {assistants}")
     model = settings.AI_MODEL
@@ -128,15 +156,15 @@ def get_assistant( name,user=None ):
     subdir = name.split('.')[-1];
     base_assistant = get_assistant( base,user);
     if base_assistant :
-        assistant = base_assistant.clone( name, model )
+        assistant = base_assistant.clone( name )
     else :
-        assistant = MyAssistant(name=name,model=model);
+        assistant = Assistant(name=name);
         vs = VectorStore(name=name);
         vs.save();
         assistant.save();
         assistant.vector_stores.set([vs.pk])
         assistant.save();
-        assistant = MyAssistant.objects.get(name=name,model=model)
+        assistant = Assistant.objects.get(name=name,model=model)
     return assistant 
 
 def thread_to_pdf( thread , prints ):
