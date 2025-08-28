@@ -264,8 +264,9 @@ def query_view(request,subpath):
             culled = [x for i,x in enumerate(messages) if i not in ideletes ]
             print(f"CULLED = {culled}")
             if None in deletions :
-                culled[-1]['response_id'] = None
-                print(f"SET A HISTORY RESET ON CULLED")
+                if len( culled ) > 0 :
+                    culled[-1]['response_id'] = None
+                    print(f"SET A HISTORY RESET ON CULLED")
             thread.messages= culled
             thread.save(update_fields=["messages" ])
             response = redirect(f"/django_ragamuffin/query/{assistant.name}/")

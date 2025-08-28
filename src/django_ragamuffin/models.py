@@ -683,6 +683,7 @@ class VectorStore( models.Model ):
 
 @receiver(pre_delete, sender=RemoteVectorStore)
 def custom_delete_remote_vector_store(sender, instance, **kwargs):
+    return
     client = OpenAIClient();
     vector_store_id = instance.vector_store_id
     #print(f"DELETE REMOTE_VECTOR_STORE_ID {vector_store_id}")
@@ -847,9 +848,10 @@ class Assistant( models.Model ):
 
     def delete_file( self, deletion ):
         deletion = int( deletion )
-        vs = self.vector_stores.all()[0];
-        file = OpenAIFile.objects.get(pk=deletion);
-        vs.files.remove(file)
+        vsall = self.vector_stores.all();
+        for vs in vsall :
+            file = OpenAIFile.objects.get(pk=deletion);
+            vs.files.remove(file)
 
     def parent( self ):
         name = '.'.join( self.name.split('.')[:-1] )
@@ -1228,8 +1230,9 @@ class Thread(models.Model) :
         else :
             if clear  or old_clear :
                 print(f"FIX MESSAGES BECAUSE CLEAR")
-                self.messages[-1]['previous_response_id'] = None
-                self.clear = False
+                if self.messages :
+                    self.messages[-1]['previous_response_id'] = None
+                    self.clear = False
             super().save(*args, **kwargs)
 
         #    thread_id = self.thread_id
