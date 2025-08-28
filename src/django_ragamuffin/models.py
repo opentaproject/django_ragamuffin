@@ -134,7 +134,6 @@ def create_or_retrieve_thread( assistant, name, user ) :
     else :
         thread = threads[0]
     thread.assistant = assistant
-    print(f"OBTAINED THREAD {thread.clear}")
     thread.save()
     return thread
 
@@ -764,7 +763,6 @@ class Assistant( models.Model ):
         return file_url
 
     def add_raw_files(self,  t1 ):
-        print(f"ADD_RAW_FILES")
         vss = self.vector_stores.all();
         if len( vss ) == 0 :
             vs = VectorStore( name=self.name);
@@ -778,7 +776,6 @@ class Assistant( models.Model ):
 
 
     def add_raw_file(self, t1):
-        print(f"ADD_RAW_FILE")
         vss = self.vector_stores.all()
         if len(vss) == 0:
             vs = VectorStore(name=self.name)
@@ -1205,15 +1202,11 @@ class Thread(models.Model) :
         return f"{self.name}"
 
     def mark_clear(self) :
-        print(f"MARK CLEAR IN THE SUBROUTINE")
         self.clear = True
         self.save(clear=True, update_fields=['clear'] );
 
 
     def save( self, clear=False, *args, **kwargs ):
-        print(f"SAVE THREAD ARGS {args} KWARGS {kwargs}")
-        print(f"OLD_CLEAR = {self.clear}")
-        print(f"CLEAR = {clear}")
         old_clear = self.clear
         is_new = self._state.adding  and not self.pk
         self.messages = self.messages
@@ -1229,7 +1222,6 @@ class Thread(models.Model) :
             super().save(*args, **kwargs) # Then update with true hashed path
         else :
             if clear  or old_clear :
-                print(f"FIX MESSAGES BECAUSE CLEAR")
                 if self.messages :
                     self.messages[-1]['previous_response_id'] = None
                     self.clear = False
@@ -1258,10 +1250,16 @@ class Thread(models.Model) :
 
 
     def run_query( self, clear=False , *args, **kwargs  ):
-        print(f"RUN_QUERY SELF_CLEAR = {self.clear} CLEAR={clear}")
         last_messages = kwargs.get('last_messages',settings.LAST_MESSAGES)
         max_num_results = kwargs.get('max_num_results',settings.MAX_NUM_RESULTS)
         query= kwargs['query']
+        if len( query.strip() )  == 0 :
+            msg =  {'user' : query, 'assistant' : 'blank!',
+                'ntokens' : 0,
+                'summary' : 'summary' ,
+                    }
+            return msg
+
         now = time.time();
     
         """ last_messages is either None for auto or an integer for length of thread history to keep at OpenAI. 
@@ -1310,7 +1308,6 @@ class Thread(models.Model) :
                     'previous_response_id' : previous_response_id }
 
         def my_run_remote_query( context ) :
-            print(f"CONTEXT = {context}")
             now = time.time();
             openai = context['openai']; 
             thread_id = context['thread_id'];
@@ -1320,13 +1317,7 @@ class Thread(models.Model) :
             max_num_results = context['max_num_results']
             model = context['model']
             previous_response_id = context.get('previous_response_id',None)
-            print(f"MODEL = {model}")
-            print(f"QUERY = {query}")
-            print(f"INSTRUCTIONS = {instructions}")
-            print(f"PREVIOUS_RESPONSE_ID = {previous_response_id}")
             effort = settings.EFFORT
-            print(f"VSS = {vss}")
-            print(f"MODEL={model} input={query} instructions={instructions} effort={effort} vss={vss}")
             msg = ''
             if vss :
                 try :
@@ -1345,7 +1336,6 @@ class Thread(models.Model) :
                     payload_str = str(err).split(" - ", 1)[1]
                     payload = ast.literal_eval(payload_str)   # safe parse to dict
                     msg = payload["error"]["message"]
-                    print(f"MSG = {msg}")
                     RESPONSE = openai.responses.create(
                         model=model,
                         input=query,
@@ -1366,10 +1356,8 @@ class Thread(models.Model) :
                     )
 
 
-            print(f"RESPONSE = {RESPONSE}")
             output = RESPONSE.output
             response_id = RESPONSE.id
-            #print(f"OUTPUT = {output}")
             summary = 'Null'
             #print(f"SUMMARY = {summary}")
             ntokens = RESPONSE.usage.total_tokens
@@ -1577,7 +1565,6 @@ def handle_files_changed(sender, instance, action, reverse, model, pk_set, **kwa
                     messages = thread.messages;
                     if messages :
                         messages[-1]['response_id'] = None
-                        print(f"RESET MESSAGES PREVIOUS_RESPONSE_ID TO NONE")
                     thread.messages = messages;
                     thread.clear = True
                     thread.save();

@@ -106,7 +106,6 @@ def delete_assistant(request, pk):
 
 def edit_assistant(request, pk):
     assistant = get_object_or_404(Assistant, pk=pk)
-    print(f"EDIT_ASSISTANT INSTRUCTIONS = {assistant.instructions}")
     if request.method == 'POST':
         deletions = request.POST.getlist('deletion')
         if deletions :
@@ -181,7 +180,6 @@ FILENAME = "../README.md"
 def feedback_view(request,subpath):
     #print(f"SUBPATH IN FEEDBACK= {subpath}")
     #print(f"SUBPATH IN QUERYVIEW = {subpath}")
-    print(f"FEEDBACK VIEW ")
     subpath_ = re.sub( r"\.","_",subpath )
     segments = subpath_.split('/')
     last_messages = settings.LAST_MESSAGES;
@@ -209,17 +207,19 @@ def feedback_view(request,subpath):
         comment = options[1];
         choice = i
     if len( thread.messages) > 0 :
-        thread.messages[index].update( {'comment': comment , 'choice' : choice })
-        msg = thread.messages[index];
-        thread.save();
-        doarchive(thread, msg )
+        try :
+            thread.messages[index].update( {'comment': comment , 'choice' : choice })
+            msg = thread.messages[index];
+            thread.save();
+            doarchive(thread, msg )
+        except Exception as err :
+            print(f"ERROR {str(err)}")
     return JsonResponse({"success": True,'index' : index ,'comment' : comment , 'choice' :choice  })
 
 FILENAME = "../README.md"
 @csrf_exempt
 @login_required
 def query_view(request,subpath):
-    print(f"SUBPATH IN QUERYVIEW = {subpath}")
     subpath_ = re.sub( r"\.","_",subpath )
     segments = subpath_.split('/')
     last_messages = settings.LAST_MESSAGES;
@@ -242,14 +242,11 @@ def query_view(request,subpath):
     #    assistant = create_or_retrieve_assistant( name  , vs )
     #    return assistant
     assistant = get_assistant(name)
-    print(f"ASSISTANT = {assistant}")
-    print(f"GET ASSISTANT RETURNS {assistant}")
     #print(f"FILES OK? {assistant.files_ok()}")
     #print(f"REMOTE VECTOR_STORES = {assistant.get_remote_vector_stores()}")
     if not assistant :
         return HttpResponseForbidden(f"No assistant <b>{name} </b> exists.")
     model = get_current_model( request.user)
-    print(f"MODEL = {model}")
     thread = create_or_retrieve_thread( assistant, name , user )
     data = request.POST;
     if 'delete' in request.POST.getlist('action') :
@@ -257,16 +254,12 @@ def query_view(request,subpath):
         if deletes :
             messages = thread.messages;
             ideletes = [int(i) for i in deletes ];
-            print(f"IDELETES = {ideletes}")
             deletions =  [x['response_id']  for i,x in enumerate(messages) if i in ideletes and not i == 0 ]
-            print(f"DELETIONS = {deletions}")
             iculled = [i for i,x in enumerate(messages) if i not in ideletes ]
             culled = [x for i,x in enumerate(messages) if i not in ideletes ]
-            print(f"CULLED = {culled}")
             if None in deletions :
                 if len( culled ) > 0 :
                     culled[-1]['response_id'] = None
-                    print(f"SET A HISTORY RESET ON CULLED")
             thread.messages= culled
             thread.save(update_fields=["messages" ])
             response = redirect(f"/django_ragamuffin/query/{assistant.name}/")
@@ -298,7 +291,6 @@ def query_view(request,subpath):
                     break
             try:
                 if txt is None:
-                    print(f"CLEAR IN VIEWS {thread.clear}")
                     msg = thread.run_query(query=query, last_messages=last_messages, max_num_results=max_num_results)
                     txt = msg['assistant']
                     summary = msg.get('summary','NONE3')
@@ -333,6 +325,8 @@ def query_view(request,subpath):
     if f:
         summary = f[-1].get('summary','None')
     else :
+        summary = ''
+    if  len( query.strip() ) == 0 :
         summary = ''
     children = assistant.children();
     parent = assistant.parent();

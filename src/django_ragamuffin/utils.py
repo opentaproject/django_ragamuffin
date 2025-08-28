@@ -111,7 +111,6 @@ def print_messages( thread ):
     ms = thread.messages
     print(f"\n")
     clear = thread.clear
-    print(f"CLEAR = {clear}")
     try :
         for m in ms :
             previous_response_id = m.get('previous_response_id','none1')
@@ -139,9 +138,7 @@ def print_my_stack():
 
 
 def get_assistant( name,user=None ):
-    print(f"GET ASSISTANT NAME = {name}")
     assistants = Assistant.objects.filter(name=name).all();
-    print(f"ASSISTANTS = {assistants}")
     logger.info(f"GET_ASSISTANT assistants = {assistants}")
     model = settings.AI_MODEL
     if not assistants and not user.is_staff :
