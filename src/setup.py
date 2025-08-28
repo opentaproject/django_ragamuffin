@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 setup(
     name='django_ragamuffin',  
-    version='1.99.0.01',  
+    version='1.102.0.0',
     packages=find_packages(),
     include_package_data=True,  # Important for static files/migrations
     license='MIT License',  # Choose your license
@@ -21,7 +21,7 @@ setup(
     ],
     install_requires=[
         'Django>=5.1',  # Specify Django version requirements
-        'openai==1.99',
+        'openai==1.102.0',
         "annotated-types==0.7.0",
         "anyio==4.9.0",
         "asgiref==3.8.1",

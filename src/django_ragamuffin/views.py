@@ -160,7 +160,7 @@ def edit_assistant(request, pk):
 
 
         
-        assistant.save(using='django_ragamuffin')
+        assistant.save()
         form = AssistantEditForm(request.POST, instance=assistant )
         if form.is_valid():
             form.save()
@@ -257,17 +257,18 @@ def query_view(request,subpath):
         if deletes :
             messages = thread.messages;
             ideletes = [int(i) for i in deletes ];
+            print(f"IDELETES = {ideletes}")
             deletions =  [x['response_id']  for i,x in enumerate(messages) if i in ideletes and not i == 0 ]
             print(f"DELETIONS = {deletions}")
+            iculled = [i for i,x in enumerate(messages) if i not in ideletes ]
             culled = [x for i,x in enumerate(messages) if i not in ideletes ]
+            print(f"CULLED = {culled}")
             if None in deletions :
-                culled[-1]['previous_response_id'] = None
                 culled[-1]['response_id'] = None
                 print(f"SET A HISTORY RESET ON CULLED")
             thread.messages= culled
-            thread.save(update_fields=["messages","thread_id"])
+            thread.save(update_fields=["messages" ])
             response = redirect(f"/django_ragamuffin/query/{assistant.name}/")
-            return response
     elif 'print' in request.POST.getlist('action') :
         prints = request.POST.getlist('entry')
         if prints :

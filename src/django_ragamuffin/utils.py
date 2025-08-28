@@ -85,9 +85,7 @@ def get_hash() :
 def doarchive( thread, msg ):
     assistant = thread.assistant
     if not assistant :
-        assistants = Assistant.objects.using('django_ragamuffin').filter(name=thread.name ).all()
-    if assistants :
-        assistant = assistants[0]
+        assistant = Assistant.objects.get_or_create(name=thread.name)
     h = msg.get('hash',get_hash() )
     subdir =  assistant.name.split('.')
     p = os.path.join('/subdomain-data','openai','queries', *subdir,thread.user.username,)

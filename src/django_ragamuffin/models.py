@@ -781,9 +781,9 @@ class Assistant( models.Model ):
         vss = self.vector_stores.all()
         if len(vss) == 0:
             vs = VectorStore(name=self.name)
-            vs.save(using='django_ragamuffin')
+            vs.save()
             self.vector_stores.add(vs)
-            self.save(using='django_ragamuffin')
+            self.save()
         else:
             vs = vss[0]
         #print(f"VSOLD = {vs.get_vector_store_id()}")
@@ -793,7 +793,7 @@ class Assistant( models.Model ):
             vs.save()
             #print(f"C SAVED")
             self.vector_stores.set([vs])
-            self.save(using='django_ragamuffin')
+            self.save()
         except Exception as err:
             dump_remote_vector_stores("ERROR IN ADD_RAW_FILE")
         #print(f"VSNEW = {vs.get_vector_store_id()}")
@@ -991,7 +991,7 @@ class Assistant( models.Model ):
         assistant.temperature = self.temperature;
         assistant.save();
         assistant.vector_stores.set([vnew.pk])
-        assistant.save(using='django_ragamuffin');
+        assistant.save();
         #print(f"RETURNING CLONED ASSISTANT {assistant}")
         return assistant;
 
@@ -1280,8 +1280,6 @@ class Thread(models.Model) :
         instructions = assistant.get_instructions()
         vss = [];
         for vs in vector_stores :
-            #print(f"VECTOR_STORE = {vs}")
-            #print(f"VSID = {vs.vsid}")
             vss.append(vs.vsid)
         thread = self
         thread_id = thread.thread_id
@@ -1309,7 +1307,7 @@ class Thread(models.Model) :
                     'previous_response_id' : previous_response_id }
 
         def my_run_remote_query( context ) :
-            #print(f"CONTEXT = {context}")
+            print(f"CONTEXT = {context}")
             now = time.time();
             openai = context['openai']; 
             thread_id = context['thread_id'];
@@ -1319,22 +1317,42 @@ class Thread(models.Model) :
             max_num_results = context['max_num_results']
             model = context['model']
             previous_response_id = context.get('previous_response_id',None)
-            #print(f"MODEL = {model}")
-            #print(f"QUERY = {query}")
-            #print(f"INSTRUCTIONS = {instructions}")
-            #print(f"PREVIOUS_RESPONSE_ID = {previous_response_id}")
+            print(f"MODEL = {model}")
+            print(f"QUERY = {query}")
+            print(f"INSTRUCTIONS = {instructions}")
+            print(f"PREVIOUS_RESPONSE_ID = {previous_response_id}")
             effort = settings.EFFORT
+            print(f"VSS = {vss}")
+            print(f"MODEL={model} input={query} instructions={instructions} effort={effort} vss={vss}")
+            msg = ''
             if vss :
-                RESPONSE = openai.responses.create(
-                    model=model,
-                    input=query,
-                    previous_response_id=previous_response_id,
-                    instructions=instructions,
-                    reasoning={"effort": effort, 'summary': 'auto'},
-                    tools=[{"type": "file_search",
+                try :
+                    RESPONSE = openai.responses.create(
+                        model=model,
+                        input=query,
+                        previous_response_id=previous_response_id,
+                        instructions=instructions,
+                        reasoning={"effort": effort, 'summary': 'auto'},
+                        tools=[{"type": "file_search",
                             "vector_store_ids": vss  # your vector store id
                             }]
                     )
+                except Exception as err:
+                    import ast
+                    payload_str = str(err).split(" - ", 1)[1]
+                    payload = ast.literal_eval(payload_str)   # safe parse to dict
+                    msg = payload["error"]["message"]
+                    print(f"MSG = {msg}")
+                    RESPONSE = openai.responses.create(
+                        model=model,
+                        input=query,
+                        previous_response_id=previous_response_id,
+                        instructions=instructions,
+                        reasoning={"effort": effort ,'summary': 'auto'},
+                        )
+
+
+
             else :
                 RESPONSE = openai.responses.create(
                     model=model,
@@ -1345,7 +1363,7 @@ class Thread(models.Model) :
                     )
 
 
-            #print(f"RESPONSE = {RESPONSE}")
+            print(f"RESPONSE = {RESPONSE}")
             output = RESPONSE.output
             response_id = RESPONSE.id
             #print(f"OUTPUT = {output}")
@@ -1357,7 +1375,7 @@ class Thread(models.Model) :
             for o in output :
                 #print(f"O = {o}")
                 if hasattr(o,'summary'):
-                    summary = ''
+                    summary = f"**{msg}**<br><br>\n" 
                     summaries = o.summary
                     for s in summaries :
                         if hasattr(s ,'text' ):
@@ -1547,7 +1565,6 @@ def handle_files_changed(sender, instance, action, reverse, model, pk_set, **kwa
         assistants = list( set( Assistant.objects.filter(name=instance.name).all() ) )
         #print(f"ASSISTANTS = {assistants}")
         if len( deletions) > 0 :
-            print(f"DELTIONS = {deletions}")
             for assistant in assistants :
                 threads = assistant.get_all_threads()
                 for thread in threads :
