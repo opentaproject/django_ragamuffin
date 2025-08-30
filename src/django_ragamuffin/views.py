@@ -326,7 +326,10 @@ def query_view(request,subpath):
         summary = f[-1].get('summary','None')
     else :
         summary = ''
-    if  len( query.strip() ) == 0 :
+    try :
+        if  len( query.strip() ) == 0 :
+            summary = ''
+    except :
         summary = ''
     children = assistant.children();
     parent = assistant.parent();
