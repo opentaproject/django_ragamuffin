@@ -15,7 +15,7 @@ def needs_migration(using='default'):
     executor = MigrationExecutor(connection)
     targets = executor.loader.graph.leaf_nodes()
     plan = executor.migration_plan(targets)
-    print(f"using={using} PLAN = {plan}")
+    #print(f"using={using} PLAN = {plan}")
     return bool(plan)
 
 
@@ -28,10 +28,10 @@ def create_database_if_not_exists(db_name, host,user , password , superuser, sup
     cursor.execute(sql.SQL("SELECT 1 FROM pg_catalog.pg_database WHERE datname = %s"), [db_name])
     exists_  = cursor.fetchone()
     exists = bool(exists_ and exists_[0])
-    print(f"CREATE_DATABASE {db_name} exists = {exists}")
+    #print(f"CREATE_DATABASE {db_name} exists = {exists}")
     
     if not exists:
-        print(f"DOES NOT EXISTS")
+        #print(f"DOES NOT EXISTS")
         # Database does not exist, so create it
         cursor.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(db_name)))
         settings.DEBUG=True
@@ -42,7 +42,6 @@ def create_database_if_not_exists(db_name, host,user , password , superuser, sup
         #call_command( 'migrate', database='django_ragamuffin'  )
     for db_alias in settings.DATABASES.keys():
         needm = needs_migration( db_alias )
-        print(f"Migrating ? : {db_alias} {needm} ")
         if needm :
             print(f"YES Migrating: {db_alias}")
             call_command("migrate", database=db_alias)

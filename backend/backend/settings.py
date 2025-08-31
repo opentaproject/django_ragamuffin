@@ -183,14 +183,12 @@ AI_KEY =  os.environ.get("OPENAI_API_KEY",None)
 AI_MODEL = os.environ.get('AI_MODEL','gpt-5-mini')
 OPENAI_UPLOAD_STORAGE =  os.environ.get("OPENAI_UPLOAD_STORAGE",'/tmp/openaifiles')
 os.makedirs(OPENAI_UPLOAD_STORAGE, exist_ok=True)
-INSTALLED_APPS.append('django_ragamuffin')
 STATIC_ROOT = os.path.join(BASE_DIR, "deploystatic")
 STATIC_URL = "deploystatic/"
 MEDIA_URL = 'media/'
 MEDIA_ROOT = OPENAI_UPLOAD_STORAGE
 
 STATIC_URL = "/static/"
-print(f"STORAGE = {OPENAI_UPLOAD_STORAGE}")
 MAXWAIT = 120 ; # WAIT MAX 120 seconds
 DEFAULT_TEMPERATURE = 0.2;
 LAST_MESSAGES = 99
@@ -261,11 +259,7 @@ LOGGING = {
 
 RUNTESTS = "pytest" in sys.modules
 #if not RUNTESTS :
-DATABASE_ROUTERS = ['django_ragamuffin.db_routers.RagamuffinRouter']
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")
-#print(f"AI_MODELS= {AI_MODELS}")
-#print(f"DATABASES = {DATABASES}")
-print(f"AI_KEY = {AI_KEY}")
-EFFORT = 'low'
-from importlib import import_module
-import_module django_ragamuffin.newsettings
+INSTALLED_APPS.append('django_ragamuffin')
+DATABASE_ROUTERS = [ 'django_ragamuffin.db_routers.RagamuffinRouter' ]
+from django_ragamuffin.settings import *
+

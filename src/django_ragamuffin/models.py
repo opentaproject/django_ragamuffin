@@ -281,6 +281,7 @@ class OpenAIClient( OpenAI ):
                 #name = randstring('vss')
                 name = checksum
                 #print(f"CREATING {name} with FILE_IDS = {new_file_ids}")
+                print(f"AI_KEY = {settings.AI_KEY}")
                 new_remote_vector_store = self.vector_stores.create(name=name,file_ids=new_file_ids , 
                     metadata={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] , "checksum" : new_checksum } )
                 remote_wait_for_vector_store_ready(self, new_remote_vector_store.id, timeout=settings.MAXWAIT)
