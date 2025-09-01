@@ -124,6 +124,7 @@ def create_or_retrieve_assistant( name , vs ):
     return assistant
 
 def create_or_retrieve_thread( assistant, name, user ) :
+    print(f"CREATE_OR_RETRIEVE_THREAD {assistant} {name} {user}")
     if user.pk :
         threads = Thread.objects.filter(name=name,user=user)
     else :
@@ -1251,6 +1252,7 @@ class Thread(models.Model) :
 
 
     def run_query( self, clear=False , *args, **kwargs  ):
+        more_instructions = kwargs.get('instructions', '')
         last_messages = kwargs.get('last_messages',settings.LAST_MESSAGES)
         max_num_results = kwargs.get('max_num_results',settings.MAX_NUM_RESULTS)
         query= kwargs['query']
@@ -1279,7 +1281,8 @@ class Thread(models.Model) :
         #    assistant.save();
         assistant_id = assistant.assistant_id
         vector_stores = assistant.vector_stores.all()
-        instructions = assistant.get_instructions()
+        instructions = assistant.get_instructions() + '\n' + more_instructions
+        print(f"INSTRUCTIONS IN QUERY IS {instructions}")
         vss = [];
         for vs in vector_stores :
             vss.append(vs.vsid)
