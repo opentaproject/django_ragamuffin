@@ -944,16 +944,16 @@ class Assistant( models.Model ):
 
         else :
             #print(f"IS NOT NEW SELF_INSTRUCTIONS = >{self.instructions}<")
-            self = Assistant.objects.get(pk=self.pk)
-            try :
-                if len( self.instructions ) > 1 :
-                    pass
-                else :
-                    self.instructions = old_instructions
-            except: 
-                pass
-            if old_temperature :
-                self.temperature = old_temperature
+            #self = Assistant.objects.get(pk=self.pk)
+            #try :
+            #    if len( self.instructions ) > 1 :
+            #        pass
+            #    else :
+            #        self.instructions = old_instructions
+            #except: 
+            #    pass
+            #if old_temperature :
+            #    self.temperature = old_temperature
             #print(f"OLD_INSTRUCTIONS = {old_instructions}")
             #print(f"OLD_TEMPERATUR = {old_temperature}")
             super().save( *args, **kwargs)

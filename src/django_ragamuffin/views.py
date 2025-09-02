@@ -159,11 +159,19 @@ def edit_assistant(request, pk):
 
 
         
+        print(f"POST =  {request.POST}")
+        post = request.POST
+        if 'instructions' in post :
+            assistant.instructions = post.getlist('instructions')[0]
+            assistant.save(update_fields=['instructions'])
+        if 'temperature' in post :
+            assistant.temperature = post.getlist('temperature')[0]
+            assistant.save(update_fields=['temperature'])
         assistant.save()
-        form = AssistantEditForm(request.POST, instance=assistant )
-        if form.is_valid():
-            form.save()
-            return redirect('edit_assistant', pk=assistant.pk)  # or another success URL
+        #form = AssistantEditForm(request.POST, instance=assistant )
+        #if form.is_valid():
+        #    form.save()
+        return redirect('edit_assistant', pk=assistant.pk)  # or another success URL
     else:
         form = AssistantEditForm(instance=assistant, custom_data=assistant.files() )
         if form.is_valid() :
