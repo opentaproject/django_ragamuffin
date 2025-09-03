@@ -21,6 +21,7 @@ class AssistantEditForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.custom_data = kwargs.pop("custom_data", {})
+        self.local_files = kwargs.pop("local_files", {})
         super().__init__(*args, **kwargs)
         instance = self.instance
         # Set initial value for the readonly field
@@ -131,9 +132,10 @@ def edit_assistant(request, pk):
                     n = re.sub( p , new_name, a.name)
                     a.name = n
                     a.save(update_fields=['name']);
-                    vs = a.vector_stores.all()[0];
-                    vs.name = n;
-                    vs.save();
+                    if a.vector_stores.all():
+                        vs = a.vector_stores.all()[0];
+                        vs.name = n;
+                        vs.save();
                 n = re.sub( p, new_name, assistant.name)
                 assistant.name = new_name
                 a = assistant;
@@ -173,7 +175,7 @@ def edit_assistant(request, pk):
         #    form.save()
         return redirect('edit_assistant', pk=assistant.pk)  # or another success URL
     else:
-        form = AssistantEditForm(instance=assistant, custom_data=assistant.files() )
+        form = AssistantEditForm(instance=assistant, custom_data=assistant.files(), local_files=assistant.local_files()  )
         if form.is_valid() :
             form.save()
             return redirect('edit_assistant', pk=assistant.pk)  # or another success URL

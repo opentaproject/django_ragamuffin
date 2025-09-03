@@ -795,8 +795,7 @@ class Assistant( models.Model ):
 
     def get_vector_stores( self ): # GET THE LAST INSTRUCTIONS IN THE TREE
         print(f"ASSISTAN GET VETOR STORES")
-        a = self;
-        p = a.parent();
+        p = self;
         vector_stores = [] # VectorStore.objects.none()
         if p :
             i = 0;
@@ -865,7 +864,7 @@ class Assistant( models.Model ):
 
 
     def file_pks( self, *args, **kwargs ):
-        vs = self.vector_stores.all()
+        vs = self.get_vector_stores()
         f = []
         for v in vs :
             for vf in v.files.all():
@@ -874,7 +873,7 @@ class Assistant( models.Model ):
         return f
 
     def file_ids(self, *args, **kwargs ):
-        vs = self.vector_stores.all()
+        vs = self.get_vector_stores()
         f = []
         for v in vs :
             for vf in v.files.all():
@@ -883,7 +882,15 @@ class Assistant( models.Model ):
         return f
 
     def files( self, *args, **kwargs ):
-        vs = self.vector_stores.all()
+        vs = self.get_vector_stores()
+        f = []
+        for v in vs :
+            for vf in v.files.all():
+                f.append( ( vf.pk , vf.name ) )
+        return f
+
+    def local_files( self, *args, **kwargs ):
+        vs = self.vector_stores.all();
         f = []
         for v in vs :
             for vf in v.files.all():
@@ -894,8 +901,11 @@ class Assistant( models.Model ):
 
 
 
+
+
+
     def file_names( self, *args, **kwargs ):
-        vs = self.vector_stores.all()
+        vs = self.get_vector_stores()
         f = []
         for v in vs :
             for vf in v.files.all():
@@ -908,7 +918,7 @@ class Assistant( models.Model ):
             return self.file_ids( args, kwargs )
         client = OpenAIClient()
         assistant = self
-        vss = self.vector_stores.all();
+        vss = self.get_vector_stores();
         for vs in vss :
             files = vs.files;
         assistant_id = assistant.assistant_id
@@ -925,7 +935,7 @@ class Assistant( models.Model ):
     def get_remote_vector_stores( self, *args, **kwargs ):
         client = OpenAIClient()
         assistant = self
-        vss = self.vector_stores.all();
+        vss = self.get_vector_stores();
         remote_ids = [ item.vsid for item in vss ]
         return remote_ids 
 

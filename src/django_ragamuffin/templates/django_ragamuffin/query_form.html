@@ -192,14 +192,14 @@
                     <div class="navigation">
                         {% if parent %}
                             <span>
-                                &uarr; <a href='/query/{{parent.name|replace:".,/" }}'> {{parent.name|replace:".,/" }} </a>
+                                &uarr; <a href='/django_ragamuffin/query/{{parent.name|replace:".,/" }}'> {{parent.name|replace:".,/" }} </a>
                             </span>
                         {% endif %}
                         <button class="here-button" style="padding-left: 6px;"> <b> &bull; {{ name | replace:".,/"}} </b> </button>
                         {% for item in children %}
                             {% for pk,name in item.items %}
                                 <span  style="padding-left: 12px;"> &darr;
-                                    <a href='/query/{{name|replace:".,/" }}'> {{name|replace:".,/" }} </a>
+                                    <a href='/django_ragamuffin/query/{{name|replace:".,/" }}'> {{name|replace:".,/" }} </a>
                                 </span>
                             {% endfor %}
                         {% endfor %}
