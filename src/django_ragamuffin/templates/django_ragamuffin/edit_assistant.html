@@ -81,7 +81,9 @@
 	{% if form.custom_data %}
             {% for k,v  in  form.custom_data %}
 	    <small>
-		    <span name='file_row' class="form-row"> [ {{v}} ]  </span>
+		    [ <span name='file_row' class="form-row"> 
+<a href="/django_ragamuffin/media/{{v|strip_extension}}/{{ v }}"> {{v}} </a>  </span> ]
+		    </span>
 	    </small>
             {% endfor %}
 	  {% endif %}
