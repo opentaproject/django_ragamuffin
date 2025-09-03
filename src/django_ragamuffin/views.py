@@ -91,7 +91,7 @@ def delete_assistant(request, pk):
     threads = assistant.threads.all();
     for thread in threads :
         thread.delete();
-    vss = assistant.vector_stores.all();
+    vss = assistant.get_vector_stores().all();
     for vs in vss:
         vs.delete();
     parent = assistant.parent();
@@ -164,9 +164,9 @@ def edit_assistant(request, pk):
         if 'instructions' in post :
             assistant.instructions = post.getlist('instructions')[0]
             assistant.save(update_fields=['instructions'])
-        if 'temperature' in post :
-            assistant.temperature = post.getlist('temperature')[0]
-            assistant.save(update_fields=['temperature'])
+        #if 'temperature' in post :
+            #assistant.temperature = post.getlist('temperature')[0]
+            #assistant.save(update_fields=['temperature'])
         assistant.save()
         #form = AssistantEditForm(request.POST, instance=assistant )
         #if form.is_valid():

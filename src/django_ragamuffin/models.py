@@ -791,6 +791,26 @@ class Assistant( models.Model ):
         if appended :
             instructions = instructions + "\n" + appended
         return instructions
+
+
+    def get_vector_stores( self ): # GET THE LAST INSTRUCTIONS IN THE TREE
+        print(f"ASSISTAN GET VETOR STORES")
+        a = self;
+        p = a.parent();
+        vector_stores = [] # VectorStore.objects.none()
+        if p :
+            i = 0;
+            while not p.parent() == None and len( vector_stores ) == 0 :
+                p = p.parent();
+                vector_stores = p.get_vector_stores();
+                i = i + 1 ;
+        print(f"VECTOR_STORES INITIALL IS {vector_stores}")
+        if self.vector_stores.all() :
+            print(f"RETURN IMMEDIATELY add {vector_stores} + {self.vector_stores.all() }")
+            vector_stores = vector_stores + list( self.vector_stores.all() )
+        print(f"RETURNING {vector_stores}")
+        return vector_stores
+
             
 
     def save( self, *args, **kwargs ):
@@ -804,12 +824,9 @@ class Assistant( models.Model ):
             vss = VectorStore.objects.filter( name=self.name);
             if vss :
                 vs = vss[0]
-            else :
-                vs = VectorStore(name=self.name)
-            vs.save();
-            self.vector_stores.set([vs])
-            self.save();
-            transaction.on_commit(self.save ) 
+                self.vector_stores.set([vs])
+                self.save();
+                transaction.on_commit(self.save ) 
 
         else :
             super().save( *args, **kwargs)
@@ -817,23 +834,23 @@ class Assistant( models.Model ):
 
     def clone( self, newname ) :
         vss = self.vector_stores.all();
-        if vss :
-            vs = vss[0]
-            vnew  = vs.clone( newname )
-        else :
-            vsnews = VectorStore.objects.filter(name=newname).all()
-            if vsnews :
-                vnew = vsnews[0]
-            else :
-                vnew = VectorStore(name=newname)
-                vnew.save();
+        #if vss :
+        #    vs = vss[0]
+        #    vnew  = vs.clone( newname )
+        #else :
+        #    vsnews = VectorStore.objects.filter(name=newname).all()
+        #    if vsnews :
+        #        vnew = vsnews[0]
+        #    else :
+        #        vnew = VectorStore(name=newname)
+        #        vnew.save();
         assistant = Assistant(name=newname)
-        assistant.instructions = self.instructions;
+        #assistant.instructions = self.instructions;
         assistant.json_field = self.json_field;
         assistant.temperature = self.temperature;
         assistant.save();
-        assistant.vector_stores.set([vnew.pk])
-        assistant.save();
+        #assistant.vector_stores.set([vnew.pk])
+        #assistant.save();
         return assistant;
 
     
@@ -998,14 +1015,17 @@ class Thread(models.Model) :
             assistant = assistants[0]
         threads = assistant.get_all_threads();
         assistant_id = assistant.assistant_id
-        vector_stores = assistant.vector_stores.all()
+        vector_stores = assistant.get_vector_stores()
+        vss = [ item.vsid for item in vector_stores ]
+        print(f"VECTOR_STORES = {vss}")
         instructions = assistant.get_instructions() + '\n' + more_instructions
         print(f"INSTRUCTIONS IN QUERY IS {instructions}")
-        vss = [];
-        for vs in vector_stores :
-            vss.append(vs.vsid)
+        #vss = [];
+        #for vs in vector_stores :
+        #    vss.append(vs.vsid)
         thread = self
         thread_id = thread.thread_id
+        print(f"VSS = {vss}")
     
         encoding = tiktoken.get_encoding("cl100k_base")
 
@@ -1026,10 +1046,11 @@ class Thread(models.Model) :
         context = {'openai' : openai, 'instructions' : instructions, 'model' : model, 
                     'thread_id': thread_id, 'assistant_id' : assistant_id, 'query': query, 
                     'last_messages' : last_messages, 'max_num_results' : max_num_results, 
-                    'previous_response_id' : previous_response_id }
+                   'previous_response_id' : previous_response_id ,'vss' : vss }
 
         def my_run_remote_query( context ) :
             now = time.time();
+            vss = context['vss']
             openai = context['openai']; 
             thread_id = context['thread_id'];
             assistant_id = context['assistant_id'];
@@ -1039,6 +1060,7 @@ class Thread(models.Model) :
             model = context['model']
             previous_response_id = context.get('previous_response_id',None)
             effort = settings.EFFORT
+            print(f"CONTEXT VSS = {vss}")
             msg = ''
             if vss :
                 try :
