@@ -240,22 +240,12 @@ def query_view(request,subpath):
     if created :
         user.is_staff = request.user.is_staff
         user.save();
-
-
-
-    #def setup_default_assistant(src):
-    #    name = src.split('/')[-1].split('.')[0]
-    #    t1 = upload_or_retrieve_openai_file( name, src )
-    #    vs = create_or_retrieve_vector_store( name, [t1])
-    #    assistant = create_or_retrieve_assistant( name  , vs )
-    #    return assistant
-    assistant = get_assistant(name)
-    #print(f"FILES OK? {assistant.files_ok()}")
-    #print(f"REMOTE VECTOR_STORES = {assistant.get_remote_vector_stores()}")
+    quser, _  = QUser.objects.get_or_create(username=request.user.username)
+    assistant = get_assistant(name, quser)
     if not assistant :
         return HttpResponseForbidden(f"No assistant <b>{name} </b> exists.")
-    model = get_current_model( request.user)
-    thread = create_or_retrieve_thread( assistant, name , user )
+    model = get_current_model( quser)
+    thread = create_or_retrieve_thread( assistant, name , quser )
     data = request.POST;
     if 'delete' in request.POST.getlist('action') :
         deletes = request.POST.getlist('entry')

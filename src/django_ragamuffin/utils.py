@@ -85,7 +85,7 @@ def get_hash() :
 def doarchive( thread, msg ):
     assistant = thread.assistant
     if not assistant :
-        assistant = Assistant.objects.get_or_create(name=thread.name)
+        assistant , _ = Assistant.objects.get_or_create(name=thread.name)
     h = msg.get('hash',get_hash() )
     subdir =  assistant.name.split('.')
     p = os.path.join('/subdomain-data','openai','queries', *subdir,thread.user.username,)
@@ -137,11 +137,11 @@ def print_my_stack():
 
 
 
-def get_assistant( name,user=None ):
+def get_assistant( name , quser ):
     assistants = Assistant.objects.filter(name=name).all();
     logger.info(f"GET_ASSISTANT assistants = {assistants}")
     model = settings.AI_MODEL
-    if not assistants and not user.is_staff :
+    if not assistants and not quser.is_staff :
         return None
     if assistants :
         return  assistants[0]
@@ -149,7 +149,7 @@ def get_assistant( name,user=None ):
     if base == '' :
         return None
     subdir = name.split('.')[-1];
-    base_assistant = get_assistant( base,user);
+    base_assistant = get_assistant( base,quser);
     if base_assistant :
         assistant = base_assistant.clone( name )
     else :
