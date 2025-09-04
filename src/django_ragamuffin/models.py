@@ -693,6 +693,32 @@ class Assistant( models.Model ):
         self.add_raw_file( t1 )
         return file_url
 
+    def add_file_by_name(self, full_path):
+        """Copy a local file into storage and register it.
+
+        - `full_path`: absolute path to a local file to import.
+        - Copies the file into `OPENAI_UPLOAD_STORAGE/<stem>/<basename>`
+          (matching the pattern used by `add_file`).
+        - Returns a media URL to the stored file.
+        """
+        if not os.path.isabs(full_path) or not os.path.exists(full_path):
+            raise FileNotFoundError(f"File not found: {full_path}")
+
+        base = os.path.basename(full_path)
+        stem = '.'.join(base.split('.')[:-1]) or base
+        relpath = f"{stem}/{base}"
+
+        dst = os.path.join(settings.OPENAI_UPLOAD_STORAGE, relpath)
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.copy2(full_path, dst)
+
+        # Register with our OpenAIFile model and link to vector store
+        t1 = upload_or_retrieve_openai_file(stem, dst)
+        self.add_raw_file(t1)
+
+        file_url = settings.MEDIA_URL + upload_storage.url(relpath)
+        return file_url
+
     def add_raw_files(self,  t1 ):
         vss = self.vector_stores.all();
         if len( vss ) == 0 :
@@ -1306,6 +1332,4 @@ def delete_remote_vector_stores():
     remote_vector_stores = RemoteVectorStore.objects.all();
     for remote_vector_store in remote_vector_stores :
         remote_vector_store.delete();
-
-
 
