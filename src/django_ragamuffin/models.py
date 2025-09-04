@@ -831,7 +831,8 @@ class Assistant( models.Model ):
             super().save( *args, **kwargs)
 
 
-    def clone( self, newname ) :
+    def clone_stub( self, newname ) :
+        print(f"CLONED_STUB  {newname}")
         vss = self.vector_stores.all();
         #if vss :
         #    vs = vss[0]
@@ -850,6 +851,31 @@ class Assistant( models.Model ):
         assistant.save();
         #assistant.vector_stores.set([vnew.pk])
         #assistant.save();
+        return assistant;
+
+
+
+
+    def clone( self, newname ) :
+        print(f"CLONED {newname}")
+        vss = self.vector_stores.all();
+        if vss :
+            vs = vss[0]
+            vnew  = vs.clone( newname )
+        else :
+            vsnews = VectorStore.objects.filter(name=newname).all()
+            if vsnews :
+                vnew = vsnews[0]
+            else :
+                vnew = VectorStore(name=newname)
+                vnew.save();
+        assistant = Assistant(name=newname)
+        assistant.instructions = self.instructions;
+        assistant.json_field = self.json_field;
+        assistant.temperature = self.temperature;
+        assistant.save();
+        assistant.vector_stores.set([vnew.pk])
+        assistant.save();
         return assistant;
 
     

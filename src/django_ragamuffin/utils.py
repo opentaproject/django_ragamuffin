@@ -151,15 +151,15 @@ def get_assistant( name , quser ):
     subdir = name.split('.')[-1];
     base_assistant = get_assistant( base,quser);
     if base_assistant :
-        assistant = base_assistant.clone( name )
+        assistant = base_assistant.clone_stub( name )
     else :
         assistant = Assistant(name=name);
-        vs = VectorStore(name=name);
-        vs.save();
+        #vs = VectorStore(name=name);
+        #vs.save();
         assistant.save();
-        assistant.vector_stores.set([vs.pk])
-        assistant.save();
-        assistant = Assistant.objects.get(name=name,model=model)
+        #assistant.vector_stores.set([vs.pk])
+        #assistant.save();
+        #assistant = Assistant.objects.get(name=name,model=model)
     return assistant 
 
 def thread_to_pdf( thread , prints ):
