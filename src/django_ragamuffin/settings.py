@@ -9,10 +9,10 @@ os.makedirs(OPENAI_UPLOAD_STORAGE, exist_ok=True)
 API_APP = 'localhost'
 DJANGO_RAGAMUFFIN_DB = os.environ.get("DJANGO_RAGAMUFFIN_DB",None) 
 d = settings.DATABASES['default'];
-PGDATABASE = d['NAME'];
-PGHOST = d['HOST']
-PGUSER = d['USER'];
-PGPASSWORD = d['PASSWORD']
+PGDATABASE = d.get('NAME','postgres')
+PGHOST = d.get('HOST','localhost')
+PGUSER = d.get('USER','postgres')
+PGPASSWORD = d.get('PASSWORD','postgres')
 if not hasattr(settings, 'SUBDOMAIN' ):
     SUBDOMAIN = os.environ.get('SUBDOMAIN','query')
 MAXWAIT = 120 ; # WAIT MAX 120 seconds
@@ -32,10 +32,13 @@ if not 'django_ragamuffin' in settings.LOGGING['loggers'] :
 
 RUNTESTS = "pytest" in sys.modules
 if not RUNTESTS :
+    printf("NOT RUNTESTS")
     if not hasattr('settings','DATABASE_ROUTERS') :
         DATABASE_ROUTERS = ['django_ragamuffin.db_routers.RagamuffinRouter'] 
     else :
         DATABASE_ROUTERS = ['django_ragamuffin.db_routers.RagamuffinRouter'] + settings.DATABASE_ROUTERS
+else :
+    DATABASE_ROUTERS = ['django_ragamuffin.db_routers.RagamuffinRouter'] 
 
 APP_KEY = os.environ.get('APP_KEY',None)
 APP_ID = os.environ.get('APP_ID',None)
@@ -62,16 +65,17 @@ AI_MODELS = {'staff' : 'gpt-5-mini', 'default' : AI_MODEL }
 API_APP = 'localhost'
 EFFORT = 'low'
 DJANGO_RAGAMUFFIN_DB = os.environ.get("DJANGO_RAGAMUFFIN_DB",None) 
-settings.DATABASES.update({
-    'django_ragamuffin': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': DJANGO_RAGAMUFFIN_DB,
-        'USER': PGUSER,
-        'PASSWORD': PGPASSWORD,
-        'HOST': 'localhost',
-        'PORT': '5432',
-        'ATOMIC_REQUESTS' : False,
-        }
-    })
+if not RUNTESTS :
+    settings.DATABASES.update({
+        'django_ragamuffin': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': DJANGO_RAGAMUFFIN_DB,
+            'USER': PGUSER,
+            'PASSWORD': PGPASSWORD,
+            'HOST': 'localhost',
+            'PORT': '5432',
+            'ATOMIC_REQUESTS' : False,
+            }
+        })
 
 
