@@ -37,8 +37,6 @@ if not RUNTESTS :
         DATABASE_ROUTERS = ['django_ragamuffin.db_routers.RagamuffinRouter'] 
     else :
         DATABASE_ROUTERS = ['django_ragamuffin.db_routers.RagamuffinRouter'] + settings.DATABASE_ROUTERS
-else :
-    DATABASE_ROUTERS = ['django_ragamuffin.db_routers.RagamuffinRouter'] 
 
 APP_KEY = os.environ.get('APP_KEY',None)
 APP_ID = os.environ.get('APP_ID',None)
