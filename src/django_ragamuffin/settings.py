@@ -32,7 +32,7 @@ if not 'django_ragamuffin' in settings.LOGGING['loggers'] :
 
 RUNTESTS = "pytest" in sys.modules
 if not RUNTESTS :
-    printf("NOT RUNTESTS")
+    print(f"NOT RUNTESTS")
     if not hasattr('settings','DATABASE_ROUTERS') :
         DATABASE_ROUTERS = ['django_ragamuffin.db_routers.RagamuffinRouter'] 
     else :
