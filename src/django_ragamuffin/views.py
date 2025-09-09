@@ -167,8 +167,17 @@ def edit_assistant(request, pk):
             assistant.instructions = post.getlist('instructions')[0]
             assistant.save(update_fields=['instructions'])
         if 'temperature' in post :
-            assistant.temperature = post.getlist('temperature')[0]
-            assistant.save(update_fields=['temperature'])
+            temperature = post.getlist('temperature')
+            print(f"TEMPERATUR OBTAINED = {temperature}")
+            if temperature == [] :
+                temperature = settings.DEFAULT_TEMPERATURE
+            else :
+                temperature = temperature[0]
+            assistant.temperature = temperature
+        if not assistant.temperature :
+            assistant.temperature = settings.DEFAULT_TEMPERATURE
+
+        print(f"ASSISTANT_TEMPERATURE = {assistant.temperature}")
         assistant.save()
         #form = AssistantEditForm(request.POST, instance=assistant )
         #if form.is_valid():
