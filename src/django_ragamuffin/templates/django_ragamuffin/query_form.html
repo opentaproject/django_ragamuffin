@@ -27,9 +27,29 @@
                 src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
         </script>
         <style> form label { display: inline-block; margin-right: 10px; } </style>
+	<style>
+  .back-button {
+    display: inline-block;
+    padding: 1px 2px;
+    background-color: blue ; /* green */
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: sans-serif;
+    transition: background-color:  blue ;
+  }
+
+  .back-button:hover {
+    background-color: #45a049; /* slightly darker green */
+  }
+
+  .back-button:active {
+    background-color: #3e8e41; /* pressed state */
+  }
+</style>
 
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown.min.css">
-        <style>
             <style>
 
             h4 {
@@ -189,7 +209,10 @@
             <div class="right-column">
 
                 <div style="margin: 10 auto; padding: 1rem;  ">
+			
+
                     <div class="navigation">
+			<a class='back-button' href="#" id="backLink">Go Back</a>
                         {% if parent %}
                             <span>
                                 &uarr; <a href='/django_ragamuffin/query/{{parent.name|replace:".,/" }}'> {{parent.name|replace:".,/" }} </a>
@@ -253,6 +276,15 @@
 <script>
   const elems = document.querySelectorAll(".wrap-summary");
   elems.forEach(el => { el.innerHTML = marked.parse( el.innerText ) ;  }  );
+</script>
+<script>
+  const ref = document.referrer;
+  if (ref) {
+    document.getElementById("backLink").href = ref;
+  } else {
+    // Fallback if no referrer (e.g. user typed URL directly)
+    document.getElementById("backLink").href = "/";
+  }
 </script>
 
 
