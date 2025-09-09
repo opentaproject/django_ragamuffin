@@ -1124,43 +1124,71 @@ class Thread(models.Model) :
             effort = settings.EFFORT
             print(f"CONTEXT VSS = {vss}")
             msg = ''
-            if vss :
-                try :
-                    RESPONSE = openai.responses.create(
-                        model=model,
-                        input=query,
-                        previous_response_id=previous_response_id,
-                        instructions=instructions,
-                        reasoning={"effort": effort, 'summary': 'auto'},
-                        tools=[{"type": "file_search",
-                            "vector_store_ids": vss  # your vector store id
-                            }]
-                    )
-                except Exception as err:
-                    import ast
-                    payload_str = str(err).split(" - ", 1)[1]
-                    payload = ast.literal_eval(payload_str)   # safe parse to dict
-                    msg = payload["error"]["message"]
-                    RESPONSE = openai.responses.create(
-                        model=model,
-                        input=query,
-                        previous_response_id=previous_response_id,
-                        instructions=instructions,
-                        reasoning={"effort": effort ,'summary': 'auto'},
+            try :
+                if vss :
+                    try :
+                        RESPONSE = openai.responses.create(
+                            model=model,
+                            input=query,
+                            previous_response_id=previous_response_id,
+                            instructions=instructions,
+                            reasoning={"effort": effort, 'summary': 'auto'},
+                            tools=[{"type": "file_search",
+                                "vector_store_ids": vss  # your vector store id
+                                }]
                         )
+                    except Exception as err:
+                        print(f"ERROR1 {str(err)} ")
+                        if "Previous response with id" in str(err) :
+                            previous_response_id = None
+                        import ast
+                        payload_str = str(err).split(" - ", 1)[1]
+                        payload = ast.literal_eval(payload_str)   # safe parse to dict
+                        msg = payload["error"]["message"]
+                        RESPONSE = openai.responses.create(
+                            model=model,
+                            input=query,
+                            previous_response_id=previous_response_id,
+                            instructions=instructions,
+                            reasoning={"effort": effort ,'summary': 'auto'},
+                            tools=[{"type": "file_search",
+                                "vector_store_ids": vss  # your vector store id
+                                }]
 
+                            )
+    
+    
+    
+                else :
+                    try :
+                        RESPONSE = openai.responses.create(
+                            model=model,
+                            input=query,
+                            previous_response_id=previous_response_id,
+                            instructions=instructions,
+                            reasoning={"effort": effort ,'summary': 'auto'},
+                            )
+                    except  Exception as err :
+                        print(f"ERROR4 {str(err)} ")
+                        if "Previous response with id" in str(err) :
+                            previous_response_id = None
+                        import ast
+                        payload_str = str(err).split(" - ", 1)[1]
+                        payload = ast.literal_eval(payload_str)   # safe parse to dict
+                        msg = payload["error"]["message"]
+                        RESPONSE = openai.responses.create(
+                            model=model,
+                            input=query,
+                            previous_response_id=previous_response_id,
+                            instructions=instructions,
+                            reasoning={"effort": effort ,'summary': 'auto'},
+                            )
 
+            except  Exception as e :
+                print(f"ERROR3 {str(e)}")
 
-            else :
-                RESPONSE = openai.responses.create(
-                    model=model,
-                    input=query,
-                    previous_response_id=previous_response_id,
-                    instructions=instructions,
-                    reasoning={"effort": effort ,'summary': 'auto'},
-                    )
-
-
+    
+            print(f"RESPONSE = {RESPONSE}")
             output = RESPONSE.output
             response_id = RESPONSE.id
             summary = 'Null'
