@@ -37,7 +37,7 @@ class AssistantEditForm(forms.ModelForm):
 
     class Meta:
         model = Assistant
-        fields = ['instructions','actual_instructions', 'temperature','directory_name']
+        fields = ['mode_choice','instructions','actual_instructions', 'temperature','directory_name']
         help_texts = {
             'directory_name' : "Only the last directory can be renmamed; all children will be renamed",
             'temperature': f"<p/>Default temperature = {settings.DEFAULT_TEMPERATURE}",
