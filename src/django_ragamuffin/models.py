@@ -658,6 +658,32 @@ DEFAULT_INSTRUCTIONS = """Answer only questions about the enclosed document.
     """
 
 
+class ModeChoice(models.Model):
+    key = models.SlugField(max_length=50, unique=True)   # e.g. "examiner"
+    label = models.CharField(max_length=100)             # e.g. "Examiner"
+
+    class Meta:
+        ordering = ["label"]
+
+    def __str__(self):
+        return self.label
+
+
+class Mode(models.Model):
+    choice = models.ForeignKey(ModeChoice, on_delete=models.PROTECT)
+    text = models.TextField(blank=True, default="")
+
+    def __str__(self):
+        return f"{self.choice.label}"
+
+    @classmethod
+    def get_text_for(cls, key):
+        try:
+            return cls.objects.get(choice__key=key).text
+        except cls.DoesNotExist:
+            return ""
+
+
 class Assistant( models.Model ):
     name =   models.CharField(max_length=255,blank=True)
     instructions = models.TextField(blank=True,null=True)
@@ -666,6 +692,7 @@ class Assistant( models.Model ):
     json_field = models.JSONField( default=dict ,  blank=True, null=True)
     temperature = models.FloatField(null=True, blank=True)
     clear_threads = models.BooleanField(default=False)
+    mode_choice = models.ForeignKey( "ModeChoice", on_delete=models.PROTECT, related_name="objects", default=None, null=True, blank=True)
     
 
 
@@ -813,7 +840,10 @@ class Assistant( models.Model ):
                 instructions = p.get_instructions();
                 i = i + 1 ;
         if instructions == '':
-            instructions = DEFAULT_INSTRUCTIONS 
+            if not self.mode_choice :
+                instructions = DEFAULT_INSTRUCTIONS 
+            else :
+                instructions = Mode.objects.get(choice=self.mode_choice).text
         if appended :
             instructions = instructions + "\n" + appended
         return instructions

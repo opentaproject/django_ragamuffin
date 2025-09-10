@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.conf import settings
 from django import forms
-from .models import OpenAIFile  , VectorStore , Assistant, Thread, DEFAULT_INSTRUCTIONS, RemoteVectorStore, QUser
+from .models import OpenAIFile  , VectorStore , Assistant, Thread, DEFAULT_INSTRUCTIONS, RemoteVectorStore, QUser, Mode, ModeChoice
 
 
 @admin.register(RemoteVectorStore)
@@ -58,7 +58,7 @@ class AssistantForm(forms.ModelForm):
 
     class Meta:
         model = Assistant
-        fields = ['name','instructions','vector_stores','assistant_id','json_field','temperature','actual_instructions' ,]
+        fields = ['name','mode_choice','instructions','vector_stores','assistant_id','json_field','temperature','actual_instructions' ,]
         help_texts = {
             'temperature': f"Default temperature = {settings.DEFAULT_TEMPERATURE}",
             'instructions' : f"Leave blank for default; start with 'append: XXX...' to append 'XXX...' to default; Any other non-blank string completely replaces the default instructions.'"
@@ -68,7 +68,7 @@ class AssistantForm(forms.ModelForm):
 @admin.register(Assistant)
 class AssistantAdmin(admin.ModelAdmin):
     form = AssistantForm 
-    list_display = ('id', 'name', 'assistant_id', 'file_names','file_pks', 'file_ids', 'remote_files','list_vector_store_ids')  # Add your custom method here
+    list_display = ('id', 'name', 'mode_choice', 'assistant_id', 'file_names','file_pks', 'file_ids', 'remote_files','list_vector_store_ids')  # Add your custom method here
 
     def list_vector_store_ids(self, obj):
         return ", ".join(str(f.name ) for f in obj.vector_stores.all())
@@ -86,3 +86,19 @@ class ThreadAdmin(admin.ModelAdmin):
     form = MyThreadForm;
     list_display = ('id', 'name', 'user', 'thread_id', 'assistant')  # Add your custom method here
 
+
+
+@admin.register(ModeChoice)
+class ModeChoiceAdmin(admin.ModelAdmin):
+    list_display = ("label", "key")
+    search_fields = ("label", "key")
+
+@admin.register(Mode)
+class ModeAdmin(admin.ModelAdmin):
+    list_display = ("choice", "short_text")
+    search_fields = ("choice__label", "text")
+    autocomplete_fields = ("choice",)  # nice if you have many choices
+
+    def short_text(self, obj):
+        return (obj.text or "")[:60]
+    short_text.short_description = "Text"
