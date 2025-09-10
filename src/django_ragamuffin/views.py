@@ -10,7 +10,7 @@ import re
 
 from .forms import QueryForm
 from .utils import doarchive, CHOICES, get_assistant, mathfix, thread_to_pdf
-from .models import create_or_retrieve_thread, QUser, get_current_model
+from .models import create_or_retrieve_thread, QUser, get_current_model, ModeChoice
 from django_ragamuffin.models import Assistant, Thread, Assistant
 
 class AssistantEditForm(forms.ModelForm):
@@ -166,6 +166,10 @@ def edit_assistant(request, pk):
         if 'instructions' in post :
             assistant.instructions = post.getlist('instructions')[0]
             assistant.save(update_fields=['instructions'])
+        if 'mode_choice' in post :
+            pk  = int( post.getlist('mode_choice')[0] )
+            assistant.mode_choice_id = pk
+            assistant.save(update_fields=['mode_choice'])
         if 'temperature' in post :
             temperature = post.getlist('temperature')
             print(f"TEMPERATUR OBTAINED = {temperature}")
