@@ -24,7 +24,7 @@ import re
 import os
 logger = logging.getLogger(__name__)
 
-upload_storage = FileSystemStorage(settings.OPENAI_UPLOAD_STORAGE, base_url=settings.MEDIA_URL )
+upload_storage = FileSystemStorage(location="/subdomain-data/query", base_url="/media/")
 
 from openai import OpenAIError, RateLimitError, APIError, Timeout
 
