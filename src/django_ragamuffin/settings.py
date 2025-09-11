@@ -6,7 +6,7 @@ AI_MODEL = os.environ.get('AI_MODEL','gpt-5')
 AI_MODEL = 'gpt-5'
 OPENAI_UPLOAD_STORAGE =  os.environ.get("OPENAI_UPLOAD_STORAGE",'/tmp/openaifiles')
 os.makedirs(OPENAI_UPLOAD_STORAGE, exist_ok=True)
-API_APP = 'localhost'
+API_APP = os.environ.get('API_APP','localhost')
 DJANGO_RAGAMUFFIN_DB = os.environ.get("DJANGO_RAGAMUFFIN_DB",None) 
 d = settings.DATABASES['default'];
 PGDATABASE = d.get('NAME','postgres')
@@ -60,7 +60,6 @@ LAST_MESSAGES = 99
 MAX_NUM_RESULTS = None
 MAX_TOKENS = 8000 # NOT IMPLMENTED AS OF openai==1.173.0 
 AI_MODELS = {'staff' : 'gpt-5-mini', 'default' : AI_MODEL }
-API_APP = 'localhost'
 EFFORT = 'low'
 DJANGO_RAGAMUFFIN_DB = os.environ.get("DJANGO_RAGAMUFFIN_DB",None) 
 if not RUNTESTS :
@@ -70,10 +69,10 @@ if not RUNTESTS :
             'NAME': DJANGO_RAGAMUFFIN_DB,
             'USER': PGUSER,
             'PASSWORD': PGPASSWORD,
-            'HOST': 'localhost',
+            'HOST': PGHOST,
             'PORT': '5432',
             'ATOMIC_REQUESTS' : False,
             }
         })
 
-
+print(f"PGHOST = {PGHOST}")

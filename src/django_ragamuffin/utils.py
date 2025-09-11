@@ -8,7 +8,7 @@ from django.conf import settings
 import os
 import string
 import random
-from django_ragamuffin.models import VectorStore, Assistant
+from django_ragamuffin.models import VectorStore, Assistant, Mode, ModeChoice, Thread
 from django.utils.safestring import mark_safe
 from django.http import FileResponse
 import logging
@@ -166,6 +166,17 @@ def thread_to_pdf( thread , prints ):
     messages = thread.messages;
     iprints = [int(i) for i in prints ];
     ps = [(i,x) for i,x in enumerate(messages) if i in iprints ]
+    mode = thread.assistant.mode_choice
+    print(f"MODE = {mode.label}")
+    vv = 'Query'
+    match mode.label :
+        case 'Examiner' :
+            vv = 'Attempt'
+        case 'Assistant' :
+            vv = 'Query'
+        case _:
+            vv = 'Query'
+
 
     file = open("/tmp/tmp.tex","w");
     file.write(head)
@@ -205,7 +216,7 @@ def thread_to_pdf( thread , prints ):
         file.write(f"\\fancyhead[R]{{\\makebox[0pt][l]{{\\hspace{{-4cm}}\\textbf{{ {name} }}}} }} ")
         file.write(boxhead)
         #file.write(f"\n\\textbf{{Assistant: {name} }}\n\\vspace{{8pt}}\n\n")
-        file.write(f"\n\\textbf{{Question {i} :}} {q}\n{boxtail}\n\\textbf{{Response:}} {r}\n")
+        file.write(f"\n\\textbf{{{vv} {i} :}} {q}\n{boxtail}\n\\textbf{{Response:}} {r}\n")
         file.write(f"\n\\vspace{{8pt}}\n") 
         file.write(f"\n\\textbf{{tokens={msg.get('ntokens',0)} dt={time_spent} model={model} choice={choice} {v} }} \\vspace{{12pt}} \n\n " )
     file.write(tail)

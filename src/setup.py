@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 setup(
     name='django_ragamuffin',  
-    version='1.102.0.0',
+    version='1.102.0.1',
     packages=find_packages(),
     include_package_data=True,  # Important for static files/migrations
     license='MIT License',  # Choose your license

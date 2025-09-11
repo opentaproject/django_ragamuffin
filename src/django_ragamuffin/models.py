@@ -449,7 +449,7 @@ def custom_delete_openaifile(sender, instance, **kwargs):
         client.delete_file_globally( file_id )
         shutil.rmtree(instance.path)
     except Exception as e:
-        print(f" FILE/ {instance.path} DOES NOT EXIST")
+        logger.error(f" FILE/ {instance.path} DOES NOT EXIST")
         return
 
 
