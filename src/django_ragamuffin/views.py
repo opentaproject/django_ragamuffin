@@ -31,6 +31,7 @@ class AssistantEditForm(forms.ModelForm):
             directory_name = instance.name.split('.')[-1];
         self.fields['directory_name'].initial = instance.name.split('.')[-1];
         self.fields['actual_instructions'].initial = instructions if self.instance.pk else "N/A"
+        self.fields['instructions'].label = 'Additional instructions'
 
 
 
@@ -41,8 +42,8 @@ class AssistantEditForm(forms.ModelForm):
         help_texts = {
             'directory_name' : "Only the last directory can be renmamed; all children will be renamed",
             'temperature': f"<p/>Default temperature = {settings.DEFAULT_TEMPERATURE}",
-            'instructions' : f"<b> Incremental instructions: </b>  <br>Leave or make blank to inherit default; <br> Start the field with 'append: XXX...' to append 'XXX...' to default; <br>Any other non-blank string completely replaces the default instructions.'<br> The entire instructions used by the assistant is shown below."
-
+            'instructions' : f"Leave or make blank to inherit default; <br> Start the field with 'append: XXX...' to append 'XXX...' to default; <br>Any other non-blank string completely replaces the default instructions.'<br> The entire instructions used by the assistant is shown below <br> It is the result of merging or replacing the mode based instructions with additional instructions.",
+            'actual_instructions' : 'This is the final instructions to the assistant which results from merging the mode based instructions with Additional Instructions'
         }
 
 #def delete_file_view(request,pk):

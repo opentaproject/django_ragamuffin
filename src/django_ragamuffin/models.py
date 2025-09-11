@@ -692,7 +692,7 @@ class Assistant( models.Model ):
     json_field = models.JSONField( default=dict ,  blank=True, null=True)
     temperature = models.FloatField(null=True, blank=True)
     clear_threads = models.BooleanField(default=False)
-    mode_choice = models.ForeignKey( "ModeChoice", on_delete=models.PROTECT, related_name="objects", default=None, null=True, blank=True)
+    mode_choice = models.ForeignKey( "ModeChoice", on_delete=models.PROTECT, related_name="assistant_set", default=None, null=True, blank=True)
     
 
 
