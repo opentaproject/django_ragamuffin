@@ -168,9 +168,10 @@ def edit_assistant(request, pk):
             assistant.instructions = post.getlist('instructions')[0]
             assistant.save(update_fields=['instructions'])
         if 'mode_choice' in post :
-            pk  = int( post.getlist('mode_choice')[0] )
-            assistant.mode_choice_id = pk
-            assistant.save(update_fields=['mode_choice'])
+            if post.getlist('mode_choice') :
+                pk  = int( post.getlist('mode_choice')[0] )
+                assistant.mode_choice_id = pk
+                assistant.save(update_fields=['mode_choice'])
         if 'temperature' in post :
             temperature = post.getlist('temperature')
             print(f"TEMPERATUR OBTAINED = {temperature}")
