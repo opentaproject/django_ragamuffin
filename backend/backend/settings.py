@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_ragamuffin",
 ]
 
 MIDDLEWARE = [
@@ -181,12 +182,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 import os
 AI_KEY =  os.environ.get("OPENAI_API_KEY",None)
 AI_MODEL = os.environ.get('AI_MODEL','gpt-5-mini')
-OPENAI_UPLOAD_STORAGE =  os.environ.get("OPENAI_UPLOAD_STORAGE",'/tmp/openaifiles')
-os.makedirs(OPENAI_UPLOAD_STORAGE, exist_ok=True)
 STATIC_ROOT = os.path.join(BASE_DIR, "deploystatic")
 STATIC_URL = "deploystatic/"
 MEDIA_URL = 'media/'
-MEDIA_ROOT = OPENAI_UPLOAD_STORAGE
 
 STATIC_URL = "/static/"
 MAXWAIT = 120 ; # WAIT MAX 120 seconds
@@ -259,7 +257,16 @@ LOGGING = {
 
 RUNTESTS = "pytest" in sys.modules
 #if not RUNTESTS :
-INSTALLED_APPS.append('django_ragamuffin')
+#INSTALLED_APPS.append('django_ragamuffin')
 DATABASE_ROUTERS = [ 'django_ragamuffin.db_routers.RagamuffinRouter' ]
 from django_ragamuffin.settings import *
-
+if True or RUNTESTS :
+    import tempfile
+    OPENAI_UPLOAD_STORAGE = "/subdomain-data/query"
+    os.makedirs(OPENAI_UPLOAD_STORAGE, exist_ok=True)
+    MEDIA_ROOT = OPENAI_UPLOAD_STORAGE
+else :
+    OPENAI_UPLOAD_STORAGE =  os.environ.get("OPENAI_UPLOAD_STORAGE",'/tmp/openaifiles')
+    MEDIA_ROOT = OPENAI_UPLOAD_STORAGE
+    OPENAI_UPLOAD_STORAGE =  os.environ.get("OPENAI_UPLOAD_STORAGE",'/tmp/openaifiles')
+    os.makedirs(OPENAI_UPLOAD_STORAGE, exist_ok=True)

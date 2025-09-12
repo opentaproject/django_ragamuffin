@@ -737,6 +737,7 @@ class Assistant( models.Model ):
 
         dst = os.path.join(settings.OPENAI_UPLOAD_STORAGE, relpath)
         os.makedirs(os.path.dirname(dst), exist_ok=True)
+        print(f"FULL_PATH={full_path} -> DST = {dst} ")
         shutil.copy2(full_path, dst)
 
         # Register with our OpenAIFile model and link to vector store

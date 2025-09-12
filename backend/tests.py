@@ -422,9 +422,10 @@ class OpenAI(TestCase):
     def test_add_file_by_name(self):
         """Create a file in /tmp, add it by full path, and assert presence via assistant.files()."""
         # Create a temporary file under /tmp
-        base = "add_by_name_test.txt"
-        filename = f"{randstring('tmp')}-{base}"
-        tmp_path = f"/tmp/{filename}"
+        base = "test.txt"
+        filename = f"{base}"
+        tmp_path = f"/subdomain-data/query/{base}"
+        print(f"TMP_PATH = {tmp_path}")
         with open(tmp_path, "wb") as f:
             f.write(b"hello from add_file_by_name test\n")
 
