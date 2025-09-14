@@ -1245,6 +1245,12 @@ class Thread(models.Model) :
             time_spent = int( time.time() - now  + 0.5 )
             characters = string.ascii_letters + string.digits  # a-zA-Z0-9
             h = ''.join(random.choices(characters, k=8))
+            match = re.search(r"^\s*Submitted.*$", query , flags=re.MULTILINE)
+            if match:
+                tagline = str( match.group() );
+            else:
+                tagline = ''
+            query = tagline + "\n" + re.sub( r"BEGIN_SUBMISSION.*?END_SUBMISSION", "", query , flags=re.DOTALL)
             msg =  {'user' : query, 'assistant' : txt,
                 'ntokens' : ntokens ,
                 'model' : model,
