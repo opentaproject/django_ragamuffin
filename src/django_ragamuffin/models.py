@@ -1169,7 +1169,7 @@ class Thread(models.Model) :
                                 }]
                         )
                     except Exception as err:
-                        print(f"ERROR1 {str(err)} ")
+                        print(f"ERROR5 {str(err)} ")
                         if "Previous response with id" in str(err) :
                             previous_response_id = None
                         import ast
@@ -1200,7 +1200,7 @@ class Thread(models.Model) :
                             reasoning={"effort": effort ,'summary': 'auto'},
                             )
                     except  Exception as err :
-                        print(f"ERROR4 {str(err)} ")
+                        print(f"ERROR6 {str(err)} ")
                         if "Previous response with id" in str(err) :
                             previous_response_id = None
                         import ast
@@ -1216,7 +1216,7 @@ class Thread(models.Model) :
                             )
 
             except  Exception as e :
-                print(f"ERROR3 {str(e)}")
+                print(f"ERROR7 {str(e)}")
 
     
             print(f"RESPONSE = {RESPONSE}")
@@ -1293,7 +1293,7 @@ def custom_delete_assistant(sender, instance, **kwargs):
             if vector_store.name == assistant.name : # THIS IS HERE BECAUSE MULTIPL VECTOR STORES CAN'T BE USED BY AN ASSISTANT
                 client.delete_vector_store( vector_store_id)
     except Exception as err :
-        print(f"ERROR = {str(err)}")
+        print(f"ERROR8 = {str(err)}")
 
 @receiver(post_delete, sender=Assistant)
 def post_delete_assistant(sender, instance, **kwargs):

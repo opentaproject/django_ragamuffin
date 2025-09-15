@@ -215,7 +215,7 @@ def feedback_view(request,subpath):
     #print(f"POST LIST THREAD = {request.POST.getlist('thread')}")
     post_thread =  re.sub(r'\.','_',request.POST.getlist('thread')[0])
     thread_name = ( '.'.join( post_thread.split('/')[3:] ) ).rstrip('.');
-    user = QUser.objects.get(username=request.user.username)
+    user , _ = QUser.objects.get_or_create(username=request.user.username)
     #print(f"USER = {user} {user.username}")
     #print(f"THREAD_NAME = {thread_name}")
     threads = Thread.objects.filter(name=thread_name,user=user).all()
@@ -238,7 +238,7 @@ def feedback_view(request,subpath):
             thread.save();
             doarchive(thread, msg )
         except Exception as err :
-            print(f"ERROR {str(err)}")
+            print(f"ERROR1 {str(err)}")
     return JsonResponse({"success": True,'index' : index ,'comment' : comment , 'choice' :choice  })
 
 FILENAME = "../README.md"
@@ -311,9 +311,9 @@ def query_view(request,subpath):
                     summary = msg.get('summary','NONE3')
                     ntokens = msg['ntokens']
             except (KeyError, AttributeError, ValueError) as e:
-                txt = f"ERROR {type(e).__name__}: {str(e)}"
+                txt = f"ERROR2 {type(e).__name__}: {str(e)}"
             except Exception  as e:
-                txt = f"ERROR {type(e).__name__}: {str(e)}"
+                txt = f"ERROR3 {type(e).__name__}: {str(e)}"
             try :
                 txtnew = mathfix(txt)
                 txt = txtnew 
