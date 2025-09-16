@@ -34,7 +34,7 @@ def randstring(tag, length=8):
 
 
 def dump_remote_vector_stores(s='') :
-    print(f"DUMP REMOTE_VECTOR_STORES {s}\nvvvvvv")
+    #print(f"DUMP REMOTE_VECTOR_STORES {s}\nvvvvvv")
     remote_vector_stores = RemoteVectorStore.objects.all();
     for remote_vector_store in remote_vector_stores :
         print(f"REMOTE_VECTOR_STORE = cs={remote_vector_store.checksum} id={remote_vector_store.vector_store_id} pks={remote_vector_store.vector_stores_pks()}")
@@ -58,7 +58,7 @@ def remote_wait_for_vector_store_delete(vector_store_id, timeout=settings.MAXWAI
 
 
 def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=settings.MAXWAIT):
-    print(f"WAIT_FOR_VECTOR_STORE_READY {vector_store_id}")
+    #print(f"WAIT_FOR_VECTOR_STORE_READY {vector_store_id}")
     start_time = time.time()
     client = OpenAIClient()
     i = 0;
@@ -851,7 +851,7 @@ class Assistant( models.Model ):
 
 
     def get_vector_stores( self ): # GET THE LAST INSTRUCTIONS IN THE TREE
-        print(f"ASSISTAN GET VETOR STORES")
+        #print(f"ASSISTAN GET VETOR STORES")
         p = self;
         vector_stores = [] # VectorStore.objects.none()
         if p :
@@ -860,11 +860,11 @@ class Assistant( models.Model ):
                 p = p.parent();
                 vector_stores = p.get_vector_stores();
                 i = i + 1 ;
-        print(f"VECTOR_STORES INITIALL IS {vector_stores}")
+        #print(f"VECTOR_STORES INITIALL IS {vector_stores}")
         if self.vector_stores.all() :
-            print(f"RETURN IMMEDIATELY add {vector_stores} + {self.vector_stores.all() }")
+            #print(f"RETURN IMMEDIATELY add {vector_stores} + {self.vector_stores.all() }")
             vector_stores = vector_stores + list( self.vector_stores.all() )
-        print(f"RETURNING {vector_stores}")
+        #print(f"RETURNING {vector_stores}")
         return vector_stores
 
             
@@ -889,7 +889,7 @@ class Assistant( models.Model ):
 
 
     def clone_stub( self, newname ) :
-        print(f"CLONED_STUB  {newname}")
+        #print(f"CLONED_STUB  {newname}")
         vss = self.vector_stores.all();
         #if vss :
         #    vs = vss[0]
@@ -914,7 +914,7 @@ class Assistant( models.Model ):
 
 
     def clone( self, newname ) :
-        print(f"CLONED {newname}")
+        #print(f"CLONED {newname}")
         vss = self.vector_stores.all();
         if vss :
             vs = vss[0]
@@ -1110,15 +1110,15 @@ class Thread(models.Model) :
         assistant_id = assistant.assistant_id
         vector_stores = assistant.get_vector_stores()
         vss = [ item.vsid for item in vector_stores ]
-        print(f"VECTOR_STORES = {vss}")
+        #print(f"VECTOR_STORES = {vss}")
         instructions = assistant.get_instructions() + '\n' + more_instructions
-        print(f"INSTRUCTIONS IN QUERY IS {instructions}")
+        #print(f"INSTRUCTIONS IN QUERY IS {instructions}")
         #vss = [];
         #for vs in vector_stores :
         #    vss.append(vs.vsid)
         thread = self
         thread_id = thread.thread_id
-        print(f"VSS = {vss}")
+        #print(f"VSS = {vss}")
     
         encoding = tiktoken.get_encoding("cl100k_base")
 
@@ -1153,8 +1153,8 @@ class Thread(models.Model) :
             model = context['model']
             previous_response_id = context.get('previous_response_id',None)
             effort = settings.EFFORT
-            print(f"CONTEXT VSS = {vss}")
             msg = ''
+            print(f"INSTRUCTIONS FOR REMOTE QUERY\nvvvvvvvvvvvvvvvvvvvvvvv\n{instructions}\n^^^^^^^^^^^^^^^^^^^^^^\n")
             try :
                 if vss :
                     try :
@@ -1201,25 +1201,31 @@ class Thread(models.Model) :
                             )
                     except  Exception as err :
                         print(f"ERROR6 {str(err)} ")
-                        if "Previous response with id" in str(err) :
-                            previous_response_id = None
                         import ast
                         payload_str = str(err).split(" - ", 1)[1]
                         payload = ast.literal_eval(payload_str)   # safe parse to dict
                         msg = payload["error"]["message"]
-                        RESPONSE = openai.responses.create(
-                            model=model,
-                            input=query,
-                            previous_response_id=previous_response_id,
-                            instructions=instructions,
-                            reasoning={"effort": effort ,'summary': 'auto'},
-                            )
+
+                        if "Previous response with id" in str(err) :
+                            RESPONSE = openai.responses.create(
+                                model=model,
+                                input=query,
+                                instructions=instructions,
+                                reasoning={"effort": effort ,'summary': 'auto'},
+                                )
+                        else :
+                            RESPONSE = openai.responses.create(
+                                model=model,
+                                input=query,
+                                previous_response_id=previous_response_id,
+                                instructions=instructions,
+                                reasoning={"effort": effort ,'summary': 'auto'},
+                                )
 
             except  Exception as e :
                 print(f"ERROR7 {str(e)}")
 
     
-            print(f"RESPONSE = {RESPONSE}")
             output = RESPONSE.output
             response_id = RESPONSE.id
             summary = 'Null'
@@ -1269,8 +1275,8 @@ class Thread(models.Model) :
         else :
             thread.messages = [msg]
         thread.save()
-        from .utils import print_messages
-        print_messages(thread)
+        #from .utils import print_messages
+        #print_messages(thread)
         return msg
 
 
@@ -1319,8 +1325,8 @@ def handle_assistants_changed(sender, instance, action, **kwargs):
 
     assistant = instance
     assistant_id = instance.assistant_id
-    for vs in assistant.vector_stores.all():
-        print(f"     VS = {vs} FILES= {vs.files.all()}")
+    #for vs in assistant.vector_stores.all():
+    #    #print(f"     VS = {vs} FILES= {vs.files.all()}")
     client = OpenAIClient()
     rebuild = False
     if action == "post_remove":
