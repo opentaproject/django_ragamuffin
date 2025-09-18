@@ -10,3 +10,7 @@ def replace(value, args):
         value = value.replace(old, new)
     return value
     
+@register.filter
+def username_from_email(value):
+    """Return the part of the email before the '@'."""
+    return value.split('@')[0] if value else ''

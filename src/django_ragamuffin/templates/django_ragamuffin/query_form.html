@@ -177,7 +177,7 @@
                                         <input type="checkbox" name="entry" value="{{ m.index}}" class="choice-box">
                                         <button style="width: 100% ; text-align: left; " name='oldquery' value="{{m.user}}">{{ m.index  | stringformat:"02d" }}:
 						[<span class="innerChoice" id="choice-{{m.index}}">{{m.choice}}</span>] 
-						<span style="font-size: xx-small;"  > [ {{ m.username }} ]   </span> 
+						<span style="font-size: xx-small;"  > [ {{ m.username | username_from_email }} ]   </span> 
                                             <div class="innerDiv" style="display: none"> {{m.assistant | safe }}
 						    <div class='verbatim'> tokens={{m.ntokens}} model={{ m.model }} dt={{ m.time_spent }}s saved_messages={{ m.last_messages }} chunks={{ m.max_num_results }}  {{ m.username }}</div>
 						{% if user.is_staff %}
