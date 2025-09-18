@@ -1154,7 +1154,8 @@ class Thread(models.Model) :
             previous_response_id = context.get('previous_response_id',None)
             effort = settings.EFFORT
             msg = ''
-            print(f"INSTRUCTIONS FOR REMOTE QUERY\nvvvvvvvvvvvvvvvvvvvvvvv\n{instructions}\n^^^^^^^^^^^^^^^^^^^^^^\n")
+            #print(f"INSTRUCTIONS FOR REMOTE QUERY\nvvvvvvvvvvvvvvvvvvvvvvv\n{instructions}\n^^^^^^^^^^^^^^^^^^^^^^\n")
+            #print(f"VSS = {vss}")
             try :
                 if vss :
                     try :

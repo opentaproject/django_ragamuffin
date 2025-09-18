@@ -284,7 +284,31 @@ def query_view(request,subpath):
             response = thread_to_pdf( thread , prints )
             return response
     d = {'status' : 'pending' , 'result' : 'RESULT' }
-    messages = thread.messages
+    if user.is_staff:
+        # Aggregate messages from all threads with this name (all users)
+        threads = Thread.objects.filter(name=name).all()
+        messages = []
+        for t in threads:
+            t_msgs = t.messages or []
+            uname = t.user.username if getattr(t, "user", None) else ""
+            for _m in t_msgs:
+                if isinstance(_m, dict):
+                    m = dict(_m)
+                    m["username"] = uname
+                else:
+                    m = _m
+                messages.append(m)
+    else:
+        base_msgs = thread.messages or []
+        uname = thread.user.username if getattr(thread, "user", None) else ""
+        messages = []
+        for _m in base_msgs:
+            if isinstance(_m, dict):
+                m = dict(_m)
+                m["username"] = uname
+            else:
+                m = _m
+            messages.append(m)
     mindex = 0
     comment = ''
     time_spent = 0;
@@ -327,6 +351,7 @@ def query_view(request,subpath):
     time_spent = int( ( time.time() - now  ) + 0.5 )
     f = [ { 'index' : index, 'user' : item['user'] , 
        'assistant' : mark_safe( mathfix(item['assistant'] ) ),
+       'username' : item.get('username',''),
        'ntokens' : item['ntokens'],
        'comment' : item.get('comment','') ,
        'choice' : item.get('choice',0),

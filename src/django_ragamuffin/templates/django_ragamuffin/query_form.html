@@ -176,9 +176,10 @@
                                     <span name='queryrow' class="form-row">
                                         <input type="checkbox" name="entry" value="{{ m.index}}" class="choice-box">
                                         <button style="width: 100% ; text-align: left; " name='oldquery' value="{{m.user}}">{{ m.index  | stringformat:"02d" }}:
-						[<span class="innerChoice" id="choice-{{m.index}}">{{m.choice}}</span>]
+						[<span class="innerChoice" id="choice-{{m.index}}">{{m.choice}}</span>] 
+						<span style="font-size: xx-small;"  > [ {{ m.username }} ]   </span> 
                                             <div class="innerDiv" style="display: none"> {{m.assistant | safe }}
-                                                <div class='verbatim'> tokens={{m.ntokens}} model={{ m.model }} dt={{ m.time_spent }}s saved_messages={{ m.last_messages }} chunks={{ m.max_num_results }}  </div>
+						    <div class='verbatim'> tokens={{m.ntokens}} model={{ m.model }} dt={{ m.time_spent }}s saved_messages={{ m.last_messages }} chunks={{ m.max_num_results }}  {{ m.username }}</div>
 						{% if user.is_staff %}
 						<div class='wrap-summary'> {{ m.summary | safe }} </div> 
 						{% endif %}
@@ -195,11 +196,11 @@
                         </div>
                         {% if  user.is_staff %}
                             <h4 class="old-messages" > 
-				    <a href="{% url 'edit_assistant' pk=assistant_pk %}">Edit Assistant</a> </h4>
+				    <a href="{% url 'edit_assistant' pk=assistant_pk %}">A Edit Assistant</a> </h4>
 			    {% if not children %}
-			    		<a href="{% url 'delete_assistant' pk=assistant_pk %}" onclick="return confirmDeleteAssistant()">Delete Assistant</a>
+			    		<a href="{% url 'delete_assistant' pk=assistant_pk %}" onclick="return confirmDeleteAssistant()">B Delete Assistant</a>
 			    {% else %}
-				<a href="{% url 'delete_assistant' pk=assistant_pk %}" onclick="return disableDeleteAssistant()">Delete Assistant</a>
+				<a href="{% url 'delete_assistant' pk=assistant_pk %}" onclick="return disableDeleteAssistant()">C Delete Assistant</a>
 			    {% endif %}
                             <hr/>
                         {% endif %}
