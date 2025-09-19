@@ -572,10 +572,10 @@ class VectorStore( models.Model ):
                 vector_store_id = client.get_or_update_remote_vector_store(self)
                 self.vsid = vector_store_id
             except openai.OpenAIError as e:
-                print(f"OpenAIError in get_or_update_remote_vector_store: {e}")
+                logger.error(f"OpenAIError in get_or_update_remote_vector_store: {e}")
                 raise
             except Exception as e:
-                print(f"Unexpected error in get_or_update_remote_vector_store: {e}")
+                logger.error(f"Unexpected error in get_or_update_remote_vector_store: {e}")
                 raise
         super().save(*args, **kwargs)
 
@@ -632,7 +632,7 @@ def custom_delete_remote_vector_store(sender, instance, **kwargs):
         client.vector_stores.delete( vector_store_id )
         remote_wait_for_vector_store_delete(vector_store_id, timeout=settings.MAXWAIT, interval=2)
     except Exception as e :
-        print(f"FAILED REMOTE_VECTOR_STORE_CLIENT_DELETE {vector_store_id} {str(e)} ")
+        logger.errorprint(f"FAILED REMOTE_VECTOR_STORE_CLIENT_DELETE {vector_store_id} {str(e)} ")
         pass
 
 
@@ -737,7 +737,6 @@ class Assistant( models.Model ):
 
         dst = os.path.join(settings.OPENAI_UPLOAD_STORAGE, relpath)
         os.makedirs(os.path.dirname(dst), exist_ok=True)
-        print(f"FULL_PATH={full_path} -> DST = {dst} ")
         shutil.copy2(full_path, dst)
 
         # Register with our OpenAIFile model and link to vector store
@@ -789,7 +788,6 @@ class Assistant( models.Model ):
         assistant_id = self.assistant_id 
         threads = self.threads.all();
         for thread in threads :
-            print(f"ASSISTANT DELETE_RAW_FILE {thread} ")
             thread.clear = True;
             thread.save(update_fields=['clear']);
         self.save();
@@ -821,32 +819,38 @@ class Assistant( models.Model ):
         return res
 
     def get_instructions( self ): # GET THE LAST INSTRUCTIONS IN THE TREE
-        if self.instructions :
-            self.instructions = self.instructions.strip();
-        appended = ''
+        prepended = ''
         instructions = ''
         if self.instructions :
-            do_append = self.instructions.split()[0].strip().rstrip(':').lower()  == 'append'
-            if do_append :
-                appended = ''.join( re.split(r'(\s+)', self.instructions)[1:] )
-                instructions = ''
-            else :
-                instructions = self.instructions
+            prepended = self.instructions.strip();
+        #if self.instructions :
+        #    #do_append = self.instructions.split()[0].strip().rstrip(':').lower()  == 'append'
+        #    #if do_append :
+        #    #    prepended = ''.join( re.split(r'(\s+)', self.instructions)[1:] )
+        #    #    instructions = ''
+        #    #else :
+        #    instructions = self.instructions
         a = self;
-        p = a.parent();
+        p = self;
+        base_instructions = ''
+        if self.mode_choice :
+                base_instructions = Mode.objects.get(choice=self.mode_choice).text
+                return f"{prepended}\n{base_instructions}\n"
         if p :
             i = 0;
-            while not p.parent() == None and instructions == ''  and i < 4 :
+            logger.info(f"I={i} base_instructions = {base_instructions}  parent={p.parent}")
+            while not p.parent() == None and base_instructions == ''  and i < 4 :
+                logger.info(f"SO FETCH PARENT_INSTRUCTION FROM {p.parent()} ")
                 p = p.parent();
-                instructions = p.get_instructions();
+                base_instructions = p.get_instructions();
+                logger.info(f"FETCHED {base_instructions}")
                 i = i + 1 ;
-        if instructions == '':
-            if not self.mode_choice :
-                instructions = DEFAULT_INSTRUCTIONS 
-            else :
-                instructions = Mode.objects.get(choice=self.mode_choice).text
-        if appended :
-            instructions = instructions + "\n" + appended
+        logger.info(f"APPENDED = {prepended} BASE_INSTRUDTIONS {base_instructions}")
+        if not prepended  == '' :
+            instructions = prepended + f"\n{base_instructions}\n"
+        else :
+            instructions = base_instructions
+        logger.info(f"GET_INSTRUCTIONS RETURNING = {instructions}")
         return instructions
 
 

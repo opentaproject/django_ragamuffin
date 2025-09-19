@@ -1,4 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
+import logging
 from django.http import HttpResponseForbidden, JsonResponse
 from django.conf import settings
 from django import forms
@@ -12,6 +13,8 @@ from .forms import QueryForm
 from .utils import doarchive, CHOICES, get_assistant, mathfix, thread_to_pdf
 from .models import create_or_retrieve_thread, QUser, get_current_model, ModeChoice
 from django_ragamuffin.models import Assistant, Thread, Assistant
+logger = logging.getLogger(__name__)
+
 
 class AssistantEditForm(forms.ModelForm):
 
@@ -27,7 +30,10 @@ class AssistantEditForm(forms.ModelForm):
         # Set initial value for the readonly field
         #self.fields['actual_instructions'].initial = instance.get_instructions() + ' '.join( DEFAULT_INSTRUCTIONS.split() )  if self.instance.pk else "N/A"
         if self.instance.pk :
-            instructions = ' '.join( instance.get_instructions().split() );
+            try :
+                instructions = ' '.join( instance.get_instructions().split() );
+            except :
+                instructions = ''
             directory_name = instance.name.split('.')[-1];
         self.fields['directory_name'].initial = instance.name.split('.')[-1];
         self.fields['actual_instructions'].initial = instructions if self.instance.pk else "N/A"
@@ -162,19 +168,28 @@ def edit_assistant(request, pk):
 
 
         
-        print(f"POST =  {request.POST}")
+        logger.info(f"POST =  {request.POST}")
         post = request.POST
         if 'instructions' in post :
             assistant.instructions = post.getlist('instructions')[0]
             assistant.save(update_fields=['instructions'])
         if 'mode_choice' in post :
-            if post.getlist('mode_choice') :
-                pk  = int( post.getlist('mode_choice')[0] )
+            pklist =  post.getlist('mode_choice') 
+            logger.info(f"MODE_CHOICE = {pklist}")
+            if len( pklist[0] ) > 0 :
+                pk  = int( pklist[0] )
+                logger.info(f"PK = {pk}")
                 assistant.mode_choice_id = pk
                 assistant.save(update_fields=['mode_choice'])
+            else :
+                assistant.mode_choice = None
+            assistant.save(update_fields=['mode_choice'] )
+        else :
+            assistant.mode_choice = None
+            assistant.save(update_fields=['mode_choice'] )
         if 'temperature' in post :
             temperature = post.getlist('temperature')
-            print(f"TEMPERATUR OBTAINED = {temperature}")
+            logger.info(f"TEMPERATUR OBTAINED = {temperature}")
             if temperature == [] :
                 temperature = settings.DEFAULT_TEMPERATURE
             else :
@@ -183,7 +198,6 @@ def edit_assistant(request, pk):
         if not assistant.temperature :
             assistant.temperature = settings.DEFAULT_TEMPERATURE
 
-        print(f"ASSISTANT_TEMPERATURE = {assistant.temperature}")
         assistant.save()
         #form = AssistantEditForm(request.POST, instance=assistant )
         #if form.is_valid():
