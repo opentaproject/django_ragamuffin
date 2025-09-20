@@ -278,6 +278,8 @@ def query_view(request,subpath):
     model = get_current_model( quser)
     thread = create_or_retrieve_thread( assistant, name , quser )
     data = request.POST;
+    keeps = request.POST.getlist('keep',[])
+    print(f"KEEPS = {keeps}")
     if 'delete' in request.POST.getlist('action') :
         deletes = request.POST.getlist('entry')
         if deletes :
@@ -297,6 +299,8 @@ def query_view(request,subpath):
         if prints :
             response = thread_to_pdf( thread , prints )
             return response
+    elif 'filter' in request.POST.getlist('action' ) :
+        response = redirect(f"/django_ragamuffin/query/{assistant.name}/")
     d = {'status' : 'pending' , 'result' : 'RESULT' }
     if user.is_staff:
         # Aggregate messages from all threads with this name (all users)
@@ -376,6 +380,7 @@ def query_view(request,subpath):
        'response_id' : item.get('response_id','None'),
        'previous_response_id' : item.get('previous_response_id',None),
        'time_spent' : item.get('time_spent', time_spent) }  for index, item in enumerate( messages ) ];
+    keeps =  [ int(i) for i in keeps ]
     if f:
         summary = f[-1].get('summary','None')
     else :
@@ -400,6 +405,7 @@ def query_view(request,subpath):
         'choice' : choice ,
         'ntokens' : ntokens,
         'summary' : summary,
+        'keeps' : keeps,
         'model' : model ,
         'assistant_pk' : assistant.pk ,
         'max_num_results' : max_num_results,

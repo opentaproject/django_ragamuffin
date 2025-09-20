@@ -161,14 +161,24 @@
     <body style="display: flex; justify-content: top; align-items: center; flex-direction: column; margin: 0; min-height: 100vh; font-size:10pt ">
         <div class='container'>
             <div class="left-column">
-                <form method="post">
+		    <form method="post">
                     {% csrf_token %}
+		    <h4> Select Filter  {{ keeps }} </h4>
+                                {% for  i , c   in choices.items %}
+				{% if i  in keeps %}
+					<input type="checkbox" name='keep' value={{ i }} id="select-filter"  checked  > [{{ i }} ] </input> 
+				{% else %}
+					<input type="checkbox" name='keep' value={{ i }} id="select-filter" > [{{ i }} ] </input> 
+				{% endif %}
+				{% endfor %}
+		 <p/>
                     <div style="margin: 10 auto; padding: 1rem;  ">
 
 
                         <div class='old-messages'>
                             {% if messages %}
-                                <h4> Old queries </h4>
+
+				<h4> Old queries </h4>
                                 <input type="checkbox" id="select-all"> Select all in <b> {{ name | replace:".,/" }} </b>   </em>
                                 <p> </p>
                                 {% for m in messages %}
@@ -191,16 +201,19 @@
                                 {% endfor %}
                                 <p/>
                                 <button onclick="return confirmDelete()" name='action' value='delete' type="submit" id="deleteBtn" >Delete checked entries</button>
+				<button name='action' value='filter' type="submit">Filter </button>
                                 <button name='action' value='print' type="submit">Print checked entries</button>
                             {% endif %}
                         </div>
                         {% if  user.is_staff %}
                             <h4 class="old-messages" > 
-				    <a href="{% url 'edit_assistant' pk=assistant_pk %}">A Edit Assistant</a> </h4>
+				    <a href="{% url 'edit_assistant' pk=assistant_pk %}">Edit Assistant</a> </h4>
+			    {% if 1 == 0 %}
 			    {% if not children %}
 			    		<a href="{% url 'delete_assistant' pk=assistant_pk %}" onclick="return confirmDeleteAssistant()">B Delete Assistant</a>
 			    {% else %}
 				<a href="{% url 'delete_assistant' pk=assistant_pk %}" onclick="return disableDeleteAssistant()">C Delete Assistant</a>
+			    {% endif %}
 			    {% endif %}
                             <hr/>
                         {% endif %}
