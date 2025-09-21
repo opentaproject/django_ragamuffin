@@ -163,12 +163,12 @@
             <div class="left-column">
 		    <form method="post">
                     {% csrf_token %}
-		    <h4> Select Filter  {{ keeps }} </h4>
+		    <h4> View filter   <button name='action' value='filter' type="submit">Filter </button> </h4>
                                 {% for  i , c   in choices.items %}
 				{% if i  in keeps %}
-					<input type="checkbox" name='keep' value={{ i }} id="select-filter"  checked  > [{{ i }} ] </input> 
+				<input type="checkbox" name='keep' value={{ i }} id="select-filter"  checked  > [{{ i }} ] </input>  {{c}} <br/>
 				{% else %}
-					<input type="checkbox" name='keep' value={{ i }} id="select-filter" > [{{ i }} ] </input> 
+				<input type="checkbox" name='keep' value={{ i }} id="select-filter" > [{{ i }} ] </input>  {{ c }} <br/>
 				{% endif %}
 				{% endfor %}
 		 <p/>
@@ -176,13 +176,20 @@
 
 
                         <div class='old-messages'>
+				<h4> Old queries     {{ keeps }} </h4> 
+				<!--
+				{% for i, c in resolved_choices %} 
+				 [ {{ i }}] {{ c }}         {% endfor %} 
+				 --!>
                             {% if messages %}
+			    	<br/>
 
-				<h4> Old queries </h4>
                                 <input type="checkbox" id="select-all"> Select all in <b> {{ name | replace:".,/" }} </b>   </em>
                                 <p> </p>
                                 {% for m in messages %}
+				{% if not user.is_staff %}
 				{% if m.previous_response_id == None and m.index > 1 %} <hr> History reset <hr>   {% endif %}
+				{% endif %}
                                     <span name='queryrow' class="form-row">
                                         <input type="checkbox" name="entry" value="{{ m.index}}" class="choice-box">
                                         <button style="width: 100% ; text-align: left; " name='oldquery' value="{{m.user}}">{{ m.index  | stringformat:"02d" }}:
@@ -201,7 +208,6 @@
                                 {% endfor %}
                                 <p/>
                                 <button onclick="return confirmDelete()" name='action' value='delete' type="submit" id="deleteBtn" >Delete checked entries</button>
-				<button name='action' value='filter' type="submit">Filter </button>
                                 <button name='action' value='print' type="submit">Print checked entries</button>
                             {% endif %}
                         </div>

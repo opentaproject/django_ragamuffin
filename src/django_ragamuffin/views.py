@@ -279,7 +279,6 @@ def query_view(request,subpath):
     thread = create_or_retrieve_thread( assistant, name , quser )
     data = request.POST;
     keeps = request.POST.getlist('keep',[])
-    print(f"KEEPS = {keeps}")
     if 'delete' in request.POST.getlist('action') :
         deletes = request.POST.getlist('entry')
         if deletes :
@@ -367,7 +366,9 @@ def query_view(request,subpath):
     else:
         form = QueryForm()
     time_spent = int( ( time.time() - now  ) + 0.5 )
-    f = [ { 'index' : index, 'user' : item['user'] , 
+    keeps =  [ int(i) for i in keeps ]
+    resolved_choices = [(i, choices[i]) for i in keeps]
+    f_ = [ { 'index' : index, 'user' : item['user'] , 
        'assistant' : mark_safe( mathfix(item['assistant'] ) ),
        'username' : item.get('username',''),
        'ntokens' : item['ntokens'],
@@ -379,8 +380,8 @@ def query_view(request,subpath):
        'summary' : item.get('summary','None'),
        'response_id' : item.get('response_id','None'),
        'previous_response_id' : item.get('previous_response_id',None),
-       'time_spent' : item.get('time_spent', time_spent) }  for index, item in enumerate( messages ) ];
-    keeps =  [ int(i) for i in keeps ]
+       'time_spent' : item.get('time_spent', time_spent) }  for index, item in enumerate( messages )  ] 
+    f = [ item for item in f_ if item.get('choice',0)  in keeps ]
     if f:
         summary = f[-1].get('summary','None')
     else :
@@ -407,6 +408,7 @@ def query_view(request,subpath):
         'summary' : summary,
         'keeps' : keeps,
         'model' : model ,
+        'resolved_choices' : resolved_choices,
         'assistant_pk' : assistant.pk ,
         'max_num_results' : max_num_results,
         'last_messages' : last_messages ,
