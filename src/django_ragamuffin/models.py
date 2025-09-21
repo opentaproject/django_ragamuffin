@@ -1,5 +1,5 @@
 from django.db import models
-from django.utils.timezone import now as django_now
+from django.utils import timezone 
 from openai import OpenAI
 from pathlib import Path
 from django.db import transaction
@@ -1259,7 +1259,7 @@ class Thread(models.Model) :
             h = ''.join(random.choices(characters, k=8))
             match = re.search(r"^\s*Submitted.*$", query , flags=re.MULTILINE)
             from django.utils.timezone import now
-            dt_str = django_now().strftime("%Y-%m-%d:%H:%M")
+            dt_str =  timezone.localtime(timezone.now()).strftime("%Y-%m-%d:%H:%M")
             if match:
                 tagline = str( match.group() );
             else:

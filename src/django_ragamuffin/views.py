@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.utils.timezone import now as django_now
+from django.utils import timezone 
 import logging
 from django.http import HttpResponseForbidden, JsonResponse
 from django.conf import settings
@@ -396,7 +396,7 @@ def query_view(request,subpath):
         summary = ''
     children = assistant.children();
     parent = assistant.parent();
-    date = django_now().strftime("%Y-%m-%d:%H:%M")
+    date =  timezone.localtime(timezone.now()).strftime("%Y-%m-%d:%H:%M")
     response = render(request, 'django_ragamuffin/query_form.html', {
         'parent' : parent,
         'children' : children,
