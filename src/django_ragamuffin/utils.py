@@ -162,8 +162,7 @@ def get_assistant( name , quser ):
         #assistant = Assistant.objects.get(name=name,model=model)
     return assistant 
 
-def thread_to_pdf( thread , prints ):
-    messages = thread.messages;
+def thread_to_pdf( thread , messages, prints ):
     iprints = [int(i) for i in prints ];
     ps = [(i,x) for i,x in enumerate(messages) if i in iprints ]
     mode = thread.assistant.mode_choice

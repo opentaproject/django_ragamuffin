@@ -286,19 +286,20 @@ def query_view(request,subpath):
             messages = thread.messages;
             ideletes = [int(i) for i in deletes ];
             deletions =  [x['response_id']  for i,x in enumerate(messages) if i in ideletes and not i == 0 ]
-            iculled = [i for i,x in enumerate(messages) if i not in ideletes ]
+            iculled = [i for i,x in enumerate(messages) if i in ideletes ]
             culled = [x for i,x in enumerate(messages) if i not in ideletes ]
+            print(f"NOT_CULLED = {iculled}")
             if None in deletions :
                 if len( culled ) > 0 :
                     culled[-1]['response_id'] = None
             thread.messages= culled
             thread.save(update_fields=["messages" ])
             response = redirect(f"/django_ragamuffin/query/{assistant.name}/")
-    elif 'print' in request.POST.getlist('action') :
-        prints = request.POST.getlist('entry')
-        if prints :
-            response = thread_to_pdf( thread , prints )
-            return response
+    #elif 'print' in request.POST.getlist('action') :
+    #    prints = request.POST.getlist('entry')
+    #    if prints :
+    #        response = thread_to_pdf( thread.messages , prints )
+    #        return response
     elif 'filter' in request.POST.getlist('action' ) :
         response = redirect(f"/django_ragamuffin/query/{assistant.name}/")
     d = {'status' : 'pending' , 'result' : 'RESULT' }
@@ -327,6 +328,13 @@ def query_view(request,subpath):
             else:
                 m = _m
             messages.append(m)
+
+    if 'print' in request.POST.getlist('action') :
+        prints = request.POST.getlist('entry')
+        print(f"PRINTS = {prints}")
+        if prints :
+            response = thread_to_pdf( thread, messages , prints )
+            return response
     mindex = 0
     comment = ''
     time_spent = 0;
