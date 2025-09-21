@@ -384,6 +384,11 @@ def query_view(request,subpath):
        'previous_response_id' : item.get('previous_response_id',None),
        'date' : item.get('date',None),
        'time_spent' : item.get('time_spent', time_spent) }  for index, item in enumerate( messages )  ] 
+    # Sort by 'date' (descending). Items with missing dates come first.
+    try:
+        f_.sort(key=lambda x: x.get('date') or "", reverse=True)
+    except Exception:
+        pass
     f = [ item for item in f_ if item.get('choice',0)  in keeps ]
     if f:
         summary = f[-1].get('summary','None')
