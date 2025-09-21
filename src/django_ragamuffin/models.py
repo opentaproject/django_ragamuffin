@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.timezone import now as django_now
 from openai import OpenAI
 from pathlib import Path
 from django.db import transaction
@@ -1257,6 +1258,8 @@ class Thread(models.Model) :
             characters = string.ascii_letters + string.digits  # a-zA-Z0-9
             h = ''.join(random.choices(characters, k=8))
             match = re.search(r"^\s*Submitted.*$", query , flags=re.MULTILINE)
+            from django.utils.timezone import now
+            dt_str = django_now().strftime("%Y-%m-%d:%H:%M")
             if match:
                 tagline = str( match.group() );
             else:
@@ -1267,6 +1270,7 @@ class Thread(models.Model) :
                 'model' : model,
                 'time_spent' : time_spent ,
                 'last_messages' : last_messages,
+                'date' : dt_str,
                 'max_num_results' : max_num_results,
                 'summary' : summary,
                 'response_id' : response_id,

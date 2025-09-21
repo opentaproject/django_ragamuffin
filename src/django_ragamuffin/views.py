@@ -1,4 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
+from django.utils.timezone import now as django_now
 import logging
 from django.http import HttpResponseForbidden, JsonResponse
 from django.conf import settings
@@ -278,7 +279,7 @@ def query_view(request,subpath):
     model = get_current_model( quser)
     thread = create_or_retrieve_thread( assistant, name , quser )
     data = request.POST;
-    keeps = request.POST.getlist('keep',[])
+    keeps = request.POST.getlist('keep',choices.keys() )
     if 'delete' in request.POST.getlist('action') :
         deletes = request.POST.getlist('entry')
         if deletes :
@@ -344,6 +345,7 @@ def query_view(request,subpath):
                     choice = message.get('choice','0')
                     mindex = mindex - 1;
                     ntokens = message.get('ntokens')
+                    date = message.get('date',None)
                     break
             try:
                 if txt is None:
@@ -380,6 +382,7 @@ def query_view(request,subpath):
        'summary' : item.get('summary','None'),
        'response_id' : item.get('response_id','None'),
        'previous_response_id' : item.get('previous_response_id',None),
+       'date' : item.get('date',None),
        'time_spent' : item.get('time_spent', time_spent) }  for index, item in enumerate( messages )  ] 
     f = [ item for item in f_ if item.get('choice',0)  in keeps ]
     if f:
@@ -393,6 +396,7 @@ def query_view(request,subpath):
         summary = ''
     children = assistant.children();
     parent = assistant.parent();
+    date = django_now().strftime("%Y-%m-%d:%H:%M")
     response = render(request, 'django_ragamuffin/query_form.html', {
         'parent' : parent,
         'children' : children,
@@ -407,6 +411,7 @@ def query_view(request,subpath):
         'ntokens' : ntokens,
         'summary' : summary,
         'keeps' : keeps,
+        'date' : date,
         'model' : model ,
         'resolved_choices' : resolved_choices,
         'assistant_pk' : assistant.pk ,

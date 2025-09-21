@@ -181,14 +181,15 @@ $(document).ready(function () {
     // console.log("FIRST_WORD = ", first_word);
     if (selectedValue == 0 && first_word != 'None') {
       button_color(document.getElementById("submitBtn"), "red");
-      if (!first_word.includes("ERROR")) {
-        alert(
-          "You must read and assess the response before with a new related query."
-        );
-      } else {
-        button_color(document.getElementById("submitBtn"), "green");
-      }
-    } else {
+      // Git rid of forcing comments before continuing!
+      // if (!first_word.includes("ERROR")) {
+      //   alert(
+      //     "You must read and assess the response before with a new related query."
+      //   );
+      // } else {
+      //   button_color(document.getElementById("submitBtn"), "green");
+     //  }
+    // } else {
       button_color(document.getElementById("submitBtn"), "green");
     }
   });

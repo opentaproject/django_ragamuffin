@@ -74,5 +74,6 @@ if not RUNTESTS :
             'ATOMIC_REQUESTS' : False,
             }
         })
+settings.INSTALLED_APPS.append('django.contrib.humanize')
 
 print(f"PGHOST = {PGHOST}")

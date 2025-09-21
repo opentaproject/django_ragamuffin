@@ -194,9 +194,9 @@
                                         <input type="checkbox" name="entry" value="{{ m.index}}" class="choice-box">
                                         <button style="width: 100% ; text-align: left; " name='oldquery' value="{{m.user}}">{{ m.index  | stringformat:"02d" }}:
 						[<span class="innerChoice" id="choice-{{m.index}}">{{m.choice}}</span>] 
-						<span style="font-size: xx-small;"  > [ {{ m.username | username_from_email }} ]   </span> 
-                                            <div class="innerDiv" style="display: none"> {{m.assistant | safe }}
-						    <div class='verbatim'> tokens={{m.ntokens}} model={{ m.model }} dt={{ m.time_spent }}s saved_messages={{ m.last_messages }} chunks={{ m.max_num_results }}  {{ m.username }}</div>
+						<span style="font-size: xx-small;"  > [ {{ m.username | username_from_email }} ] [ {{m.date|humanize_datetime}}]  </span> 
+                                            <div class="innerDiv" style="display: none"> {{m.assistant | safe }}  
+					    <div class='verbatim'> date={{m.date|humanize_datetime }} tokens={{m.ntokens}} model={{ m.model }} dt={{ m.time_spent }}s saved_messages={{ m.last_messages }} chunks={{ m.max_num_results }}  {{ m.username }}</div>
 						{% if user.is_staff %}
 						<div class='wrap-summary'> {{ m.summary | safe }} </div> 
 						{% endif %}
@@ -256,7 +256,7 @@
                     <div id='response-block'>
                         <div style="border: 1px dashed gray; background-color: #f9f9f9; padding: 1rem;">
                             <div id='response' class='wrap-text' > {{ response| safe }}
-                                <div class='verbatim'> ntokens={{ntokens}} model={{ model }} dt={{ time_spent }}s saved_messages={{ last_messages }} chunks={{ max_num_results }}  </div>
+			    <div class='verbatim'> date={{date|humanize_datetime}} ntokens={{ntokens}} model={{ model }} dt={{ time_spent }}s saved_messages={{ last_messages }} chunks={{ max_num_results }}  </div>
 				{% if user.is_staff %}
 	<div class='wrap-summary'> {{ summary | safe }} </div> 
 				{% endif %}
