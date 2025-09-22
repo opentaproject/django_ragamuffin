@@ -1,4 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
+from django.forms.models import model_to_dict
 from django.utils import timezone 
 import logging
 from django.http import HttpResponseForbidden, JsonResponse
@@ -11,9 +12,9 @@ import time
 import re
 
 from .forms import QueryForm
-from .utils import doarchive, CHOICES, get_assistant, mathfix, thread_to_pdf
+from .utils import doarchive, CHOICES, get_assistant, mathfix, messages_to_pdf
 from .models import create_or_retrieve_thread, QUser, get_current_model, ModeChoice
-from django_ragamuffin.models import Assistant, Thread, Assistant
+from django_ragamuffin.models import Assistant, Thread, Assistant, Message
 logger = logging.getLogger(__name__)
 
 
@@ -224,18 +225,19 @@ def feedback_view(request,subpath):
     segments = subpath_.split('/')
     last_messages = settings.LAST_MESSAGES;
     max_num_results = settings.MAX_NUM_RESULTS;
-    name = ( '.'.join( segments ) ).rstrip('.')
+    #name = ( '.'.join( segments ) ).rstrip('.')
     choice = 0;
     index = int( request.POST.getlist('newmessage_index')[0] )
+    print(f"INDEX = {index}")
     #print(f"POST LIST THREAD = {request.POST.getlist('thread')}")
-    post_thread =  re.sub(r'\.','_',request.POST.getlist('thread')[0])
-    thread_name = ( '.'.join( post_thread.split('/')[3:] ) ).rstrip('.');
-    user , _ = QUser.objects.get_or_create(username=request.user.username)
+    #post_thread =  re.sub(r'\.','_',request.POST.getlist('thread')[0])
+    #thread_name = ( '.'.join( post_thread.split('/')[3:] ) ).rstrip('.');
+    #user , _ = QUser.objects.get_or_create(username=request.user.username)
     #print(f"USER = {user} {user.username}")
     #print(f"THREAD_NAME = {thread_name}")
-    threads = Thread.objects.filter(name=thread_name,user=user).all()
+    #threads = Thread.objects.filter(name=thread_name,user=user).all()
     #print(f"THREADS = {threads}")
-    thread = threads[0]
+    #thread = threads[0]
     comment = ''
     comments =  request.POST.getlist('comment')
     options  =  request.POST.getlist('option' );
@@ -246,14 +248,18 @@ def feedback_view(request,subpath):
         i = int( options[0] );
         comment = options[1];
         choice = i
-    if len( thread.messages) > 0 :
-        try :
-            thread.messages[index].update( {'comment': comment , 'choice' : choice })
-            msg = thread.messages[index];
-            thread.save();
-            doarchive(thread, msg )
-        except Exception as err :
-            print(f"ERROR1 {str(err)}")
+    message = Message.objects.get(pk=index)
+    message.choice = choice;
+    message.comment = comment;
+    message.save(update_fields=['comment','choice'] );
+    #if len( thread.messages) > 0 :
+    #    try :
+    #        thread.messages[index].update( {'comment': comment , 'choice' : choice })
+    #        msg = thread.messages[index];
+    #        thread.save();
+    #        doarchive(thread, msg )
+    #    except Exception as err :
+    #        print(f"ERROR1 {str(err)}")
     return JsonResponse({"success": True,'index' : index ,'comment' : comment , 'choice' :choice  })
 
 FILENAME = "../README.md"
@@ -282,58 +288,48 @@ def query_view(request,subpath):
     keeps = request.POST.getlist('keep',choices.keys() )
     if 'delete' in request.POST.getlist('action') :
         deletes = request.POST.getlist('entry')
-        if deletes :
-            messages = thread.messages;
-            ideletes = [int(i) for i in deletes ];
-            deletions =  [x['response_id']  for i,x in enumerate(messages) if i in ideletes and not i == 0 ]
-            iculled = [i for i,x in enumerate(messages) if i in ideletes ]
-            culled = [x for i,x in enumerate(messages) if i not in ideletes ]
-            print(f"NOT_CULLED = {iculled}")
-            if None in deletions :
-                if len( culled ) > 0 :
-                    culled[-1]['response_id'] = None
-            thread.messages= culled
-            thread.save(update_fields=["messages" ])
-            response = redirect(f"/django_ragamuffin/query/{assistant.name}/")
-    #elif 'print' in request.POST.getlist('action') :
-    #    prints = request.POST.getlist('entry')
-    #    if prints :
-    #        response = thread_to_pdf( thread.messages , prints )
-    #        return response
+        print(f"DELETES = {deletes}")
+        dmessages = Message.objects.filter(pk__in=deletes);
+        print(f"DMESSAGES = {dmessages}")
+        dmessages.delete();
+        #if deletes :
+        #    messages = thread.messages;
+        #    ideletes = [int(i) for i in deletes ];
+        #    deletions =  [x['response_id']  for i,x in enumerate(messages) if i in ideletes and not i == 0 ]
+        #    iculled = [i for i,x in enumerate(messages) if i in ideletes ]
+        #    culled = [x for i,x in enumerate(messages) if i not in ideletes ]
+        #    print(f"NOT_CULLED = {iculled}")
+        #    if None in deletions :
+        #        if len( culled ) > 0 :
+        #            culled[-1]['response_id'] = None
+        #    thread.messages= culled
+        #    thread.save(update_fields=["messages" ])
+        response = redirect(f"/django_ragamuffin/query/{assistant.name}/")
     elif 'filter' in request.POST.getlist('action' ) :
         response = redirect(f"/django_ragamuffin/query/{assistant.name}/")
     d = {'status' : 'pending' , 'result' : 'RESULT' }
-    if user.is_staff:
-        # Aggregate messages from all threads with this name (all users)
-        threads = Thread.objects.filter(name=name).all()
-        messages = []
-        for t in threads:
-            t_msgs = t.messages or []
-            uname = t.user.username if getattr(t, "user", None) else ""
-            for _m in t_msgs:
-                if isinstance(_m, dict):
-                    m = dict(_m)
-                    m["username"] = uname
-                else:
-                    m = _m
-                messages.append(m)
-    else:
-        base_msgs = thread.messages or []
-        uname = thread.user.username if getattr(thread, "user", None) else ""
-        messages = []
-        for _m in base_msgs:
-            if isinstance(_m, dict):
-                m = dict(_m)
-                m["username"] = uname
-            else:
-                m = _m
-            messages.append(m)
+    if  user.is_staff : 
+        base_msgs = list( Message.objects.filter(thread__name=name) ) or []
+    else :
+        base_msgs = list( thread.thread_messages.all() ) or []
+    uname = thread.user.username if getattr(thread, "user", None) else ""
+    messages = []
+    for _mm in base_msgs:
+        m =  model_to_dict(_mm , fields=[f.name for f in _mm._meta.fields])
+        #if isinstance(_m, dict):
+        #    m = dict(_m)
+        m["username"] = _mm.username()
+        m["pk"] = _mm.pk
+        m["date"] = str( _mm.date)
+        if m['choice'] == None :
+            m['choice'] = 0;
+        messages.append(m)
+
 
     if 'print' in request.POST.getlist('action') :
         prints = request.POST.getlist('entry')
-        print(f"PRINTS = {prints}")
         if prints :
-            response = thread_to_pdf( thread, messages , prints )
+            response = messages_to_pdf( assistant , messages , prints )
             return response
     mindex = 0
     comment = ''
@@ -347,8 +343,8 @@ def query_view(request,subpath):
             txt = None
             for i,message in enumerate( messages ) :
                 mindex = i+1;
-                if query.strip()  == message['user'].strip() :
-                    txt = "*You already asked that!*<p/>" + message['assistant']
+                if query.strip()  == message['query'].strip() :
+                    txt = "*You already asked that!*<p/>" + message['response']
                     comment = message.get('comment','')
                     choice = message.get('choice','0')
                     mindex = mindex - 1;
@@ -378,8 +374,8 @@ def query_view(request,subpath):
     time_spent = int( ( time.time() - now  ) + 0.5 )
     keeps =  [ int(i) for i in keeps ]
     resolved_choices = [(i, choices[i]) for i in keeps]
-    f_ = [ { 'index' : index, 'user' : item['user'] , 
-       'assistant' : mark_safe( mathfix(item['assistant'] ) ),
+    f_ = [ {  'user' : item['query'] ,  'pk' : item['pk'] ,
+       'response' : mark_safe( mathfix(item['response'] ) ),
        'username' : item.get('username',''),
        'ntokens' : item['ntokens'],
        'comment' : item.get('comment','') ,
@@ -397,9 +393,9 @@ def query_view(request,subpath):
         f_.sort(key=lambda x: x.get('date') or "", reverse=True)
     except Exception:
         pass
-    f = [ item for item in f_ if item.get('choice',0)  in keeps ]
-    if f:
-        summary = f[-1].get('summary','None')
+    ff = [ item for item in f_ if item.get('choice',0)  in keeps ]
+    if ff:
+        summary = ff[-1].get('summary','None')
     else :
         summary = ''
     try :
@@ -407,6 +403,7 @@ def query_view(request,subpath):
             summary = ''
     except :
         summary = ''
+    f = [ { **item, 'index' : index}   for index,item in enumerate(ff)]
     children = assistant.children();
     parent = assistant.parent();
     date =  timezone.localtime(timezone.now()).strftime("%Y-%m-%d:%H:%M")
@@ -420,7 +417,7 @@ def query_view(request,subpath):
         'mindex' : mindex ,
         'comment' : comment,
         'choices' : choices ,
-        'choice' : choice ,
+        'choice' : 0,
         'ntokens' : ntokens,
         'summary' : summary,
         'keeps' : keeps,

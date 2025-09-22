@@ -29,6 +29,17 @@ upload_storage = FileSystemStorage(location="/subdomain-data/query", base_url="/
 
 from openai import OpenAIError, RateLimitError, APIError, Timeout
 
+CHOICES = {0 : 'Unread' ,
+           1 : 'Incomplete' , 
+           2 : 'Wrong', 
+           3 : 'Irrelevant',
+           4 : "Superficial." ,  
+           5 : "Unhelpful", 
+           6 : 'Partly Correct', 
+           7 : 'Completely Correct'}
+
+
+
 def randstring(tag, length=8):
     characters = string.ascii_letters + string.digits  # A-Z, a-z, 0-9
     return tag + '-' + ''.join(random.choices(characters, k=length))
@@ -209,6 +220,7 @@ class QUser(models.Model ):
 
     def __str__(self):
         return f"{self.username}"
+
 
 
 
@@ -1039,9 +1051,6 @@ class Assistant( models.Model ):
         return set( remote_ids) == set( file_ids )
 
 
-
-
-
 class Thread(models.Model) :
     name = models.CharField(max_length=255)
     date = models.DateTimeField(auto_now=True)
@@ -1144,7 +1153,7 @@ class Thread(models.Model) :
         context = {'openai' : openai, 'instructions' : instructions, 'model' : model, 
                     'thread_id': thread_id, 'assistant_id' : assistant_id, 'query': query, 
                     'last_messages' : last_messages, 'max_num_results' : max_num_results, 
-                   'previous_response_id' : previous_response_id ,'vss' : vss }
+                    'previous_response_id' : previous_response_id ,'vss' : vss }
 
         def my_run_remote_query( context ) :
             now = time.time();
@@ -1159,8 +1168,10 @@ class Thread(models.Model) :
             previous_response_id = context.get('previous_response_id',None)
             effort = settings.EFFORT
             msg = ''
-            #print(f"INSTRUCTIONS FOR REMOTE QUERY\nvvvvvvvvvvvvvvvvvvvvvvv\n{instructions}\n^^^^^^^^^^^^^^^^^^^^^^\n")
-            #print(f"VSS = {vss}")
+            print(f"INSTRUCTIONS FOR REMOTE QUERY\nvvvvvvvvvvvvvvvvvvvvvvv\n{instructions}\n^^^^^^^^^^^^^^^^^^^^^^\n")
+            print(f"VSS = {vss}")
+            reasoning={"effort": effort ,'summary': 'auto'}
+            print(f"REASONING = {reasoning}")
             try :
                 if vss :
                     try :
@@ -1169,7 +1180,7 @@ class Thread(models.Model) :
                             input=query,
                             previous_response_id=previous_response_id,
                             instructions=instructions,
-                            reasoning={"effort": effort, 'summary': 'auto'},
+                            reasoning=reasoning,
                             tools=[{"type": "file_search",
                                 "vector_store_ids": vss  # your vector store id
                                 }]
@@ -1187,7 +1198,7 @@ class Thread(models.Model) :
                             input=query,
                             previous_response_id=previous_response_id,
                             instructions=instructions,
-                            reasoning={"effort": effort ,'summary': 'auto'},
+                            reasoning=reasoning,
                             tools=[{"type": "file_search",
                                 "vector_store_ids": vss  # your vector store id
                                 }]
@@ -1203,7 +1214,7 @@ class Thread(models.Model) :
                             input=query,
                             previous_response_id=previous_response_id,
                             instructions=instructions,
-                            reasoning={"effort": effort ,'summary': 'auto'},
+                            reasoning=reasoning,
                             )
                     except  Exception as err :
                         print(f"ERROR6 {str(err)} ")
@@ -1217,7 +1228,7 @@ class Thread(models.Model) :
                                 model=model,
                                 input=query,
                                 instructions=instructions,
-                                reasoning={"effort": effort ,'summary': 'auto'},
+                                reasoning=reasoning,
                                 )
                         else :
                             RESPONSE = openai.responses.create(
@@ -1225,7 +1236,7 @@ class Thread(models.Model) :
                                 input=query,
                                 previous_response_id=previous_response_id,
                                 instructions=instructions,
-                                reasoning={"effort": effort ,'summary': 'auto'},
+                                reasoning=reasoning,
                                 )
 
             except  Exception as e :
@@ -1274,6 +1285,7 @@ class Thread(models.Model) :
                 'max_num_results' : max_num_results,
                 'summary' : summary,
                 'response_id' : response_id,
+                'instructions' : instructions,
                 'previous_response_id' : previous_response_id,
                 'hash' : h }
             return msg
@@ -1284,10 +1296,55 @@ class Thread(models.Model) :
         else :
             thread.messages = [msg]
         thread.save()
+        previous = None
+        try :
+            previous = Message.objects.filter(thread=thread).last();
+        except :
+            pass
+        message = Message(query=msg['user'],
+            response=msg['assistant'],
+            summary=msg['summary'],
+            previous=previous,
+            ntokens=msg.get('ntokens',0),
+            model=msg['model'],
+            time_spent=msg['time_spent'],
+            last_messages=msg['last_messages'],
+            response_id=msg['response_id'],
+            instructions=msg['instructions'],
+            previous_response_id=msg['previous_response_id'],
+            mhash=msg['hash'],
+            )
+        message.save();
+        message.thread = thread;
+        message.save();
+
         #from .utils import print_messages
         #print_messages(thread)
         return msg
 
+
+
+
+class Message( models.Model ):
+    query =    models.TextField(blank=True, default="")
+    response = models.TextField(blank=True, default="")
+    summary =  models.TextField(blank=True, default="")
+    previous = models.ForeignKey( "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="next_message")
+    ntokens = models.IntegerField( blank=True, null=True)
+    choice = models.IntegerField( default=0, blank=True, null=True)
+    comment =  models.TextField(blank=True, default="",null=True)
+    model = models.CharField(max_length=64,blank=True)
+    time_spent = models.IntegerField(blank=True,null=True)
+    last_messages = models.IntegerField(blank=True,null=True)
+    date = models.DateTimeField(auto_now_add=True)
+    response_id = models.CharField(max_length=64,blank=True)
+    instructions =  models.TextField(blank=True, default="")
+    previous_response_id =  models.CharField(max_length=64,blank=True,null=True)
+    mhash =  models.CharField(max_length=64,blank=True,null=True)
+    thread =  models.ForeignKey(Thread,  null=True, on_delete=models.SET_NULL, blank=True, related_name="thread_messages")
+
+    def username(self) :
+        return self.thread.user.username
 
 
 

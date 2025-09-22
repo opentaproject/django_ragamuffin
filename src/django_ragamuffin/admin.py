@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.conf import settings
 from django import forms
-from .models import OpenAIFile  , VectorStore , Assistant, Thread, DEFAULT_INSTRUCTIONS, RemoteVectorStore, QUser, Mode, ModeChoice
+from .models import OpenAIFile  , VectorStore , Assistant, Thread, DEFAULT_INSTRUCTIONS, RemoteVectorStore, QUser, Mode, ModeChoice, Message
 
 
 @admin.register(RemoteVectorStore)
@@ -85,6 +85,17 @@ class MyThreadForm(forms.ModelForm):
 class ThreadAdmin(admin.ModelAdmin):
     form = MyThreadForm;
     list_display = ('id', 'name', 'user', 'thread_id', 'assistant')  # Add your custom method here
+
+@admin.register(Message)
+class MessageAdmin(admin.ModelAdmin):
+    form = MyThreadForm;
+    list_display = ('id',  'thread')  # Add your custom method here
+
+
+class MyMessageForm(forms.ModelForm):
+    class Meta:
+        model = Message
+        fields = '__all__'
 
 
 

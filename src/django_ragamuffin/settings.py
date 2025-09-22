@@ -60,7 +60,10 @@ LAST_MESSAGES = 99
 MAX_NUM_RESULTS = None
 MAX_TOKENS = 8000 # NOT IMPLMENTED AS OF openai==1.173.0 
 AI_MODELS = {'staff' : 'gpt-5-mini', 'default' : AI_MODEL }
-EFFORT = 'low'
+if hasattr(settings,'EFFORT' ) :
+    EFFORT = settings.EFFORT
+else :
+    EFFORT = 'medium'
 DJANGO_RAGAMUFFIN_DB = os.environ.get("DJANGO_RAGAMUFFIN_DB",None) 
 if not RUNTESTS :
     settings.DATABASES.update({

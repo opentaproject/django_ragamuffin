@@ -8,7 +8,7 @@ from django.conf import settings
 import os
 import string
 import random
-from django_ragamuffin.models import VectorStore, Assistant, Mode, ModeChoice, Thread
+from django_ragamuffin.models import VectorStore, Assistant, Mode, ModeChoice, Thread, CHOICES
 from django.utils.safestring import mark_safe
 from django.http import FileResponse
 import logging
@@ -96,16 +96,6 @@ def doarchive( thread, msg ):
     with open(fn, "w") as f:
         json.dump(msgsave,  f , indent=2)
 
-CHOICES = {0 : 'Unread' ,
-           1 : 'Incomplete' , 
-           2 : 'Wrong', 
-           3 : 'Irrelevant',
-           4 : "Superficial." ,  
-           5 : "Unhelpful", 
-           6 : 'Partly Correct', 
-           7 : 'Completely Correct'}
-
-
 
 def print_messages( thread ):
     ms = thread.messages
@@ -162,27 +152,29 @@ def get_assistant( name , quser ):
         #assistant = Assistant.objects.get(name=name,model=model)
     return assistant 
 
-def thread_to_pdf( thread , messages, prints ):
+def messages_to_pdf( assistant , messages, prints ):
     iprints = [int(i) for i in prints ];
-    ps = [(i,x) for i,x in enumerate(messages) if i in iprints ]
-    mode = thread.assistant.mode_choice
-    print(f"MODE = {mode.label}")
+    pks = [ m['id'] for m in messages ]
+    ps = [(i,x) for i,x in enumerate(messages) if ( x['id']  in iprints ) ]
+    mode = assistant.mode_choice
     vv = 'Query'
-    match mode.label :
-        case 'Examiner' :
-            vv = 'Attempt'
-        case 'Assistant' :
-            vv = 'Query'
-        case _:
-            vv = 'Query'
-
+    if mode == None :
+        vv = ''
+    else :
+        match f"{mode}":
+            case 'Examiner' :
+                vv = 'Attempt'
+            case 'Assistant' :
+                vv = 'Query'
+            case _:
+                vv = 'Query'
 
     file = open("/tmp/tmp.tex","w");
     file.write(head)
     for (i,p) in ps :
         msg = p;
-        q = msg['user'];
-        r = msg['assistant']
+        q = msg['query'];
+        r = msg['response']
         r =  mark_safe( mathfix(r)  );
         r = pypandoc.convert_text( r ,'latex', format='html+raw_tex', extra_args=["--wrap=preserve"]  )
         def pandoc_fix(r) :
@@ -210,14 +202,14 @@ def thread_to_pdf( thread , messages, prints ):
         v = CHOICES[choice]
         time_spent = msg.get('time_spent',0);
         model = msg.get('model','None')
-        name = thread.name
+        name = assistant.name
         #file.write(f"\\fancyhead[R]{{ \\hspace{{1cm}} \\textbf{{ {name} }} }}\n");
         file.write(f"\\fancyhead[R]{{\\makebox[0pt][l]{{\\hspace{{-4cm}}\\textbf{{ {name} }}}} }} ")
         file.write(boxhead)
         #file.write(f"\n\\textbf{{Assistant: {name} }}\n\\vspace{{8pt}}\n\n")
         file.write(f"\n\\textbf{{{vv} {i} :}} {q}\n{boxtail}\n\\textbf{{Response:}} {r}\n")
         file.write(f"\n\\vspace{{8pt}}\n") 
-        file.write(f"\n\\textbf{{tokens={msg.get('ntokens',0)} dt={time_spent} model={model} choice={choice} {v} }} \\vspace{{12pt}} \n\n " )
+        file.write(f"\n\\textbf{{tokens={msg.get('ntokens',0)} dt={time_spent} model={model} {choice}-{v} }} \\vspace{{12pt}} \n\n " )
     file.write(tail)
     file.close();
     try :

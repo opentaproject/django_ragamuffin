@@ -1,7 +1,9 @@
 from django import template
 from django.utils.dateparse import parse_datetime
-from django.utils.timesince import timesince
+from django.utils.timesince import timesince, timeuntil
+from django.utils.dateparse import parse_datetime
 from django.utils.timezone import is_naive, make_aware, get_current_timezone
+from django.utils import timezone
 
 
 register = template.Library()
@@ -20,7 +22,7 @@ def username_from_email(value):
     return value.split('@')[0] if value else ''
 
 @register.filter
-def humanize_datetime(value):
+def old_humanize_datetime(value):
     """
     Convert a datetime string like '2025-09-21:13:07' to 'x minutes ago'.
     """
@@ -33,6 +35,65 @@ def humanize_datetime(value):
             return value  # fallback: return raw string
         if is_naive(dt):
             dt = make_aware(dt, get_current_timezone())
-        return f"{timesince(dt)} ago"
+        d = f"{timesince(dt)} ago"
+        d = d.replace('hours','h,')
+
+        return d
+
     except Exception as err :
         return str( value )
+
+@register.filter
+def humanize_datetime(value):
+    """
+    Humanize an ISO-like datetime string into 'x minutes ago' or 'in x minutes'.
+    Example input: '2025-09-22 20:04:13.667166+00:00'
+    """
+    if not value:
+        return ""
+
+    # Parse the string into datetime
+    dt = parse_datetime(str(value))
+    if not dt:
+        return value  # fallback if parsing fails
+
+    # Ensure timezone-aware in current tz
+    if timezone.is_naive(dt):
+        dt = timezone.make_aware(dt, timezone.get_current_timezone())
+
+    now = timezone.localtime(timezone.now())
+
+    if dt <= now:
+        d = f"{timesince(dt, now)} ago"
+    else:
+        d = f"in {timeuntil(dt, now)}"
+    d = d.replace('hours','h')
+    d = d.replace('minutes','m')
+    d = d.replace(',','')
+    d = '+' + d.replace(' ago','')
+    return d
+
+@register.filter
+def localtime_no_microseconds(value):
+    """
+    Humanize an ISO-like datetime string into 'x minutes ago' or 'in x minutes'.
+    Example input: '2025-09-22 20:04:13.667166+00:00'
+    """
+    if not value:
+        return ""
+
+    # Parse the string into datetime
+    dt = parse_datetime(str(value))
+    if not dt:
+        return value  # fallback if parsing fails
+
+    # Ensure timezone-aware in current tz
+    if timezone.is_naive(dt):
+        dt = timezone.make_aware(dt, timezone.get_current_timezone())
+    return dt.strftime("%Y-%m-%d:%H:%M:%S")
+
+    #if dt <= now:
+    #    return f"{timesince(dt, now)} ago"
+    #else:
+    #    return f"in {timeuntil(dt, now)}"
+
