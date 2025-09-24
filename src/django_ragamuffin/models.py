@@ -1,4 +1,3 @@
-from django.db import models
 from django.utils import timezone 
 from openai import OpenAI
 from pathlib import Path
@@ -1168,10 +1167,10 @@ class Thread(models.Model) :
             previous_response_id = context.get('previous_response_id',None)
             effort = settings.EFFORT
             msg = ''
-            print(f"INSTRUCTIONS FOR REMOTE QUERY\nvvvvvvvvvvvvvvvvvvvvvvv\n{instructions}\n^^^^^^^^^^^^^^^^^^^^^^\n")
-            print(f"VSS = {vss}")
+            #print(f"INSTRUCTIONS FOR REMOTE QUERY\nvvvvvvvvvvvvvvvvvvvvvvv\n{instructions}\n^^^^^^^^^^^^^^^^^^^^^^\n")
+            #print(f"VSS = {vss}")
             reasoning={"effort": effort ,'summary': 'auto'}
-            print(f"REASONING = {reasoning}")
+            #print(f"REASONING = {reasoning}")
             try :
                 if vss :
                     try :
