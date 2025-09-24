@@ -1,4 +1,5 @@
 from django.utils import timezone 
+from django.db import models
 from openai import OpenAI
 from pathlib import Path
 from django.db import transaction
