@@ -15,7 +15,7 @@ PGUSER = d.get('USER','postgres')
 PGPASSWORD = d.get('PASSWORD','postgres')
 if not hasattr(settings, 'SUBDOMAIN' ):
     SUBDOMAIN = os.environ.get('SUBDOMAIN','query')
-MAXWAIT = 120 ; # WAIT MAX 120 seconds
+MAXWAIT = 480 ; # WAIT MAX 120 seconds
 DEFAULT_TEMPERATURE = 0.2;
 LAST_MESSAGES = 99
 MAX_NUM_RESULTS = None
