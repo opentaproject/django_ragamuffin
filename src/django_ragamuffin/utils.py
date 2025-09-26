@@ -53,7 +53,11 @@ def mathfix( txt ):
     txt = re.sub(r"LEFTBRAK",'<p/>$\\;',txt)
     txt = re.sub(r"RIGHTBRAK",'\\;$<p/>',txt)
     txt = re.sub(r"UNDERSCORE",'_',txt)
+    txt = re.sub(r"\\!",'',txt)
     txt = markdown2.markdown(txt)
+    txt = re.sub(r"\\!",'',txt)
+    txt = re.sub(r'([A-Za-z_]{2,})!', r'\1',txt)
+    txt = re.sub(r'(_\w)!', r'\1',txt)
     return txt
 
 
