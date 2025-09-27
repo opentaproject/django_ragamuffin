@@ -1320,6 +1320,7 @@ class Thread(models.Model) :
 
         #from .utils import print_messages
         #print_messages(thread)
+        msg['pk'] = message.pk
         return msg
 
 
