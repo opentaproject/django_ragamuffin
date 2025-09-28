@@ -358,7 +358,7 @@ class OpenAI(TestCase):
                         ]
 
         thread = Thread(name=aname,assistant=assistant,user=self.quser)
-        thread.messages = []
+        #thread.messages = []
         #thread.messages = None
         thread.save()
         for  q in queries :

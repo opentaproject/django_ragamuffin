@@ -1141,13 +1141,24 @@ class Thread(models.Model) :
         else :
             max_tokens = settings.MAX_TOKENS
         timeout = settings.MAXWAIT
-        if self.messages :
-            previous_response_id = self.messages[-1].get('response_id',None)
-        else :
+        #old_messages = self.thread_messages.all();
+        #print(f"OLD_MESSAGES = {old_messages}")
+        #if old_messages :
+        #    previous_response_id = old_messages[-1].response_id
+        #else :
+        #    previous_response_id = None
+        #print(f"PREVIOUS_RESPONSE_ID = {previous_response_id}")
+        previous_response_id = None
+        try :
+            if clear or self.clear :
+                previous_response_id = None
+                self.clear = False
+            else :
+                previous_response_id = thread.thread_messages.last().response_id
+        except  Exception as err :
+            print(f"ERR = {str(err)}")
             previous_response_id = None
-        if clear or self.clear :
-            previous_response_id = None
-            self.clear = False
+        print(f"PREVIOUS_RESPONSE_ID = {previous_response_id}")
         user = self.user
         model = get_current_model(self.user)
         context = {'openai' : openai, 'instructions' : instructions, 'model' : model, 
@@ -1291,11 +1302,11 @@ class Thread(models.Model) :
             return msg
 
         msg = my_run_remote_query( context)
-        if thread.messages :
-            thread.messages.append(msg) 
-        else :
-            thread.messages = [msg]
-        thread.save()
+        #if thread.messages :
+        #    thread.messages.append(msg) 
+        #else :
+        #    thread.messages = [msg]
+        #thread.save()
         previous = None
         try :
             previous = Message.objects.filter(thread=thread).last();
@@ -1454,10 +1465,14 @@ def handle_files_changed(sender, instance, action, reverse, model, pk_set, **kwa
             for assistant in assistants :
                 threads = assistant.get_all_threads()
                 for thread in threads :
-                    messages = thread.messages;
-                    if messages :
-                        messages[-1]['response_id'] = None
-                    thread.messages = messages;
+                    messages = thread.thread_messages;
+                    last_message = messages.last();
+                    if last_message :
+                        last_message.previous_response_id =  None
+                        last_message.save();
+                    #if messages :
+                    #    messages[-1]['response_id'] = None
+                    #thread.messages = messages;
                     thread.clear = True
                     thread.save();
 

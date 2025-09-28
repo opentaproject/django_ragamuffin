@@ -271,4 +271,7 @@ else :
     OPENAI_UPLOAD_STORAGE =  os.environ.get("OPENAI_UPLOAD_STORAGE",'/tmp/openaifiles')
     os.makedirs(OPENAI_UPLOAD_STORAGE, exist_ok=True)
 print(f"AI_KEY {settings.AI_KEY}")
-print(f"OPENAI_API_KEY {settings.OPENAI_API_KEY}")
+try :
+    print(f"OPENAI_API_KEY {settings.OPENAI_API_KEY}")
+except :
+    OPENAI_API_KEY =  os.environ.get("OPENAI_API_KEY",None)

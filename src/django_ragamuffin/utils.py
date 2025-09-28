@@ -102,7 +102,8 @@ def doarchive( thread, msg ):
 
 
 def print_messages( thread ):
-    ms = thread.messages
+    print(f"PRINT MESSAGES {thread}")
+    ms = thread.thread_messages.all()
     print(f"\n")
     clear = thread.clear
     try :
