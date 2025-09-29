@@ -61,6 +61,12 @@ def mathfix( txt ):
     txt = re.sub(r'(\w\')!', r'\1',txt)  # SHOULD NOT BE HERE
     txt = re.sub(r'(\w\')\!', r'\1',txt) # SHOULD NOT BE HERE
     txt = re.sub(r'(\w\')\\!', r'\1',txt)
+    txt = re.sub(r"operatorname","bold",txt )
+    txt = re.sub(r"boldsymbol","bold",txt )
+    txt = re.sub(r"\$\$(.*?)\$\$", r"<p/><p/>$\1$<p/><p/>", txt, flags=re.S)
+    txt = re.sub(r"\\dots", r"\\ldots", txt )
+    txt = re.sub(r'fileciteturn0file[0-9]+\.', '', txt )
+
     return txt
 
 
