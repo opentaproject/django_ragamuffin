@@ -57,7 +57,10 @@ def mathfix( txt ):
     txt = markdown2.markdown(txt)
     txt = re.sub(r"\\!",'',txt)
     txt = re.sub(r'([A-Za-z_]{2,})!', r'\1',txt)
-    txt = re.sub(r'(_\w)!', r'\1',txt)
+    txt = re.sub(r'(_\w)!', r'\1',txt)   
+    txt = re.sub(r'(\w\')!', r'\1',txt)  # SHOULD NOT BE HERE
+    txt = re.sub(r'(\w\')\!', r'\1',txt) # SHOULD NOT BE HERE
+    txt = re.sub(r'(\w\')\\!', r'\1',txt)
     return txt
 
 

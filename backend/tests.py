@@ -411,9 +411,7 @@ class OpenAI(TestCase):
         t1.delete();
         t2.delete();
         t3.delete();
-        print(f"NOW DELETE ASSISTANT {aname}")
         assistant.delete();
-        print(f"DELETED ASSISTANT {aname}")
         dump_remote_vector_stores("FINAL1");
         delete_remote_vector_stores();
         dump_remote_vector_stores("FINAL2");

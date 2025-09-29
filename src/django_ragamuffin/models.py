@@ -49,16 +49,16 @@ def dump_remote_vector_stores(s='') :
     #print(f"DUMP REMOTE_VECTOR_STORES {s}\nvvvvvv")
     remote_vector_stores = RemoteVectorStore.objects.all();
     for remote_vector_store in remote_vector_stores :
-        print(f"REMOTE_VECTOR_STORE = cs={remote_vector_store.checksum} id={remote_vector_store.vector_store_id} pks={remote_vector_store.vector_stores_pks()}")
-    print(f"^^^^^^")
+        logger.error(f"REMOTE_VECTOR_STORE = cs={remote_vector_store.checksum} id={remote_vector_store.vector_store_id} pks={remote_vector_store.vector_stores_pks()}")
+    logger.error(f"^^^^^^")
 
 
 def remote_wait_for_vector_store_delete(vector_store_id, timeout=settings.MAXWAIT, interval=2):
-    print(f"WAIT_FOR_VECTOR_STORE_DELETE {vector_store_id}")
+    #print(f"WAIT_FOR_VECTOR_STORE_DELETE {vector_store_id}")
     client = OpenAIClient()
     start_time = time.time()
     while time.time() - start_time < timeout:
-        print(f"WAITIN DELETE")
+        #print(f"WAITIN DELETE")
         try:
             client.vector_stores.retrieve(vector_store_id)
         except NotFoundError:
@@ -76,7 +76,7 @@ def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=settings
     i = 0;
     while True:
         i = i + 1;
-        print(f"WATING1 {i}")
+        logger.info(f"WATING1 {i}")
         vs = client.vector_stores.retrieve(vector_store_id=vector_store_id)
         if vs.status == "completed":
             return vs
@@ -133,7 +133,7 @@ def create_or_retrieve_assistant( name , vs ):
     return assistant
 
 def create_or_retrieve_thread( assistant, name, user ) :
-    print(f"CREATE_OR_RETRIEVE_THREAD {assistant} {name} {user}")
+    #print(f"CREATE_OR_RETRIEVE_THREAD {assistant} {name} {user}")
     if user.pk :
         threads = Thread.objects.filter(name=name,user=user)
     else :
@@ -258,7 +258,7 @@ class OpenAIClient( OpenAI ):
                         self.vector_stores.files.delete(vector_store_id=vector_store_id, file_id=f)
                         remote_wait_for_vector_store_ready(self, vector_store_id, timeout=settings.MAXWAIT)
                     except openai.NotFoundError as e:
-                        print(f"File {f} not found in vector store {vector_store_id}: {e}")
+                        logger.error(f"File {f} not found in vector store {vector_store_id}: {e}")
                         continue
                 added_files = list( set( new_file_ids) - set( old_file_ids) )
                 vs.checksum = new_checksum
@@ -272,7 +272,6 @@ class OpenAIClient( OpenAI ):
 
             else :
                 name = checksum
-                print(f"AI_KEY = {settings.AI_KEY}")
                 new_remote_vector_store = self.vector_stores.create(name=name,file_ids=new_file_ids , 
                     metadata={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] , "checksum" : new_checksum } )
                 remote_wait_for_vector_store_ready(self, new_remote_vector_store.id, timeout=settings.MAXWAIT)
@@ -292,7 +291,7 @@ class OpenAIClient( OpenAI ):
         try:
             vector_store_id = vs.get_vector_store_id()
         except AttributeError as e:
-            print(f"Failed to get vector_store_id: {e}")
+            logger.error(f"Failed to get vector_store_id: {e}")
             raise
         checksum = vs.get_checksum()
         return True
@@ -336,11 +335,11 @@ class OpenAIClient( OpenAI ):
 
     def delete_file_globally( self , file_id ):
         try :
-            print(f"DELETE GLOBALLY {file_id}")
+            logger.info(f"DELETE GLOBALLY {file_id}")
             self.files.delete(file_id)
             return True
         except Exception as err :
-            print(f"GLOBAL DELETION ERROR {str(err)}")
+            logger.error(f"GLOBAL DELETION ERROR {str(err)}")
             return False
 
     def vector_stores_files_delete( self, vs, vector_store_id, file_id ):
@@ -1156,9 +1155,9 @@ class Thread(models.Model) :
             else :
                 previous_response_id = thread.thread_messages.last().response_id
         except  Exception as err :
-            print(f"ERR = {str(err)}")
+            logger.error(f"ERR44 = {str(err)}")
             previous_response_id = None
-        print(f"PREVIOUS_RESPONSE_ID = {previous_response_id}")
+        logger.info(f"PREVIOUS_RESPONSE_ID = {previous_response_id}")
         user = self.user
         model = get_current_model(self.user)
         context = {'openai' : openai, 'instructions' : instructions, 'model' : model, 
@@ -1197,7 +1196,7 @@ class Thread(models.Model) :
                                 }]
                         )
                     except Exception as err:
-                        print(f"ERROR5 {str(err)} ")
+                        logger.error(f"ERROR5 {str(err)} ")
                         if "Previous response with id" in str(err) :
                             previous_response_id = None
                         import ast
@@ -1228,7 +1227,7 @@ class Thread(models.Model) :
                             reasoning=reasoning,
                             )
                     except  Exception as err :
-                        print(f"ERROR6 {str(err)} ")
+                        logger.error(f"ERROR6 {str(err)} ")
                         import ast
                         payload_str = str(err).split(" - ", 1)[1]
                         payload = ast.literal_eval(payload_str)   # safe parse to dict
@@ -1251,7 +1250,7 @@ class Thread(models.Model) :
                                 )
 
             except  Exception as e :
-                print(f"ERROR7 {str(e)}")
+                logger.error(f"ERROR7 {str(e)}")
 
     
             output = RESPONSE.output
@@ -1377,7 +1376,7 @@ def custom_delete_assistant(sender, instance, **kwargs):
             if vector_store.name == assistant.name : # THIS IS HERE BECAUSE MULTIPL VECTOR STORES CAN'T BE USED BY AN ASSISTANT
                 client.delete_vector_store( vector_store_id)
     except Exception as err :
-        print(f"ERROR8 = {str(err)}")
+        logger.error(f"ERROR8 = {str(err)}")
 
 @receiver(post_delete, sender=Assistant)
 def post_delete_assistant(sender, instance, **kwargs):
