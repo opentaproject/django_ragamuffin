@@ -202,7 +202,11 @@
 						{% endif %}
                                             </div>
                                             <div class="mindex" style="display: none"> {{m.pk }} </div>
-                                            {{m.user|truncatechars:30}} <em> <span id="comment-{{m.pk}}" class="innerComment">{{ m.comment}}</span> </em>   </button>
+                                            {{m.user|truncatechars:30}} <em> <span id="comment-{{m.pk}}" class="innerComment">{{ m.comment}}</span> </em>   
+					    <em> 
+					    {{m.response|clean_snippet:30}} </em>
+
+					    </button>
                                         <div class="message_index"></div>
                                     </span>
                                 {% endfor %}

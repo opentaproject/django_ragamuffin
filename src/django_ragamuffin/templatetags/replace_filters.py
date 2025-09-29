@@ -3,7 +3,9 @@ from django.utils.dateparse import parse_datetime
 from django.utils.timesince import timesince, timeuntil
 from django.utils.dateparse import parse_datetime
 from django.utils.timezone import is_naive, make_aware, get_current_timezone
+from django.utils.html import strip_tags
 from django.utils import timezone
+import re
 
 
 register = template.Library()
@@ -15,6 +17,32 @@ def replace(value, args):
         old, new = a.split(',')
         value = value.replace(old, new)
     return value
+
+@register.filter(name="clean_snippet")
+def clean_snippet(value, length=30):
+    if value is None:
+        return ""
+    s = str(value)
+    s = strip_tags(s)
+
+    # 1) strip leading blanks
+    s = s.lstrip()
+
+    # 2) replace any newline variation with a single space
+    s = re.sub(r"\r\n|\r|\n", " ", s)
+
+    # (optional) collapse multiple spaces
+    s = re.sub(r"\s{2,}", " ", s)
+
+    # 3) truncate to desired length (default 30)
+    try:
+        n = int(length)
+    except (TypeError, ValueError):
+        n = 30
+
+    if len(s) <= n:
+        return s
+    return s[:n].rstrip() + "…"
     
 @register.filter
 def username_from_email(value):
