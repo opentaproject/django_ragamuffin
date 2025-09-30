@@ -221,6 +221,10 @@ class QUser(models.Model ):
     def __str__(self):
         return f"{self.username}"
 
+    def messages(self):
+        messages = Message.objects.filter(thread__in=self.thread_set.all()).select_related("thread")
+        return messages
+
 
 
 

@@ -18,7 +18,11 @@ class RemoteVectorStoreAdmin(admin.ModelAdmin):
 
 @admin.register(QUser)
 class QUserAdmin(admin.ModelAdmin):
-    list_display = ('pk', 'username', 'is_staff')
+
+    def messages(self,obj):
+        return len( obj.messages() )
+
+    list_display = ('pk', 'username', 'is_staff','messages')
 
 
 
