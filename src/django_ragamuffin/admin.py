@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db.models import Count
 from django.conf import settings
 from django import forms
 from .models import OpenAIFile  , VectorStore , Assistant, Thread, DEFAULT_INSTRUCTIONS, RemoteVectorStore, QUser, Mode, ModeChoice, Message
@@ -23,6 +24,15 @@ class QUserAdmin(admin.ModelAdmin):
         return len( obj.messages() )
 
     list_display = ('pk', 'username', 'is_staff','messages')
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        # annotate each user with a count of related messages
+        return qs.annotate(message_count=Count('thread__thread_messages'))
+
+    @admin.display(ordering='message_count')
+    def messages(self, obj):
+        return obj.message_count
 
 
 
