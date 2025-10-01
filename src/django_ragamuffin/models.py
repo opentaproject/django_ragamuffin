@@ -1299,7 +1299,7 @@ class Thread(models.Model) :
                 'max_num_results' : max_num_results,
                 'summary' : summary.strip() ,
                 'response_id' : response_id,
-                'instructions' : instructions,
+                'instructions' : instructions.strip(),
                 'previous_response_id' : previous_response_id,
                 'hash' : h }
             return msg
