@@ -1290,14 +1290,14 @@ class Thread(models.Model) :
             else:
                 tagline = ''
             query = tagline + "\n" + re.sub( r"BEGIN_SUBMISSION.*?END_SUBMISSION", "", query , flags=re.DOTALL)
-            msg =  {'user' : query, 'assistant' : txt,
+            msg =  {'user' : query.strip() , 'assistant' : txt.strip() ,
                 'ntokens' : ntokens ,
                 'model' : model,
                 'time_spent' : time_spent ,
                 'last_messages' : last_messages,
                 'date' : dt_str,
                 'max_num_results' : max_num_results,
-                'summary' : summary,
+                'summary' : summary.strip() ,
                 'response_id' : response_id,
                 'instructions' : instructions,
                 'previous_response_id' : previous_response_id,

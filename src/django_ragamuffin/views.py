@@ -369,16 +369,17 @@ def query_view(request,subpath):
             html = mark_safe(txt )
             response = f" <h4> Query: </h4>  {query}  <h4> Response: </h4> {html}  "
             response = f"{html}"
+            print(f"RESPONSE = {response}")
     else:
         form = QueryForm()
     time_spent = int( ( time.time() - now  ) + 0.5 )
     keeps =  [ int(i) for i in keeps ]
     resolved_choices = [(i, choices[i]) for i in keeps]
-    f_ = [ {  'user' : item['query'] ,  'pk' : item['pk'] ,
-       'response' : mark_safe( mathfix(item['response'] ) ),
+    f_ = [ {  'user' : ( item['query'] ).strip() ,  'pk' : item['pk'] ,
+       'response' : mark_safe( mathfix(item['response'] ) ).strip(),
        'username' : item.get('username',''),
        'ntokens' : item['ntokens'],
-       'comment' : item.get('comment','') ,
+       'comment' : item.get('comment','').strip() ,
        'choice' : item.get('choice',0),
        'model' : item.get('model', model) ,  
        'max_num_results' : item.get('max_num_results' , max_num_results ),
