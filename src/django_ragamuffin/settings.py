@@ -54,7 +54,6 @@ USE_MATHPIX = os.environ.get('USE_MATHPIX','False') == 'True'
 if APP_KEY == None or APP_ID == None :
     USE_MATHPIX = False
 
-MAXWAIT = 120 ; # WAIT MAX 120 seconds
 DEFAULT_TEMPERATURE = 0.2;
 LAST_MESSAGES = 99
 MAX_NUM_RESULTS = None
