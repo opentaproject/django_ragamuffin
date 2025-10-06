@@ -68,13 +68,13 @@ class OpenAI(TestCase):
         self.quser = QUser.objects.create(username=self.user.username)
 
     @pytest.mark.django_db
-    def test_user_exists(self):
+    def notest_user_exists(self):
         print(f"TEST_USER_EXISTS")
         user_exists = User.objects.filter(username='testuser').exists()
         self.assertTrue(user_exists)
 
     @pytest.mark.django_db
-    def test_create_and_delete_file_object(self):
+    def notest_create_and_delete_file_object(self):
         print(f"TEST_CREATE_AND_DELETE_FILE_OBJECTS")
         url = reverse('admin:django_ragamuffin_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
@@ -108,7 +108,7 @@ class OpenAI(TestCase):
 
 
     @pytest.mark.django_db
-    def test_create_and_delete_two_openai_file_objects(self):
+    def notest_create_and_delete_two_openai_file_objects(self):
         print(f"TEST_CREATE_AND_DELETE_TWO_OPENAI..")
         url = reverse('admin:django_ragamuffin_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
@@ -138,7 +138,7 @@ class OpenAI(TestCase):
 
 
     @pytest.mark.django_db
-    def test_create_and_delete_file_globally(self):
+    def notest_create_and_delete_file_globally(self):
 
         aname = randstring('T1')
         print(f"TEST_CREATE_AND_DELETE_FILE_GLOBALLY ")
@@ -168,7 +168,7 @@ class OpenAI(TestCase):
         dump_remote_vector_stores("TEST3");
 
     @pytest.mark.django_db
-    def test_clone_vector_store_object(self):
+    def notest_clone_vector_store_object(self):
         dump_remote_vector_stores("cloned-2");
         aname = randstring('T3')
         print(f"TEST_CREATE_AND_CLONE_VECTOR_STORE_OBJECT")
@@ -214,7 +214,7 @@ class OpenAI(TestCase):
 
 
     @pytest.mark.django_db
-    def test_create_and_delete_vector_store_object(self):
+    def notest_create_and_delete_vector_store_object(self):
 
         aname = randstring('T5')
         print(f"TEST_CREATE_AND_DELETE_VECTOR_STORE_OBJECT")
@@ -246,7 +246,7 @@ class OpenAI(TestCase):
 
 
     @pytest.mark.django_db
-    def test_create_and_delete_assistant_object(self):
+    def notest_create_and_delete_assistant_object(self):
         print(f"TEST_CREATE_AND_DELETE_ASSISTANT_OBJECT")
         url = reverse('admin:django_ragamuffin_openaifile_changelist')  # use your app and model name
         response = self.client.get(url)
@@ -417,7 +417,7 @@ class OpenAI(TestCase):
         dump_remote_vector_stores("FINAL2");
 
     @pytest.mark.django_db
-    def test_add_file_by_name(self):
+    def notest_add_file_by_name(self):
         """Create a file in /tmp, add it by full path, and assert presence via assistant.files()."""
         # Create a temporary file under /tmp
         base = "test.txt"

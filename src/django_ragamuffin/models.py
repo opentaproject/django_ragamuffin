@@ -1058,7 +1058,7 @@ class Thread(models.Model) :
     name = models.CharField(max_length=255)
     date = models.DateTimeField(auto_now=True)
     thread_id = models.CharField(max_length=255,blank=True)
-    messages = models.JSONField( default=dict ,  blank=True, null=True)
+    #messages = models.JSONField( default=dict ,  blank=True, null=True)
     assistant = models.ForeignKey(Assistant,  null=True, on_delete=models.SET_NULL,related_name="threads")
     user = models.ForeignKey(QUser, null=True, on_delete=models.SET_NULL, blank=True )
     max_tokens = models.IntegerField( blank=True, null=True)
@@ -1082,7 +1082,7 @@ class Thread(models.Model) :
     def save( self, clear=False, *args, **kwargs ):
         old_clear = self.clear
         is_new = self._state.adding  and not self.pk
-        self.messages = self.messages
+        #self.messages = self.messages
         client = OpenAIClient();
         super().save(*args, **kwargs)  # Save first, so file is processed
         if is_new  :
@@ -1090,20 +1090,24 @@ class Thread(models.Model) :
             h = ''.join(random.choices(characters, k=8))
             thread_id ='mythread1_' + h
             self.thread_id = thread_id
-            self.messages = []
+            #self.messages = []
             super().save(*args, **kwargs) # Then update with true hashed path
         else :
             if clear  or old_clear :
-                if self.messages :
-                    self.messages[-1]['previous_response_id'] = None
-                    self.clear = False
+                #if self.messages :
+                #self.messages[-1]['previous_response_id'] = None
+                last_msg = self.thread_messages.last();
+                if last_msg :
+                    last_msg.previous_response_id = None
+                    last_msg.save();
             super().save(*args, **kwargs)
 
 
 
 
 
-    def run_query( self, clear=False , *args, **kwargs  ):
+    def run_query( self, clear=False , **kwargs  ):
+        print(f"RUNNING QUERY WITH CLEAR = {clear}  kwargs = {kwargs}")
         more_instructions = kwargs.get('instructions', '')
         last_messages = kwargs.get('last_messages',settings.LAST_MESSAGES)
         max_num_results = kwargs.get('max_num_results',settings.MAX_NUM_RESULTS)
@@ -1152,6 +1156,7 @@ class Thread(models.Model) :
         #    previous_response_id = None
         #print(f"PREVIOUS_RESPONSE_ID = {previous_response_id}")
         previous_response_id = None
+        print(f"CLEAR2 = {clear}")
         try :
             if clear or self.clear :
                 previous_response_id = None
@@ -1161,15 +1166,16 @@ class Thread(models.Model) :
         except  Exception as err :
             logger.error(f"ERR44 = {str(err)}")
             previous_response_id = None
-        logger.info(f"PREVIOUS_RESPONSE_ID = {previous_response_id}")
+        print(f"PREVIOUS_RESPONSE_ID = {previous_response_id}")
         user = self.user
         model = get_current_model(self.user)
         context = {'openai' : openai, 'instructions' : instructions, 'model' : model, 
                     'thread_id': thread_id, 'assistant_id' : assistant_id, 'query': query, 
                     'last_messages' : last_messages, 'max_num_results' : max_num_results, 
-                    'previous_response_id' : previous_response_id ,'vss' : vss }
+                   'previous_response_id' : previous_response_id ,'vss' : vss , 'clear' : clear }
 
         def my_run_remote_query( context ) :
+            print(f"MY_RUN_REMOTE_QUERY")
             now = time.time();
             vss = context['vss']
             openai = context['openai']; 
@@ -1179,7 +1185,9 @@ class Thread(models.Model) :
             last_messages=context['last_messages'];
             max_num_results = context['max_num_results']
             model = context['model']
+            clear = context['clear']
             previous_response_id = context.get('previous_response_id',None)
+            print(f"RUNNING REMOTE3 previous = {previous_response_id}")
             effort = settings.EFFORT
             msg = ''
             #print(f"INSTRUCTIONS FOR REMOTE QUERY\nvvvvvvvvvvvvvvvvvvvvvvv\n{instructions}\n^^^^^^^^^^^^^^^^^^^^^^\n")
