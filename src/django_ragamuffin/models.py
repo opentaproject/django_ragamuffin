@@ -1164,7 +1164,7 @@ class Thread(models.Model) :
             else :
                 previous_response_id = thread.thread_messages.last().response_id
         except  Exception as err :
-            logger.error(f"ERR44 = {str(err)}")
+            logger.info(f"ERR44 = {str(err)}")
             previous_response_id = None
         print(f"PREVIOUS_RESPONSE_ID = {previous_response_id}")
         user = self.user
