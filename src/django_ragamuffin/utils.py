@@ -45,18 +45,17 @@ boxhead = "\n\n\\hspace*{-20pt}\\fbox{\n\
 MAX_OLD_QUERIES = 30
 def mathfix( txt ):
     txt = re.sub(r"\\!",'',txt)
-    txt = re.sub(r'\[0-9]+pt\]','',txt)
+    txt = re.sub(r'\[[0-9]+pt\]','',txt)
     txt = re.sub(r"_","UNDERSCORE",txt)
     txt = re.sub(r"\\\(",'$',txt)
     txt = re.sub(r"\\\)",'$',txt)
     txt = re.sub(r"\\\[",'LEFTBRAK',txt)
     txt = re.sub(r"\\\]",'RIGHTBRAK',txt)
-    txt = markdown2.markdown( txt )
     txt = re.sub(r"LEFTBRAK",'<p/>$\\;',txt)
     txt = re.sub(r"RIGHTBRAK",'\\;$<p/>',txt)
     txt = re.sub(r"UNDERSCORE",'_',txt)
-    txt = markdown2.markdown(txt)
     txt = re.sub(r'([A-Za-z_]{2,})!', r'\1',txt)
+    txt = re.sub(r'(?<!\\)_', r'\\_', txt)
     #txt = re.sub(r'(_\w)!', r'\1',txt)   
     #txt = re.sub(r'(\w\')!', r'\1',txt)  # SHOULD NOT BE HERE
     #txt = re.sub(r'(\w\')\!', r'\1',txt) # SHOULD NOT BE HERE
@@ -67,6 +66,10 @@ def mathfix( txt ):
     txt = re.sub(r"\$\$(.*?)\$\$", r"<p/><p/>$\1$<p/><p/>", txt, flags=re.S)
     txt = re.sub(r"\\dots", r"\\ldots", txt )
     txt = re.sub(r'fileciteturn0file[0-9]+\.', '', txt )
+    print(f"TXT1  = {txt}")
+    txt = markdown2.markdown(txt)
+    print(f"TXT2 = {txt}")
+    txt = mark_safe( txt )
 
     return txt
 
