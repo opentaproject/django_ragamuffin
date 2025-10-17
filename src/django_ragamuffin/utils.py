@@ -64,13 +64,19 @@ def tokenize_math_dollars(text: str) -> Tuple[str, Dict[str, dict]]:
         # m.group(1) corresponds to $$...$$, m.group(2) to $...$
         if m.group(1) is not None:
             inside = m.group(1)
-            delim = "$$"
+            delimleft = " \\[ "
+            delimright = " \\] "
         else:
             inside = m.group(2)
-            delim = "$"
+            delimleft = "$"
+            delimright = "$"
+
 
         token = f"⟦MATH:{counter}⟧"
-        mapping[token] = {"content": inside, "delim": delim}
+        inside = re.sub(r"\\-"," - ",  inside )
+        inside = re.sub(r"\\rm","",inside )
+        inside = re.sub(r"\\!",'',inside)
+        mapping[token] = {"content": inside, "delimleft": delimleft, "delimright" : delimright}
         counter += 1
         return token
 
@@ -86,7 +92,7 @@ def restore_math_tokens(text: str, mapping: Dict[str, dict]) -> str:
     # Sort by descending token length just in case (defensive)
     for token in sorted(mapping.keys(), key=len, reverse=True):
         item = mapping[token]
-        wrapped = f"{item['delim']} {item['content']} {item['delim']}"
+        wrapped = f"{item['delimleft']} {item['content']} {item['delimright']}"
         print(f"WRAPPED = {wrapped}")
         text = text.replace(token, wrapped)
     return text
@@ -120,13 +126,12 @@ def strip_openai_citations(text: str) -> str:
 
 MAX_OLD_QUERIES = 30
 def mathfix( txt ):
-    #print(f"MATHFIX_IN {txt}")
+    print(f"MATHFIX_IN {txt}")
     #txt = strip_openai_citations(txt)
-    txt = re.sub(r"\\!",'',txt)
     txt = re.sub(r'\[[0-9]+pt\]','',txt)
-    txt = re.sub(r"\\\(",'$',txt)
-    txt = re.sub(r"\\\)",'$',txt)
-    txt = re.sub(r"\$",' $ ',txt )
+    #txt = re.sub(r"\\\(",'$',txt)
+    #txt = re.sub(r"\\\)",'$',txt)
+    #txt = re.sub(r"\$",' $ ',txt )
     #txt = re.sub(r"\\\[",'LEFTBRAK',txt)
     #txt = re.sub(r"\\\]",'RIGHTBRAK',txt)
     #txt = re.sub(r"LEFTBRAK",'<p/>$\\;',txt)
@@ -157,7 +162,8 @@ def mathfix( txt ):
     #txt = re.sub(r"\\-",'\\ - ',txt)
     txt = restore_math_tokens(txt, mapping)
     txt = re.sub(r"operatorname","mathrm",txt )
-    #print(f"TXT MATTHFIX_OUT\n{txt}")
+    txt = re.sub(r"\$\$",'$',txt)
+    print(f"TXT MATTHFIX_OUT\n{txt}")
     #txt = mark_safe(txt)
     
 
