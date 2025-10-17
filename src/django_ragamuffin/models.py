@@ -1107,7 +1107,6 @@ class Thread(models.Model) :
 
 
     def run_query( self, clear=False , **kwargs  ):
-        print(f"RUNNING QUERY WITH CLEAR = {clear}  kwargs = {kwargs}")
         more_instructions = kwargs.get('instructions', '')
         last_messages = kwargs.get('last_messages',settings.LAST_MESSAGES)
         max_num_results = kwargs.get('max_num_results',settings.MAX_NUM_RESULTS)
@@ -1156,7 +1155,6 @@ class Thread(models.Model) :
         #    previous_response_id = None
         #print(f"PREVIOUS_RESPONSE_ID = {previous_response_id}")
         previous_response_id = None
-        print(f"CLEAR2 = {clear}")
         try :
             if clear or self.clear :
                 previous_response_id = None
@@ -1166,7 +1164,6 @@ class Thread(models.Model) :
         except  Exception as err :
             logger.info(f"ERR44 = {str(err)}")
             previous_response_id = None
-        print(f"PREVIOUS_RESPONSE_ID = {previous_response_id}")
         user = self.user
         model = get_current_model(self.user)
         context = {'openai' : openai, 'instructions' : instructions, 'model' : model, 
@@ -1175,7 +1172,6 @@ class Thread(models.Model) :
                    'previous_response_id' : previous_response_id ,'vss' : vss , 'clear' : clear }
 
         def my_run_remote_query( context ) :
-            print(f"MY_RUN_REMOTE_QUERY")
             now = time.time();
             vss = context['vss']
             openai = context['openai']; 
@@ -1187,7 +1183,6 @@ class Thread(models.Model) :
             model = context['model']
             clear = context['clear']
             previous_response_id = context.get('previous_response_id',None)
-            print(f"RUNNING REMOTE3 previous = {previous_response_id}")
             effort = settings.EFFORT
             msg = ''
             #print(f"INSTRUCTIONS FOR REMOTE QUERY\nvvvvvvvvvvvvvvvvvvvvvvv\n{instructions}\n^^^^^^^^^^^^^^^^^^^^^^\n")
