@@ -12,6 +12,7 @@ from django_ragamuffin.models import VectorStore, Assistant, Mode, ModeChoice, T
 from django.utils.safestring import mark_safe
 from django.http import FileResponse
 import logging
+from typing import Tuple, Dict
 logger = logging.getLogger(__name__)
 
 head = " \
@@ -40,39 +41,124 @@ boxhead = "\n\n\\hspace*{-20pt}\\fbox{\n\
 \\parbox{\\dimexpr\\linewidth-2\\fboxsep-2\\fboxrule\\relax}{\n"
 
 
+_MATH_RE = re.compile(
+    r'(?<!\\)\$\$(.+?)(?<!\\)\$\$'      # block-style, $$...$$
+    r'|(?<!\\)\$(.+?)(?<!\\)\$',        # inline, $...$
+    flags=re.DOTALL
+)
+
+def tokenize_math_dollars(text: str) -> Tuple[str, Dict[str, dict]]:
+    """
+    Replace every unescaped $...$ or $$...$$ span with a unique token.
+    Returns (new_text, mapping) where mapping[token] = {"content": <inside>,
+    "delim": "$" or "$$"}.
+
+    - Keeps unmatched/escaped \$ or \$\$ intact.
+    - Uses rare bracket/label tokens to minimize collisions.
+    """
+    counter = 0
+    mapping: Dict[str, dict] = {}
+
+    def _repl(m: re.Match) -> str:
+        nonlocal counter
+        # m.group(1) corresponds to $$...$$, m.group(2) to $...$
+        if m.group(1) is not None:
+            inside = m.group(1)
+            delim = "$$"
+        else:
+            inside = m.group(2)
+            delim = "$"
+
+        token = f"⟦MATH:{counter}⟧"
+        mapping[token] = {"content": inside, "delim": delim}
+        counter += 1
+        return token
+
+    new_text = _MATH_RE.sub(_repl, text)
+    return new_text, mapping
+
+
+def restore_math_tokens(text: str, mapping: Dict[str, dict]) -> str:
+    """
+    Replace tokens back with their original math, re-wrapping in the
+    correct delimiter length ($ or $$).
+    """
+    # Sort by descending token length just in case (defensive)
+    for token in sorted(mapping.keys(), key=len, reverse=True):
+        item = mapping[token]
+        wrapped = f"{item['delim']} {item['content']} {item['delim']}"
+        print(f"WRAPPED = {wrapped}")
+        text = text.replace(token, wrapped)
+    return text
+
+def strip_openai_citations(text: str) -> str:
+    """
+    Remove all OpenAI citation markers and artifacts (, 【...†...】, etc.)
+    from a model response.
+    """
+    if not text:
+        return ""
+
+    # Remove full invisible filecite markers ()
+    text = re.sub(r'', '', text)
+
+    # Remove any leftover fragments like ''
+    text = re.sub(r'[]', '', text)
+
+    # Remove reference markers like   or  
+    text = re.sub(r'【[^】]*†[^】]*】', '', text)
+
+    # Also catch any orphan 【...】 pairs
+    text = re.sub(r'【[^】]*】', '', text)
+
+    # Clean up double spaces and stray brackets
+    text = re.sub(r'\s{2,}', ' ', text)
+    #text = re.sub(r'\s*\]\s*', ' ', text)
+
+    return text.strip()
 
 
 MAX_OLD_QUERIES = 30
 def mathfix( txt ):
+    #print(f"MATHFIX_IN {txt}")
+    #txt = strip_openai_citations(txt)
     txt = re.sub(r"\\!",'',txt)
     txt = re.sub(r'\[[0-9]+pt\]','',txt)
-    txt = re.sub(r"_","UNDERSCORE",txt)
     txt = re.sub(r"\\\(",'$',txt)
     txt = re.sub(r"\\\)",'$',txt)
-    txt = re.sub(r"\\\[",'LEFTBRAK',txt)
-    txt = re.sub(r"\\\]",'RIGHTBRAK',txt)
-    txt = re.sub(r"LEFTBRAK",'<p/>$\\;',txt)
-    txt = re.sub(r"RIGHTBRAK",'\\;$<p/>',txt)
-    txt = re.sub(r"UNDERSCORE",'_',txt)
-    txt = re.sub(r'([A-Za-z_]{2,})!', r'\1',txt)
-    txt = re.sub(r'(?<!\\)_', r'\\_', txt)
+    txt = re.sub(r"\$",' $ ',txt )
+    #txt = re.sub(r"\\\[",'LEFTBRAK',txt)
+    #txt = re.sub(r"\\\]",'RIGHTBRAK',txt)
+    #txt = re.sub(r"LEFTBRAK",'<p/>$\\;',txt)
+    #txt = re.sub(r"RIGHTBRAK",'\\;$<p/>',txt)
+    #txt = re.sub(r'([A-Za-z_]{2,})!', r'\1',txt)
+    #txt = re.sub(r'(?<!\\)_', r'\\_', txt)
     #txt = re.sub(r'(_\w)!', r'\1',txt)   
     #txt = re.sub(r'(\w\')!', r'\1',txt)  # SHOULD NOT BE HERE
     #txt = re.sub(r'(\w\')\!', r'\1',txt) # SHOULD NOT BE HERE
     #txt = re.sub(r'(\w\')\\!', r'\1',txt)
     #txt = re.sub(r"operatorname","bold",txt )
     txt = re.sub(r"texttt","mathtt",txt )
-    #txt = re.sub(r"boldsymbol","bold",txt )
-    txt = re.sub(r"\$\$(.*?)\$\$", r"<p/><p/>$\1$<p/><p/>", txt, flags=re.S)
+    #txt = re.sub(r"\$\$(.*?)\$\$", r"<p/><p/>$\1$<p/><p/>", txt, flags=re.S)
     txt = re.sub(r"\\dots", r"\\ldots", txt )
     #txt = re.sub(r'fileciteturn0file[0-9]+\.', '', txt )
-    txt = re.sub(r'\\\\',' DOUBLESLASH ',txt)
-    txt = markdown2.markdown(txt)
-    txt = re.sub(r'DOUBLESLASH','\\\\\\\\',txt)
-    txt = re.sub(r"\\-",' - ',txt)
-    txt = re.sub(r']*?', '', txt )
-    txt = mark_safe( txt )
+    #print(f"TXT_BEFORE_MARKDOWN\n{txt}")
+    #txt = re.sub(r"\\\\",r"\\",txt)
+    txt = re.sub(r'\\\\(?=[A-Za-z])', r'\\', txt )
+    #txt = re.sub(r"\\ ",r"\\\\",txt)
+    #print(f"TXT2_BEFORE_MARKDOWN\n{txt}")
+    #txt = re.sub(r"\&",r' AMPERSAND ',txt)
+    txt,mapping = tokenize_math_dollars(txt)
+    #print(f"MAPPING = {mapping}")
+    txt = markdown2.markdown(txt )
+    #print(f"TXT3_AFTER_MARKDOWN\n{txt}")
+    #txt = re.sub(r" AMPERSAND ",r'&',txt)
+    #txt = re.sub(r" DOUBLEBACKSLASH ",r'\\\\',txt)
+    #txt = re.sub(r"\\-",'\\ - ',txt)
+    txt = restore_math_tokens(txt, mapping)
     txt = re.sub(r"operatorname","mathrm",txt )
+    #print(f"TXT MATTHFIX_OUT\n{txt}")
+    #txt = mark_safe(txt)
     
 
     return txt
