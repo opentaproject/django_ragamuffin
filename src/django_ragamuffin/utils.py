@@ -65,8 +65,12 @@ def mathfix( txt ):
     #txt = re.sub(r"boldsymbol","bold",txt )
     txt = re.sub(r"\$\$(.*?)\$\$", r"<p/><p/>$\1$<p/><p/>", txt, flags=re.S)
     txt = re.sub(r"\\dots", r"\\ldots", txt )
-    txt = re.sub(r'fileciteturn0file[0-9]+\.', '', txt )
+    #txt = re.sub(r'fileciteturn0file[0-9]+\.', '', txt )
+    txt = re.sub(r'\\\\',' DOUBLESLASH ',txt)
     txt = markdown2.markdown(txt)
+    txt = re.sub(r'DOUBLESLASH','\\\\\\\\',txt)
+    txt = re.sub(r"\\-",' - ',txt)
+    txt = re.sub(r']*?', '', txt )
     txt = mark_safe( txt )
 
     return txt
