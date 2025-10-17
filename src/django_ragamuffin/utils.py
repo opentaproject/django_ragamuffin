@@ -72,6 +72,8 @@ def mathfix( txt ):
     txt = re.sub(r"\\-",' - ',txt)
     txt = re.sub(r']*?', '', txt )
     txt = mark_safe( txt )
+    txt = re.sub(r"operatorname","mathrm",txt )
+    
 
     return txt
 
