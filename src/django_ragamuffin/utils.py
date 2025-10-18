@@ -82,7 +82,7 @@ def tokenize_math_dollars(text: str) -> Tuple[str, Dict[str, dict]]:
         inside = re.sub(r"\\rm","",inside )
         inside = inside.replace(r"\!", "")
         inside = inside.replace(r"boldsymbol","bold")
-        print(f"INSIDE_ORIG {insideorig} -> {inside}")
+        #print(f"INSIDE_ORIG {insideorig} -> {inside}")
         mapping[token] = {"content": inside, "delimleft": delimleft, "delimright" : delimright}
         counter += 1
         return token
@@ -132,7 +132,7 @@ def strip_openai_citations(text: str) -> str:
 
 MAX_OLD_QUERIES = 30
 def mathfix( txt ):
-    print(f"MATHFIX_IN {txt}")
+    #print(f"MATHFIX_IN {txt}")
     #txt = strip_openai_citations(txt)
     txt = re.sub(r'\[[0-9]+pt\]','',txt)
     txt = re.sub(r'\$[, ]+\$[, ]+\$',r'$$',txt);
@@ -171,7 +171,7 @@ def mathfix( txt ):
     txt = restore_math_tokens(txt, mapping)
     txt = re.sub(r"operatorname","mathrm",txt )
     #txt = re.sub(r"\$\$",'$',txt)
-    print(f"TXT MATTHFIX_OUT\n{txt}")
+    #print(f"TXT MATTHFIX_OUT\n{txt}")
     txt = re.sub(r"[\ue000-\uf8ff]\S*", "", txt )
     #txt = mark_safe(txt)
     
@@ -220,9 +220,9 @@ def doarchive( thread, msg ):
 
 
 def print_messages( thread ):
-    print(f"PRINT MESSAGES {thread}")
+    #print(f"PRINT MESSAGES {thread}")
     ms = thread.thread_messages.all()
-    print(f"\n")
+    #print(f"\n")
     clear = thread.clear
     try :
         for m in ms :
@@ -230,7 +230,7 @@ def print_messages( thread ):
             response_id = m.get('response_id','none2')
             user = m.get('user','nouser')
             response = m.get('assistant','noreponse')[0:15]
-            print(f"clear={clear} previous={previous_response_id} id={response_id} query={user} response={response}")
+            #print(f"clear={clear} previous={previous_response_id} id={response_id} query={user} response={response}")
     except :
             print(f"ms = {ms}")
     print("\n")
