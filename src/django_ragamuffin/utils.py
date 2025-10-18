@@ -46,6 +46,10 @@ _MATH_RE = re.compile(
     r'|(?<!\\)\$(.+?)(?<!\\)\$',        # inline, $...$
     flags=re.DOTALL
 )
+_MATH_RE = re.compile(
+    r'(?<!\\)(?:\$\$(.+?)(?<!\\)\$\$|\$(.+?)(?<!\\)\$)',
+    flags=re.DOTALL
+)
 
 def tokenize_math_dollars(text: str) -> Tuple[str, Dict[str, dict]]:
     """
@@ -73,9 +77,12 @@ def tokenize_math_dollars(text: str) -> Tuple[str, Dict[str, dict]]:
 
 
         token = f"⟦MATH:{counter}⟧"
+        insideorig = inside
         inside = re.sub(r"\\-"," - ",  inside )
         inside = re.sub(r"\\rm","",inside )
-        inside = re.sub(r"\\!",'',inside)
+        inside = inside.replace(r"\!", "")
+        inside = inside.replace(r"boldsymbol","bold")
+        print(f"INSIDE_ORIG {insideorig} -> {inside}")
         mapping[token] = {"content": inside, "delimleft": delimleft, "delimright" : delimright}
         counter += 1
         return token
@@ -93,7 +100,6 @@ def restore_math_tokens(text: str, mapping: Dict[str, dict]) -> str:
     for token in sorted(mapping.keys(), key=len, reverse=True):
         item = mapping[token]
         wrapped = f"{item['delimleft']} {item['content']} {item['delimright']}"
-        print(f"WRAPPED = {wrapped}")
         text = text.replace(token, wrapped)
     return text
 
@@ -129,6 +135,8 @@ def mathfix( txt ):
     print(f"MATHFIX_IN {txt}")
     #txt = strip_openai_citations(txt)
     txt = re.sub(r'\[[0-9]+pt\]','',txt)
+    txt = re.sub(r'\$[, ]+\$[, ]+\$',r'$$',txt);
+    txt = re.sub(r'\$[, ]+\$','$$',txt)
     #txt = re.sub(r"\\\(",'$',txt)
     #txt = re.sub(r"\\\)",'$',txt)
     #txt = re.sub(r"\$",' $ ',txt )
@@ -162,7 +170,7 @@ def mathfix( txt ):
     #txt = re.sub(r"\\-",'\\ - ',txt)
     txt = restore_math_tokens(txt, mapping)
     txt = re.sub(r"operatorname","mathrm",txt )
-    txt = re.sub(r"\$\$",'$',txt)
+    #txt = re.sub(r"\$\$",'$',txt)
     print(f"TXT MATTHFIX_OUT\n{txt}")
     #txt = mark_safe(txt)
     
