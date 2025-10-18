@@ -172,6 +172,7 @@ def mathfix( txt ):
     txt = re.sub(r"operatorname","mathrm",txt )
     #txt = re.sub(r"\$\$",'$',txt)
     print(f"TXT MATTHFIX_OUT\n{txt}")
+    txt = re.sub(r"[\ue000-\uf8ff]\S*", "", txt )
     #txt = mark_safe(txt)
     
 
