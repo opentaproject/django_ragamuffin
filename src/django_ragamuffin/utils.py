@@ -79,13 +79,19 @@ def tokenize_math_dollars(text: str) -> Tuple[str, Dict[str, dict]]:
         token = f"⟦MATH:{counter}⟧"
         insideorig = inside
         inside = re.sub(r"\\-"," - ",  inside )
-        inside = re.sub(r"\\rm","",inside )
-        inside = inside.replace(r"\!", "")
-        inside = inside.replace(r"boldsymbol","bold")
-        #print(f"INSIDE_ORIG {insideorig} -> {inside}")
+        inside = re.sub(r"\\\\,","  ",  inside )
+        inside = inside.replace(r"\\\\\!", "")
+        #inside = re.sub(r"\\n",r" ",inside)
+        #inside = inside.replace(r"boldsymbol","bold")
+        for p in ['boxed' ,'aligned' ] :
+            if p in  insideorig :
+                delimleft = '$$';
+                delimright = '$$';
         mapping[token] = {"content": inside, "delimleft": delimleft, "delimright" : delimright}
         counter += 1
         return token
+    text = text.replace(r'\\[',r'$$ ')
+    text = text.replace(r'\\]',r' $$')
 
     new_text = _MATH_RE.sub(_repl, text)
     return new_text, mapping
