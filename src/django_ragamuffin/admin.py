@@ -82,7 +82,8 @@ class AssistantForm(forms.ModelForm):
 @admin.register(Assistant)
 class AssistantAdmin(admin.ModelAdmin):
     form = AssistantForm 
-    list_display = ('id', 'name', 'mode_choice', 'assistant_id', 'file_names','file_pks', 'file_ids', 'remote_files','list_vector_store_ids')  # Add your custom method here
+    list_display = ('id', 'name', 'mode_choice', 'assistant_id', 'file_names','file_pks' )  # Add your custom method here
+    #list_display = ('id', 'name', 'mode_choice', 'assistant_id', 'file_names','file_pks', 'file_ids', 'remote_files','list_vector_store_ids')  # Add your custom method here
 
     def list_vector_store_ids(self, obj):
         return ", ".join(str(f.name ) for f in obj.vector_stores.all())
