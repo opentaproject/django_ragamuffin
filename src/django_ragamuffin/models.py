@@ -1360,6 +1360,8 @@ class Message( models.Model ):
     previous_response_id =  models.CharField(max_length=64,blank=True,null=True)
     mhash =  models.CharField(max_length=64,blank=True,null=True)
     thread =  models.ForeignKey(Thread,  null=True, on_delete=models.SET_NULL, blank=True, related_name="thread_messages")
+    subdomain = models.CharField(max_length=64,blank=True,null=True)
+
 
     def username(self) :
         return self.thread.user.username
