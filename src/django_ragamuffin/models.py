@@ -1107,6 +1107,8 @@ class Thread(models.Model) :
 
 
     def run_query( self, clear=False , **kwargs  ):
+        subdomain = kwargs.get('subdomain','')
+        print(f"SUBDOMAIN = {subdomain}")
         more_instructions = kwargs.get('instructions', '')
         last_messages = kwargs.get('last_messages',settings.LAST_MESSAGES)
         max_num_results = kwargs.get('max_num_results',settings.MAX_NUM_RESULTS)
@@ -1169,7 +1171,7 @@ class Thread(models.Model) :
         context = {'openai' : openai, 'instructions' : instructions, 'model' : model, 
                     'thread_id': thread_id, 'assistant_id' : assistant_id, 'query': query, 
                     'last_messages' : last_messages, 'max_num_results' : max_num_results, 
-                   'previous_response_id' : previous_response_id ,'vss' : vss , 'clear' : clear }
+                   'previous_response_id' : previous_response_id ,'vss' : vss , 'clear' : clear ,'subdomain' : subdomain}
 
         def my_run_remote_query( context ) :
             now = time.time();
@@ -1182,6 +1184,7 @@ class Thread(models.Model) :
             max_num_results = context['max_num_results']
             model = context['model']
             clear = context['clear']
+            subdomain = context['subdomain']
             previous_response_id = context.get('previous_response_id',None)
             effort = settings.EFFORT
             msg = ''
@@ -1330,6 +1333,7 @@ class Thread(models.Model) :
             instructions=msg['instructions'],
             previous_response_id=msg['previous_response_id'],
             mhash=msg['hash'],
+            subdomain=subdomain,
             )
         message.save();
         message.thread = thread;
