@@ -143,7 +143,50 @@ class MyMessageForm(forms.ModelForm):
 @admin.register(Thread)
 class ThreadAdmin(admin.ModelAdmin):
     form = MyThreadForm;
-    list_display = ('id', 'name', 'user', 'thread_id', 'assistant')  # Add your custom method here
+    list_display = ('id', 'name', 'user', 'thread_id', 'assistant', 'subdomain', 'messages')
+    list_filter = ()
+
+    class ThreadSubdomainListFilter(admin.SimpleListFilter):
+        title = 'subdomain'
+        parameter_name = 'subdomain'
+
+        def lookups(self, request, model_admin):
+            subs = (
+                Message.objects.exclude(subdomain__isnull=True)
+                .exclude(subdomain='')
+                .values_list('subdomain', flat=True)
+                .distinct()
+                .order_by('subdomain')
+            )
+            return [(s, s) for s in subs]
+
+        def queryset(self, request, queryset):
+            value = self.value()
+            if value:
+                return queryset.filter(thread_messages__subdomain=value).distinct()
+            return queryset
+
+    list_filter = (ThreadSubdomainListFilter,)
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        latest_subdomain = Subquery(
+            Message.objects
+            .filter(thread=OuterRef('pk'))
+            .exclude(subdomain__isnull=True)
+            .exclude(subdomain='')
+            .order_by('-date')
+            .values('subdomain')[:1]
+        )
+        return qs.annotate(message_count=Count('thread_messages'), last_subdomain=latest_subdomain)
+
+    @admin.display(ordering='message_count', description='Messages')
+    def messages(self, obj):
+        return obj.message_count
+
+    @admin.display(ordering='last_subdomain', description='Subdomain')
+    def subdomain(self, obj):
+        return getattr(obj, 'last_subdomain', '') or ''
 
 @admin.register(Message)
 class MessageAdmin(admin.ModelAdmin):
