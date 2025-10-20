@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.db.models import Count
+from django.db.models import Count, OuterRef, Subquery
 from django.conf import settings
 from django import forms
 from .models import OpenAIFile  , VectorStore , Assistant, Thread, DEFAULT_INSTRUCTIONS, RemoteVectorStore, QUser, Mode, ModeChoice, Message
@@ -79,10 +79,32 @@ class AssistantForm(forms.ModelForm):
         }
 
 
+class AssistantSubdomainListFilter(admin.SimpleListFilter):
+    title = 'subdomain'
+    parameter_name = 'subdomain'
+
+    def lookups(self, request, model_admin):
+        subs = (
+            Message.objects.exclude(subdomain__isnull=True)
+            .exclude(subdomain='')
+            .values_list('subdomain', flat=True)
+            .distinct()
+            .order_by('subdomain')
+        )
+        return [(s, s) for s in subs]
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if value:
+            return queryset.filter(threads__thread_messages__subdomain=value).distinct()
+        return queryset
+
+
 @admin.register(Assistant)
 class AssistantAdmin(admin.ModelAdmin):
-    form = AssistantForm 
-    list_display = ('id', 'name', 'mode_choice', 'assistant_id', 'file_names','file_pks' )  # Add your custom method here
+    form = AssistantForm
+    list_display = ('id', 'name', 'mode_choice', 'assistant_id', 'subdomain', 'file_names', 'file_pks')
+    list_filter = (AssistantSubdomainListFilter,)
     #list_display = ('id', 'name', 'mode_choice', 'assistant_id', 'file_names','file_pks', 'file_ids', 'remote_files','list_vector_store_ids')  # Add your custom method here
 
     def list_vector_store_ids(self, obj):
@@ -90,10 +112,32 @@ class AssistantAdmin(admin.ModelAdmin):
 
     list_vector_store_ids.short_description = "VectorStore names"
     
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        latest_subdomain = Subquery(
+            Message.objects
+            .filter(thread__assistant=OuterRef('pk'))
+            .exclude(subdomain__isnull=True)
+            .exclude(subdomain='')
+            .order_by('-date')
+            .values('subdomain')[:1]
+        )
+        return qs.annotate(last_subdomain=latest_subdomain)
+
+    def subdomain(self, obj):
+        return getattr(obj, 'last_subdomain', '') or ''
+    subdomain.short_description = 'Subdomain'
+    subdomain.admin_order_field = 'last_subdomain'
+
 
 class MyThreadForm(forms.ModelForm):
     class Meta:
         model = Thread
+        fields = '__all__'
+
+class MyMessageForm(forms.ModelForm):
+    class Meta:
+        model = Message
         fields = '__all__'
 
 @admin.register(Thread)
@@ -103,14 +147,9 @@ class ThreadAdmin(admin.ModelAdmin):
 
 @admin.register(Message)
 class MessageAdmin(admin.ModelAdmin):
-    form = MyThreadForm;
-    list_display = ('id',  'thread')  # Add your custom method here
-
-
-class MyMessageForm(forms.ModelForm):
-    class Meta:
-        model = Message
-        fields = '__all__'
+    form = MyMessageForm
+    list_display = ('id',  'thread', 'subdomain')  # Add your custom method here
+    list_filter = ('subdomain',)
 
 
 
