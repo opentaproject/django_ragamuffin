@@ -218,7 +218,15 @@ class QUser(models.Model ):
     username = models.CharField(max_length=255,blank=True)
     is_staff = models.BooleanField(default=False)
     subdomain = models.CharField(max_length=64,blank=True,null=True)
-    
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["username", "subdomain"],
+                name="unique_quser_username_subdomain",
+            )
+        ]
+
 
     def __str__(self):
         return f"{self.username}"
@@ -1499,4 +1507,3 @@ def delete_remote_vector_stores():
     remote_vector_stores = RemoteVectorStore.objects.all();
     for remote_vector_store in remote_vector_stores :
         remote_vector_store.delete();
-
