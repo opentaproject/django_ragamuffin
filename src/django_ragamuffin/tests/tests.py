@@ -65,7 +65,7 @@ class OpenAI(TestCase):
         self.admin_user = User.objects.create_superuser( username='admin', email='admin@example.com', password='adminpass')
         self.client.login(username='admin', password='adminpass')
         self.user = User.objects.create_user(username='testuser', password='testpass')
-        self.quser = QUser.objects.create(username=self.user.username)
+        self.quser = QUser.objects.create(username=self.user.username,subdomain='default')
 
     @pytest.mark.django_db
     def test_user_exists(self):

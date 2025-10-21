@@ -268,17 +268,23 @@ FILENAME = "../README.md"
 def query_view(request,subpath):
     subpath_ = re.sub( r"\.","_",subpath )
     segments = subpath_.split('/')
+    subdomain = request.META["HTTP_HOST"].split(".")[0].split(":")
+    if subdomain  :
+       subdomain = subdomain[0]
+    else :
+       subdomain = ''
+    print(f"SUBDOMAIN = {subdomain}")
     last_messages = settings.LAST_MESSAGES;
     max_num_results = settings.MAX_NUM_RESULTS;
     name = ( '.'.join( segments ) ).rstrip('.')
     choices = CHOICES
     choice = 0;
     response = None
-    user,  created  = QUser.objects.get_or_create(username=request.user.username)
+    user,  created  = QUser.objects.get_or_create(username=request.user.username,subdomain=subdomain)
     if created :
         user.is_staff = request.user.is_staff
         user.save();
-    quser, _  = QUser.objects.get_or_create(username=request.user.username)
+    quser, _  = QUser.objects.get_or_create(username=request.user.username,subdomain=subdomain)
     assistant = get_assistant(name, quser)
     if not assistant :
         return HttpResponseForbidden(f"No assistant <b>{name} </b> exists.")

@@ -1118,7 +1118,7 @@ class Thread(models.Model) :
 
     def run_query( self, clear=False , **kwargs  ):
         subdomain = kwargs.get('subdomain','')
-        print(f"SUBDOMAIN = {subdomain}")
+        print(f"RUN_QUERY SUBDOMAIN = {subdomain}")
         more_instructions = kwargs.get('instructions', '')
         last_messages = kwargs.get('last_messages',settings.LAST_MESSAGES)
         max_num_results = kwargs.get('max_num_results',settings.MAX_NUM_RESULTS)
@@ -1134,10 +1134,13 @@ class Thread(models.Model) :
     
         """ last_messages is either None for auto or an integer for length of thread history to keep at OpenAI. 
         The entire history is kept in the local database"""
-        assistant = self.assistant
-        if not assistant :
-            assistants = Assistant.objects.filter(name=self.name ).all()
-            assistant = assistants[0]
+        try :
+            assistant = self.assistant
+            if not assistant :
+                assistants = Assistant.objects.filter(name=self.name ).all()
+                assistant = assistants[0]
+        except :
+            logger.error(f" NAME = {self.name}")
         threads = assistant.get_all_threads();
         assistant_id = assistant.assistant_id
         vector_stores = assistant.get_vector_stores()
