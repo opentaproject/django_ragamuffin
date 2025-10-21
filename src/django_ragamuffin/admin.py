@@ -34,7 +34,8 @@ class RemoteVectorStoreAdmin(admin.ModelAdmin):
 
 @admin.register(QUser)
 class QUserAdmin(admin.ModelAdmin):
-    list_display = ('pk', 'username', 'is_staff', 'messages')
+    list_display = ('pk', 'username', 'subdomain', 'is_staff', 'messages')
+    list_filter = ('subdomain',)
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)

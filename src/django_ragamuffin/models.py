@@ -217,6 +217,8 @@ def chunk_mmd(linestring):
 class QUser(models.Model ):
     username = models.CharField(max_length=255,blank=True)
     is_staff = models.BooleanField(default=False)
+    subdomain = models.CharField(max_length=64,blank=True,null=True)
+    
 
     def __str__(self):
         return f"{self.username}"
