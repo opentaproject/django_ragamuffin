@@ -1145,16 +1145,9 @@ class Thread(models.Model) :
         assistant_id = assistant.assistant_id
         vector_stores = assistant.get_vector_stores()
         vss = [ item.vsid for item in vector_stores ]
-        #print(f"VECTOR_STORES = {vss}")
         instructions = assistant.get_instructions() + '\n' + more_instructions
-        #print(f"INSTRUCTIONS IN QUERY IS {instructions}")
-        #vss = [];
-        #for vs in vector_stores :
-        #    vss.append(vs.vsid)
         thread = self
         thread_id = thread.thread_id
-        #print(f"VSS = {vss}")
-    
         encoding = tiktoken.get_encoding("cl100k_base")
 
         if thread.max_tokens :
@@ -1162,13 +1155,6 @@ class Thread(models.Model) :
         else :
             max_tokens = settings.MAX_TOKENS
         timeout = settings.MAXWAIT
-        #old_messages = self.thread_messages.all();
-        #print(f"OLD_MESSAGES = {old_messages}")
-        #if old_messages :
-        #    previous_response_id = old_messages[-1].response_id
-        #else :
-        #    previous_response_id = None
-        #print(f"PREVIOUS_RESPONSE_ID = {previous_response_id}")
         previous_response_id = None
         try :
             if clear or self.clear :
@@ -1201,9 +1187,10 @@ class Thread(models.Model) :
             previous_response_id = context.get('previous_response_id',None)
             effort = settings.EFFORT
             msg = ''
-            #print(f"INSTRUCTIONS FOR REMOTE QUERY\nvvvvvvvvvvvvvvvvvvvvvvv\n{instructions}\n^^^^^^^^^^^^^^^^^^^^^^\n")
-            #print(f"VSS = {vss}")
+            print(f"REMOTE QUERY\nvvvvvvvvvvvvvvvvvvvvvvv\n{instructions}\n^^^^^^^^^^^^^^^^^^^^^^\n")
+            print(f"VSS = {vss}")
             reasoning={"effort": effort ,'summary': 'auto'}
+            print(f"REMOTE QUERY\n^^^^^^^^^^^^^^^^^^^^^^^\n")
             #print(f"REASONING = {reasoning}")
             try :
                 if vss :

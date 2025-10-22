@@ -248,19 +248,23 @@ def feedback_view(request,subpath):
         i = int( options[0] );
         comment = options[1];
         choice = i
-    message = Message.objects.get(pk=index)
-    message.choice = choice;
-    message.comment = comment;
-    message.save(update_fields=['comment','choice'] );
-    #if len( thread.messages) > 0 :
-    #    try :
-    #        thread.messages[index].update( {'comment': comment , 'choice' : choice })
-    #        msg = thread.messages[index];
-    #        thread.save();
-    #        doarchive(thread, msg )
-    #    except Exception as err :
-    #        print(f"ERROR1 {str(err)}")
-    return JsonResponse({"success": True,'index' : index ,'comment' : comment , 'choice' :choice  })
+    try :
+        message = Message.objects.get(pk=index)
+        message.choice = choice;
+        message.comment = comment;
+        message.save(update_fields=['comment','choice'] );
+        #if len( thread.messages) > 0 :
+        #    try :
+        #        thread.messages[index].update( {'comment': comment , 'choice' : choice })
+        #        msg = thread.messages[index];
+        #        thread.save();
+        #        doarchive(thread, msg )
+        #    except Exception as err :
+        #        print(f"ERROR1 {str(err)}")
+        return JsonResponse({"success": True,'index' : index ,'comment' : comment , 'choice' :choice  })
+    except Exception as err :
+        return JsonResponse({"success": False,'index' : index ,'comment' : 'error', 'choice' :choice  })
+
 
 FILENAME = "../README.md"
 @csrf_exempt
@@ -294,22 +298,10 @@ def query_view(request,subpath):
     keeps = request.POST.getlist('keep',choices.keys() )
     if 'delete' in request.POST.getlist('action') :
         deletes = request.POST.getlist('entry')
-        print(f"DELETES = {deletes}")
+        #print(f"DELETES = {deletes}")
         dmessages = Message.objects.filter(pk__in=deletes);
-        print(f"DMESSAGES = {dmessages}")
+        #print(f"DMESSAGES = {dmessages}")
         dmessages.delete();
-        #if deletes :
-        #    messages = thread.messages;
-        #    ideletes = [int(i) for i in deletes ];
-        #    deletions =  [x['response_id']  for i,x in enumerate(messages) if i in ideletes and not i == 0 ]
-        #    iculled = [i for i,x in enumerate(messages) if i in ideletes ]
-        #    culled = [x for i,x in enumerate(messages) if i not in ideletes ]
-        #    print(f"NOT_CULLED = {iculled}")
-        #    if None in deletions :
-        #        if len( culled ) > 0 :
-        #            culled[-1]['response_id'] = None
-        #    thread.messages= culled
-        #    thread.save(update_fields=["messages" ])
         response = redirect(f"/django_ragamuffin/query/{assistant.name}/")
     elif 'filter' in request.POST.getlist('action' ) :
         response = redirect(f"/django_ragamuffin/query/{assistant.name}/")
@@ -375,7 +367,6 @@ def query_view(request,subpath):
             html = mark_safe(txt )
             response = f" <h4> Query: </h4>  {query}  <h4> Response: </h4> {html}  "
             response = f"{html}"
-            print(f"RESPONSE = {response}")
     else:
         form = QueryForm()
     time_spent = int( ( time.time() - now  ) + 0.5 )
