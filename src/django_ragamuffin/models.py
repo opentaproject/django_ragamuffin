@@ -1122,7 +1122,6 @@ class Thread(models.Model) :
 
     def run_query( self, clear=False , **kwargs  ):
         subdomain = kwargs.get('subdomain','')
-        print(f"RUN_QUERY SUBDOMAIN = {subdomain}")
         more_instructions = kwargs.get('instructions', '')
         last_messages = kwargs.get('last_messages',settings.LAST_MESSAGES)
         max_num_results = kwargs.get('max_num_results',settings.MAX_NUM_RESULTS)
@@ -1191,10 +1190,10 @@ class Thread(models.Model) :
             previous_response_id = context.get('previous_response_id',None)
             effort = settings.EFFORT
             msg = ''
-            print(f"REMOTE QUERY\nvvvvvvvvvvvvvvvvvvvvvvv\n{instructions}\n^^^^^^^^^^^^^^^^^^^^^^\n")
-            print(f"VSS = {vss}")
+            #print(f"REMOTE QUERY\nvvvvvvvvvvvvvvvvvvvvvvv\n{instructions}\n^^^^^^^^^^^^^^^^^^^^^^\n")
+            #print(f"VSS = {vss}")
             reasoning={"effort": effort ,'summary': 'auto'}
-            print(f"REMOTE QUERY\n^^^^^^^^^^^^^^^^^^^^^^^\n")
+            #print(f"REMOTE QUERY\n^^^^^^^^^^^^^^^^^^^^^^^\n")
             #print(f"REASONING = {reasoning}")
             try :
                 if vss :
