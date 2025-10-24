@@ -286,8 +286,12 @@ class OpenAIClient( OpenAI ):
 
             else :
                 name = checksum
-                new_remote_vector_store = self.vector_stores.create(name=name,file_ids=new_file_ids , 
-                    metadata={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] , "checksum" : new_checksum } )
+                if new_file_ids :
+                    new_remote_vector_store = self.vector_stores.create(name=name,file_ids=new_file_ids , 
+                        metadata={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] , "checksum" : new_checksum } )
+                else  :
+                    new_remote_vector_store = self.vector_stores.create(name=name,
+                        metadata={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] , "checksum" : new_checksum } )
                 remote_wait_for_vector_store_ready(self, new_remote_vector_store.id, timeout=settings.MAXWAIT)
                 rvs = new_remote_vector_store
                 new_remote_vector_store, created   = RemoteVectorStore.objects.get_or_create(checksum=checksum,vector_store_id=rvs.id);
