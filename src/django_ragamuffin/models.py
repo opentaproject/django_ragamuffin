@@ -1121,6 +1121,7 @@ class Thread(models.Model) :
 
 
     def run_query( self, clear=False , **kwargs  ):
+        print(f"THREAD RUN_QUERY")
         subdomain = kwargs.get('subdomain','')
         more_instructions = kwargs.get('instructions', '')
         last_messages = kwargs.get('last_messages',settings.LAST_MESSAGES)
@@ -1195,6 +1196,8 @@ class Thread(models.Model) :
             reasoning={"effort": effort ,'summary': 'auto'}
             #print(f"REMOTE QUERY\n^^^^^^^^^^^^^^^^^^^^^^^\n")
             #print(f"REASONING = {reasoning}")
+            #print(f"MAXWAIT = {settings.MAXWAIT}")
+            #print(f"EFFORT = {settings.EFFORT}")
             try :
                 if vss :
                     try :
@@ -1204,6 +1207,7 @@ class Thread(models.Model) :
                             previous_response_id=previous_response_id,
                             instructions=instructions,
                             reasoning=reasoning,
+                            timeout=settings.MAWAIT,
                             tools=[{"type": "file_search",
                                 "vector_store_ids": vss  # your vector store id
                                 }]
@@ -1222,6 +1226,7 @@ class Thread(models.Model) :
                             previous_response_id=previous_response_id,
                             instructions=instructions,
                             reasoning=reasoning,
+                            timeout=settings.MAWAIT,
                             tools=[{"type": "file_search",
                                 "vector_store_ids": vss  # your vector store id
                                 }]
@@ -1238,6 +1243,7 @@ class Thread(models.Model) :
                             previous_response_id=previous_response_id,
                             instructions=instructions,
                             reasoning=reasoning,
+                            timeout=settings.MAWAIT,
                             )
                     except  Exception as err :
                         logger.error(f"ERROR6 {str(err)} ")
@@ -1252,6 +1258,7 @@ class Thread(models.Model) :
                                 input=query,
                                 instructions=instructions,
                                 reasoning=reasoning,
+                                timeout=settings.MAWAIT,
                                 )
                         else :
                             RESPONSE = openai.responses.create(
@@ -1260,6 +1267,7 @@ class Thread(models.Model) :
                                 previous_response_id=previous_response_id,
                                 instructions=instructions,
                                 reasoning=reasoning,
+                                timeout=settings.MAWAIT,
                                 )
 
             except  Exception as e :
