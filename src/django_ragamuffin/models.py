@@ -1196,8 +1196,9 @@ class Thread(models.Model) :
             reasoning={"effort": effort ,'summary': 'auto'}
             #print(f"REMOTE QUERY\n^^^^^^^^^^^^^^^^^^^^^^^\n")
             #print(f"REASONING = {reasoning}")
-            #print(f"MAXWAIT = {settings.MAXWAIT}")
+            print(f"MAXWAIT = {settings.MAXWAIT}")
             #print(f"EFFORT = {settings.EFFORT}")
+            timeout = 240
             try :
                 if vss :
                     try :
@@ -1207,7 +1208,7 @@ class Thread(models.Model) :
                             previous_response_id=previous_response_id,
                             instructions=instructions,
                             reasoning=reasoning,
-                            timeout=settings.MAWAIT,
+                            timeout=timeout,
                             tools=[{"type": "file_search",
                                 "vector_store_ids": vss  # your vector store id
                                 }]
@@ -1226,7 +1227,7 @@ class Thread(models.Model) :
                             previous_response_id=previous_response_id,
                             instructions=instructions,
                             reasoning=reasoning,
-                            timeout=settings.MAWAIT,
+                            timeout=timeout,
                             tools=[{"type": "file_search",
                                 "vector_store_ids": vss  # your vector store id
                                 }]
@@ -1243,7 +1244,7 @@ class Thread(models.Model) :
                             previous_response_id=previous_response_id,
                             instructions=instructions,
                             reasoning=reasoning,
-                            timeout=settings.MAWAIT,
+                            timeout=timeout,
                             )
                     except  Exception as err :
                         logger.error(f"ERROR6 {str(err)} ")
@@ -1258,7 +1259,7 @@ class Thread(models.Model) :
                                 input=query,
                                 instructions=instructions,
                                 reasoning=reasoning,
-                                timeout=settings.MAWAIT,
+                                timeout=timeout,
                                 )
                         else :
                             RESPONSE = openai.responses.create(
@@ -1267,7 +1268,7 @@ class Thread(models.Model) :
                                 previous_response_id=previous_response_id,
                                 instructions=instructions,
                                 reasoning=reasoning,
-                                timeout=settings.MAWAIT,
+                                timeout=timeout,
                                 )
 
             except  Exception as e :
