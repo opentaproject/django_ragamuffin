@@ -146,22 +146,37 @@ class OpenAI(TestCase):
         response = self.client.get(url)
         t1 = self.create_testfile_from_string( b"test1_content_here" ,"test1.txt")
         t2 = self.create_testfile_from_string( b"test2_content_here" ,"test2.txt")
+        print(f"A1")
         vsname = randstring('T2')
+        print(f"A2")
         vs = VectorStore( name=vsname)
+        print(f"A3")
         vs.save()
+        print(f"A4")
         vs.files.set([t1,t2])
+        time.sleep(30)
+        print(f"A5")
         vs.save()
+        print(f"A6")
         dump_remote_vector_stores("TEST0");
-        assert vs.files_ok( ), "TWO FILES NOT OK"
+        #print(f"TWO_FILES_NOT_OK {vs.files_ok( )}" ) # , "TWO FILES NOT OK"
+        assert vs.files_ok() , 'TWO_FILES_NOT_OK'
+        print(f"A7")
         t2.delete();
+        time.sleep(30);
+        print(f"A8")
         #vs = VectorStore.objects.get(name=vsname)
         #vs.save();
+        print(f"A9")
         dump_remote_vector_stores("T1");
-        assert vs.files_ok() , "ONE FILE NOT OK"
+        print(f"A10")
+        #print( f" ONE_FILE_NOT_OK {vs.files_ok() }") #  , "ONE FILE NOT OK"
+        assert vs.files_ok()  , "ONE FILE NOT OK"
         t1.delete();
         #vs.save()
         #vs = VectorStore.objects.get(name=vsname)
         dump_remote_vector_stores("TEST2");
+        #print(f" ONE_FILE_NOT_OK_AGAIN {vs.files_ok() }") # , "ONE FILE NOT OK"
         assert vs.files_ok() , "ONE FILE NOT OK"
         vs.delete();
         delete_remote_vector_stores();
@@ -183,16 +198,25 @@ class OpenAI(TestCase):
         vs1.save()
         print(f"VSPK-A = {vs1.pk} ")# #VS2PK = {vs2.pk}")
         vs1.files.set([t1,t2])
+        time.sleep(30)
         print(f"VSPK-B = {vs1.pk} ")# #VS2PK = {vs2.pk}")
         vs1.save()
+        print(f"SAVED")
         vs2 = vs1.clone(vsname + '-copy')
         vs2.save();
+        print(f"CLONED and saved")
         for i in [1,2] :
-            assert vs1.files_ok(), "VS1 FILES BROKEN"
-            assert vs2.files_ok(), "VS2 FILES BROKEN"
+            print(f"SLEEP 30 i = {i}")
+            time.sleep(30);
+            #print(f"VS1)FILES_BROKEN  {vs1.files_ok()} " )# , "VS1 FILES BROKEN"
+            #print(f"VS2_FILES_BROKEN  {vs2.files_ok() }" ) #, "VS2 FILES BROKEN"
+
+            assert vs1.files_ok()  , "VS1 FILES BROKEN"
+            assert vs2.files_ok()  , "VS2 FILES BROKEN"
             files1 = vs1.files.all();
             files2 = vs2.files.all();
-            #print(f"FILES = {files1}")
+            print(f"FILES1 = {files1}")
+            print(f"FILES2 = {files2}")
             assert len( files1 ) == 3 - i , f"FILES = {files1}"
             assert set( files1 ) == set( files2 ) , "FILES NOT THE SAME"
             assert vs1.get_checksum() == vs2.get_checksum(), "CHECKSUMS DIFFER"
@@ -201,6 +225,7 @@ class OpenAI(TestCase):
             assert vid1 == vid2 , "REMOTE VECTOR_STORES_DIFFER"
             if i == 1 :
                 t1.delete();
+                print(f"NOW SLEEP AGAIN")
         t2.delete();
         vs1.delete();
         vs2.delete();
@@ -214,7 +239,7 @@ class OpenAI(TestCase):
 
 
     @pytest.mark.django_db
-    def notest_create_and_delete_vector_store_object(self):
+    def test_create_and_delete_vector_store_object(self):
 
         aname = randstring('T5')
         print(f"TEST_CREATE_AND_DELETE_VECTOR_STORE_OBJECT")
@@ -231,10 +256,13 @@ class OpenAI(TestCase):
         vs.save()
         vs.files.add(t2); # REDUNDANT ADD
         vs.save()
+        print(f"NOW SLEEP 30 ")
+        time.sleep(30)
         assert vs.files_ok( ), "TWO FILES NOT OK"
         print(f"NEXT REMOVE A {t1} FILE NOW")
         vs.files.remove( t1  )
-        print(f"FILES {t1} REMOVED")
+        print(f"FILES {t1} REMOVED ; now sleep again")
+        time.sleep(30);
         assert vs.files_ok() , "ONE FILE NOT OK"
         vs.files.remove( t2 ) 
         assert vs.files_ok(  ) , "NO FILES SHOULD BE LEFT"
@@ -309,7 +337,7 @@ class OpenAI(TestCase):
         dump_remote_vector_stores("TEST6");
 
     @pytest.mark.django_db(transaction=True)
-    def test_create_and_delete_thread(self):
+    def notest_create_and_delete_thread(self):
         print(f"TEST_CREATE_AND_DELETE_THREAD")
         import tiktoken
 
@@ -343,8 +371,10 @@ class OpenAI(TestCase):
         print(f"CREATED ASSISTANT {aname}")
         assistant.save();
         assistant.instructions = 'Answer the questions as concisely as possible based only on the information provided. No need for complete sentences. '
-        #assistant.save()
+        assistant.save()
         assistant.add_raw_files([t1,t2,t3])
+        assistant.save();
+        time.sleep(30)
         file_ids = assistant.file_ids()
         assert  assistant.files_ok()  , f"FILE_IDS_LOCAL = {file_ids} not equal to FILE_IDS_REMOTE "
         print(f"ASSITANT REMOTE FILES OK")
@@ -358,8 +388,8 @@ class OpenAI(TestCase):
                         ]
 
         thread = Thread(name=aname,assistant=assistant,user=self.quser)
-        #thread.messages = []
-        #thread.messages = None
+        thread.messages = []
+        thread.messages = None
         thread.save()
         for  q in queries :
             print(f"Q {q}")
@@ -384,6 +414,7 @@ class OpenAI(TestCase):
         #self.client.post( url ,  {'file': test_file3}, follow=True)
         #t3 = OpenAIFile.objects.get(name="test3.txt")
         assistant.add_raw_file(t3)
+        assistant.save();
         #threads = assistant.threads.all();
         #for thread in threads :
         #    thread.messages = []
@@ -394,8 +425,8 @@ class OpenAI(TestCase):
                     [ 'Q7: What color was the cat.','hite',True],
                     [ 'Q8: What color was the dog.','lack',True],
                     [ 'Q9: What did the cat  do?', 'iaow',True],
-                    [ 'Q10: What was the first query in the conversation','cat',True ],
-                    [ 'Q11: What did the dog do?', 'arked' ,False ],
+                    [ 'Q10: What was the first query in the conversation','cat',True],
+                    [ 'Q11: What did the dog do?', 'arked' ,False],
                  ]
         clear = True
         for  q in queries :

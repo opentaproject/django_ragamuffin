@@ -633,11 +633,14 @@ class VectorStore( models.Model ):
         vs = VectorStore.objects.get(pk=self.pk)
         file_ids = vs.file_ids()
         vector_store_id = vs.get_vector_store_id()
+        print(f"VSID = {vector_store_id}")
         client = OpenAIClient()
         vector_store_files = client.vector_stores.files.list( vector_store_id=vector_store_id)
         remote_ids = []
         for f in vector_store_files:
             remote_ids.append( f.id)
+        print(f"FILES_OK file_ids = {file_ids}")
+        print(f"FILES_OK remote_ids = {remote_ids}")
         return set( file_ids) == set( remote_ids) 
 
     def save( self, *args, **kwargs ):
@@ -1062,9 +1065,11 @@ class Assistant( models.Model ):
 
     def files_ok( self,*args, **kwargs):
         assistant = self
-        vss = assistant.vector_stores.all();
+        #vss = assistant.vector_stores.all();
         file_ids = assistant.file_ids();
+        print(f"FILES_OK TEST {file_ids}")
         remote_ids = assistant.remote_files();
+        print(f"REMOTE_FILES = {remote_ids}")
         return set( remote_ids) == set( file_ids )
 
 
