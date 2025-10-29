@@ -257,21 +257,21 @@ def print_my_stack():
 
 
 def get_assistant( name , quser ):
-    print(f"GET_ASSISTANT NAM={name} QUSER={quser}")
+    #print(f"GET_ASSISTANT NAM={name} QUSER={quser}")
     assistants = Assistant.objects.filter(name=name).all();
-    print(f"GET_ASSISTANT assistants = {assistants}")
+    #print(f"GET_ASSISTANT assistants = {assistants}")
     model = settings.AI_MODEL
     if not assistants and not quser.is_staff :
         return None
     if assistants :
         return  assistants[0]
     base = '.'.join(name.split('.')[:-1])
-    print(f"BASE = {base}")
+    #print(f"BASE = {base}")
     if base == '' :
         return None
     subdir = name.split('.')[-1];
     base_assistant = get_assistant( base,quser);
-    print("BASE_ASSISTANT = ", base_assistant)
+    #print("BASE_ASSISTANT = ", base_assistant)
     if base_assistant :
         assistant = base_assistant.clone_stub( name )
     else :

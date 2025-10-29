@@ -228,7 +228,7 @@ def feedback_view(request,subpath):
     #name = ( '.'.join( segments ) ).rstrip('.')
     choice = 0;
     index = int( request.POST.getlist('newmessage_index')[0] )
-    print(f"INDEX = {index}")
+    #print(f"INDEX = {index}")
     #print(f"POST LIST THREAD = {request.POST.getlist('thread')}")
     #post_thread =  re.sub(r'\.','_',request.POST.getlist('thread')[0])
     #thread_name = ( '.'.join( post_thread.split('/')[3:] ) ).rstrip('.');
@@ -277,7 +277,7 @@ def query_view(request,subpath):
        subdomain = subdomain[0]
     else :
        subdomain = ''
-    print(f"SUBDOMAIN = {subdomain}")
+    #print(f"SUBDOMAIN = {subdomain}")
     last_messages = settings.LAST_MESSAGES;
     max_num_results = settings.MAX_NUM_RESULTS;
     name = ( '.'.join( segments ) ).rstrip('.')

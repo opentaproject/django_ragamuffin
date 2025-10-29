@@ -90,18 +90,18 @@ def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=settings
     i = 0;
     interval = 5;
     imax = settings.MAXWAIT / interval;
-    print(f"VSID1 = {vector_store_id}")
+    #print(f"VSID1 = {vector_store_id}")
     client = OpenAIClient()
     vector_store_files = client.vector_stores.files.list( vector_store_id=vector_store_id)
     remote_ids = []
     for f in vector_store_files:
         remote_ids.append( f.id)
-    print(f"REMOTE_IDS = {remote_ids}")
+    #print(f"REMOTE_IDS = {remote_ids}")
 
     while i < imax :
         print(f"VSID2 = {vector_store_id}")
         file_list = client.vector_stores.files.list(vector_store_id=vector_store_id)
-        print(f"FILE_LIST = {file_list}")
+        #print(f"FILE_LIST = {file_list}")
         statuses = [file.status for file in file_list.data]
         print(f"WAIT FOR REMOTE_VECTOR_STORES I={i} IMAX={imax} {statuses} ")
         if all(status == "completed" for status in statuses):
@@ -112,7 +112,9 @@ def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=settings
             time.sleep(interval)  # Wait before polling again
         i = i + 1 ;
     assert i < imax , "VECTOR STORE READY TIMED OUT"
-    time.sleep( interval )
+    if True : # i > 0 :
+        print(f"VECTOR STORE OK; NOW SNOOZE JUST {interval}")
+        time.sleep( interval )
 
 
 def validate_file_extension(value):
@@ -653,14 +655,14 @@ class VectorStore( models.Model ):
         vs = VectorStore.objects.get(pk=self.pk)
         file_ids = vs.file_ids()
         vector_store_id = vs.get_vector_store_id()
-        print(f"VSID3 = {vector_store_id}")
+        #print(f"VSID3 = {vector_store_id}")
         client = OpenAIClient()
         vector_store_files = client.vector_stores.files.list( vector_store_id=vector_store_id)
         remote_ids = []
         for f in vector_store_files:
             remote_ids.append( f.id)
-        print(f"FILES_OK file_ids = {file_ids}")
-        print(f"FILES_OK remote_ids = {remote_ids}")
+        #print(f"FILES_OK file_ids = {file_ids}")
+        #print(f"FILES_OK remote_ids = {remote_ids}")
         return set( file_ids) == set( remote_ids) 
 
     def save( self, *args, **kwargs ):
@@ -686,7 +688,7 @@ def custom_delete_remote_vector_store(sender, instance, **kwargs):
         client.vector_stores.delete( vector_store_id )
         remote_wait_for_vector_store_delete(vector_store_id, timeout=settings.MAXWAIT, interval=2)
     except Exception as e :
-        logger.errorprint(f"FAILED REMOTE_VECTOR_STORE_CLIENT_DELETE {vector_store_id} {str(e)} ")
+        logger.error(f"FAILED REMOTE_VECTOR_STORE_CLIENT_DELETE {vector_store_id} {str(e)} ")
         pass
 
 
@@ -1088,9 +1090,9 @@ class Assistant( models.Model ):
         assistant = self
         #vss = assistant.vector_stores.all();
         file_ids = assistant.file_ids();
-        print(f"FILES_OK TEST {file_ids}")
+        #print(f"FILES_OK TEST {file_ids}")
         remote_ids = assistant.remote_files();
-        print(f"REMOTE_FILES = {remote_ids}")
+        #print(f"REMOTE_FILES = {remote_ids}")
         return set( remote_ids) == set( file_ids )
 
 
@@ -1147,7 +1149,7 @@ class Thread(models.Model) :
 
 
     def run_query( self, clear=False , **kwargs  ):
-        print(f"THREAD RUN_QUERY")
+        #print(f"THREAD RUN_QUERY")
         subdomain = kwargs.get('subdomain','')
         more_instructions = kwargs.get('instructions', '')
         last_messages = kwargs.get('last_messages',settings.LAST_MESSAGES)
@@ -1222,9 +1224,9 @@ class Thread(models.Model) :
             reasoning={"effort": effort ,'summary': 'auto'}
             #print(f"REMOTE QUERY\n^^^^^^^^^^^^^^^^^^^^^^^\n")
             #print(f"REASONING = {reasoning}")
-            print(f"MAXWAIT = {settings.MAXWAIT}")
+            #print(f"MAXWAIT = {settings.MAXWAIT}")
             #print(f"EFFORT = {settings.EFFORT}")
-            timeout = 240
+            timeout = settings.MAXWAIT
             try :
                 if vss :
                     try :
