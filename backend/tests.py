@@ -154,7 +154,7 @@ class OpenAI(TestCase):
         vs.save()
         print(f"A4")
         vs.files.set([t1,t2])
-        time.sleep(30)
+        #time.sleep(30)
         print(f"A5")
         vs.save()
         print(f"A6")
@@ -163,7 +163,7 @@ class OpenAI(TestCase):
         assert vs.files_ok() , 'TWO_FILES_NOT_OK'
         print(f"A7")
         t2.delete();
-        time.sleep(30);
+        #time.sleep(30);
         print(f"A8")
         #vs = VectorStore.objects.get(name=vsname)
         #vs.save();
@@ -198,7 +198,7 @@ class OpenAI(TestCase):
         vs1.save()
         print(f"VSPK-A = {vs1.pk} ")# #VS2PK = {vs2.pk}")
         vs1.files.set([t1,t2])
-        time.sleep(30)
+        #time.sleep(10)
         print(f"VSPK-B = {vs1.pk} ")# #VS2PK = {vs2.pk}")
         vs1.save()
         print(f"SAVED")
@@ -207,7 +207,7 @@ class OpenAI(TestCase):
         print(f"CLONED and saved")
         for i in [1,2] :
             print(f"SLEEP 30 i = {i}")
-            time.sleep(30);
+            #time.sleep(10);
             #print(f"VS1)FILES_BROKEN  {vs1.files_ok()} " )# , "VS1 FILES BROKEN"
             #print(f"VS2_FILES_BROKEN  {vs2.files_ok() }" ) #, "VS2 FILES BROKEN"
 
@@ -257,12 +257,12 @@ class OpenAI(TestCase):
         vs.files.add(t2); # REDUNDANT ADD
         vs.save()
         print(f"NOW SLEEP 30 ")
-        time.sleep(30)
+        #time.sleep(30)
         assert vs.files_ok( ), "TWO FILES NOT OK"
         print(f"NEXT REMOVE A {t1} FILE NOW")
         vs.files.remove( t1  )
         print(f"FILES {t1} REMOVED ; now sleep again")
-        time.sleep(30);
+        #time.sleep(30);
         assert vs.files_ok() , "ONE FILE NOT OK"
         vs.files.remove( t2 ) 
         assert vs.files_ok(  ) , "NO FILES SHOULD BE LEFT"
@@ -373,7 +373,7 @@ class OpenAI(TestCase):
         assistant.instructions = 'Answer the questions as concisely as possible based only on the information provided. No need for complete sentences. '
         assistant.save()
         assistant.add_raw_files([t1,t2,t3])
-        time.sleep(30)
+        ##time.sleep(30)
         assistant.save();
         file_ids = assistant.file_ids()
         assert  assistant.files_ok()  , f"FILE_IDS_LOCAL = {file_ids} not equal to FILE_IDS_REMOTE "
@@ -395,7 +395,7 @@ class OpenAI(TestCase):
             print(f"Q {q}")
             [ query,response , truth ] =  q
             r = thread.run_query(  query=query,  last_messages=99)
-            time.sleep(10);
+            ##time.sleep(10);
             txt = r['assistant']
             print(f"TXT = {txt}")
             assert ( response in txt ) == truth , f"ERROR : in {q} TXT={txt} "
@@ -415,7 +415,7 @@ class OpenAI(TestCase):
         #self.client.post( url ,  {'file': test_file3}, follow=True)
         #t3 = OpenAIFile.objects.get(name="test3.txt")
         assistant.add_raw_file(t3)
-        time.sleep( 30 )
+        ##time.sleep( 30 )
         assistant.save();
         #threads = assistant.threads.all();
         #for thread in threads :
