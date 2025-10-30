@@ -68,6 +68,13 @@ def remote_wait_for_vector_store_delete(vector_store_id, timeout=settings.MAXWAI
 
     raise TimeoutError(f"Vector store {vector_store_id} deletion not confirmed within timeout.")
 
+def has_changed(obj):
+    current = obj.__class__.objects.get(pk=obj.pk)
+    for field in obj._meta.fields:
+        name = field.name
+        if getattr(current, name) != getattr(obj, name):
+            return True
+    return False
 
 
 def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=settings.MAXWAIT):
@@ -92,20 +99,28 @@ def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=settings
     imax = settings.MAXWAIT / interval;
     #print(f"VSID1 = {vector_store_id}")
     client = OpenAIClient()
-    vector_store_files = client.vector_stores.files.list( vector_store_id=vector_store_id)
+    try :
+        vector_store_files = client.vector_stores.files.list( vector_store_id=vector_store_id)
+    except :
+        vector_store_files = []
     remote_ids = []
     for f in vector_store_files:
         remote_ids.append( f.id)
     #print(f"REMOTE_IDS = {remote_ids}")
+    stable_reads = 0;
 
-    while i < imax :
+    while i < imax  and stable_reads < 3 :
         print(f"VSID2 = {vector_store_id}")
-        file_list = client.vector_stores.files.list(vector_store_id=vector_store_id)
-        #print(f"FILE_LIST = {file_list}")
-        statuses = [file.status for file in file_list.data]
-        print(f"WAIT FOR REMOTE_VECTOR_STORES I={i} IMAX={imax} {statuses} ")
+        try : 
+            file_list = client.vector_stores.files.list(vector_store_id=vector_store_id)
+            #print(f"FILE_LIST = {file_list}")
+            statuses = [file.status for file in file_list.data]
+            print(f"WAIT FOR REMOTE_VECTOR_STORES I={i} IMAX={imax} {statuses} ")
+        except :
+            statuses = []
         if all(status == "completed" for status in statuses):
-            break
+            stable_reads += 1;
+            time.sleep(interval)
         elif any(status == "failed" for status in statuses):
             raise Exception(f"❌ Some files failed to process! {statuses}")
         else:
@@ -114,7 +129,7 @@ def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=settings
     assert i < imax , "VECTOR STORE READY TIMED OUT"
     if True : # i > 0 :
         print(f"VECTOR STORE OK; NOW SNOOZE JUST {interval}")
-        time.sleep( interval )
+        #time.sleep( interval )
 
 
 def validate_file_extension(value):
@@ -275,7 +290,7 @@ class OpenAIClient( OpenAI ):
             vs.remote_vector_store = remote_vector_stores[0]
             new_vector_store_id =    remote_vector_store.vector_store_id
             vs.vsid = new_vector_store_id
-            remote_wait_for_vector_store_ready(self, vs.vsid, timeout=settings.MAXWAIT)
+            #remote_wait_for_vector_store_ready(self, vs.vsid, timeout=settings.MAXWAIT)
             
             vs.remote_vector_store = remote_vector_store
             vs.save();
@@ -289,7 +304,7 @@ class OpenAIClient( OpenAI ):
                 for f in deleted_files:
                     try :
                         self.vector_stores.files.delete(vector_store_id=vector_store_id, file_id=f)
-                        remote_wait_for_vector_store_ready(self, vector_store_id, timeout=settings.MAXWAIT)
+                        #remote_wait_for_vector_store_ready(self, vector_store_id, timeout=settings.MAXWAIT)
                     except openai.NotFoundError as e:
                         logger.error(f"File {f} not found in vector store {vector_store_id}: {e}")
                         continue
@@ -298,7 +313,7 @@ class OpenAIClient( OpenAI ):
                 if not added_files == []:
                     self.vector_stores.file_batches.create( vector_store_id=vector_store_id, file_ids=added_files, 
                         metadata={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] , "checksum" : new_checksum } )
-                    remote_wait_for_vector_store_ready(self, vector_store_id, timeout=settings.MAXWAIT)
+                    #remote_wait_for_vector_store_ready(self, vector_store_id, timeout=settings.MAXWAIT)
                 remote_vector_store.checksum = new_checksum;
                 new_vector_store_id = remote_vector_store.vector_store_id
                 remote_vector_store.save();
@@ -311,11 +326,11 @@ class OpenAIClient( OpenAI ):
                 else  :
                     new_remote_vector_store = self.vector_stores.create(name=name,
                         metadata={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] , "checksum" : new_checksum } )
-                remote_wait_for_vector_store_ready(self, new_remote_vector_store.id, timeout=settings.MAXWAIT)
+                #remote_wait_for_vector_store_ready(self, new_remote_vector_store.id, timeout=settings.MAXWAIT)
                 rvs = new_remote_vector_store
                 new_remote_vector_store, created   = RemoteVectorStore.objects.get_or_create(checksum=checksum,vector_store_id=rvs.id);
                 new_remote_vector_store.save();
-                remote_wait_for_vector_store_ready(self,rvs.id, timeout=settings.MAXWAIT)
+                #remote_wait_for_vector_store_ready(self,rvs.id, timeout=settings.MAXWAIT)
                 vs.vector_store_id = rvs.id
                 vs.remote_vector_store = new_remote_vector_store
                 vs.vsid = rvs.id
@@ -611,37 +626,43 @@ class VectorStore( models.Model ):
         checksums.sort()
         return checksums
 
-    def old_save(self, *args, **kwargs):
-        is_new = not self.pk
-        if is_new :
-            super().save(*args, **kwargs)
-        checksum = self.get_checksum()
-        client = OpenAIClient()
-        if is_new:
-            try:
-                vector_store_id = client.get_or_update_remote_vector_store(self)
-                self.vsid = vector_store_id
-            except openai.OpenAIError as e:
-                logger.error(f"OpenAIError in get_or_update_remote_vector_store: {e}")
-                raise
-            except Exception as e:
-                logger.error(f"Unexpected error in get_or_update_remote_vector_store: {e}")
-                raise
-        super().save(*args, **kwargs)
+    #def old_save(self, *args, **kwargs):
+    #    is_new = not self.pk
+    #    if is_new :
+    #        super().save(*args, **kwargs)
+    #    checksum = self.get_checksum()
+    #    client = OpenAIClient()
+    #    if is_new:
+    #        try:
+    #            vector_store_id = client.get_or_update_remote_vector_store(self)
+    #            self.vsid = vector_store_id
+    #        except openai.OpenAIError as e:
+    #            logger.error(f"OpenAIError in get_or_update_remote_vector_store: {e}")
+    #            raise
+    #        except Exception as e:
+    #            logger.error(f"Unexpected error in get_or_update_remote_vector_store: {e}")
+    #            raise
+    #    super().save(*args, **kwargs)
 
-    def save(self, *args, **kwargs):
-        is_new = self._state.adding and not self.pk
+    #def old_save2(self, *args, **kwargs):
+    #    is_new = self._state.adding and not self.pk
 
 
-        self.checksum = self.get_checksum()
-        client = OpenAIClient()
+    #    self.checksum = self.get_checksum()
+    #    client = OpenAIClient()
 
-        if is_new:
-            vector_store_id = client.get_or_update_remote_vector_store(self)
-            self.vsid = vector_store_id
-
-        super().save(*args, **kwargs)
-        remote_wait_for_vector_store_ready(client, self.vsid, timeout=settings.MAXWAIT)
+    #    do_save = False
+    #    if is_new:
+    #        vector_store_id = client.get_or_update_remote_vector_store(self)
+    #        self.vsid = vector_store_id
+    #        do_save = True
+    #    else :
+    #        if has_changed( self ):
+    #    if not do_save :
+    #        print(f"SKIP SAVE")
+    #        return 
+    #    super().save(*args, **kwargs)
+    #    remote_wait_for_vector_store_ready(client, self.vsid, timeout=settings.MAXWAIT)
 
 
 
@@ -666,14 +687,23 @@ class VectorStore( models.Model ):
         return set( file_ids) == set( remote_ids) 
 
     def save( self, *args, **kwargs ):
+        print(f"SAVE_VECTOR_STORE")
         is_new = self._state.adding and not self.pk
         if is_new :
             super().save(*args,**kwargs)
         checksum = self.get_checksum();
         client = OpenAIClient()
+        do_save = False
         if is_new :
             vector_store_id = client.get_or_update_remote_vector_store( self )
             self.vsid = vector_store_id
+            do_save = True
+        else :
+            if has_changed( self ):
+                do_save = True
+        print(f"DO_SAVE = {do_save}")
+        if not do_save :
+            return 
         remote_wait_for_vector_store_ready(client, self.vsid, timeout=settings.MAXWAIT)
         super().save(*args,**kwargs)
 
