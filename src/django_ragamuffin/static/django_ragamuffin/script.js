@@ -63,7 +63,7 @@ function button_color(btn, color) {
 }
 
 function handleClick(event) {
-  // console.log("HANDLE_CLICK")
+  console.log("HANDLE_CLICK")
   event.preventDefault();
   document.getElementById("response-block").style.display = "block";
   var txt = event.currentTarget?.value || "";
@@ -178,9 +178,9 @@ $(document).ready(function () {
     const response_area = document.getElementById("response").innerHTML;
     // console.log("selectedValue", selectedValue, "len=", response_area.length , response_area);
     var first_word = response_area.trim().split(/\s+/)[0];
-    // console.log("FIRST_WORD = ", first_word);
-    if (selectedValue == 0 && first_word != 'None') {
-      button_color(document.getElementById("submitBtn"), "red");
+    console.log("FIRST_WORD = ", first_word);
+    if (selectedValue == 0  ){ // && first_word != 'None') {
+      button_color(document.getElementById("submitBtn"), "pink");
       // Git rid of forcing comments before continuing!
       // if (!first_word.includes("ERROR")) {
       //   alert(
