@@ -10,7 +10,11 @@ def login_view(request):
         for thread in threads.all() :
             print(f"THREAD = {thread}")
             previous = None
-            for msg in thread.messages :
+            try :
+                msgs = thread.messages
+            except :
+                msgs = []
+            for msg in msgs :
                 print(f"MSG = {msg}")
                 query = msg['user'];
                 response = msg['assistant'];
