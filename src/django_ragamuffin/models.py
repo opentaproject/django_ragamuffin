@@ -139,6 +139,7 @@ def validate_file_extension(value):
 
 def hashed_upload_to(instance, filename):
     dirname = '.'.join( instance.file.name.split('.')[:-1] )
+    print(f"DIRNAME = {dirname} INSTANCE = {instance.file.name}")
     os.makedirs(os.path.join( settings.OPENAI_UPLOAD_STORAGE, dirname ) ,  exist_ok=True)
     return os.path.join( dirname, instance.file.name )
 
@@ -189,6 +190,7 @@ def upload_or_retrieve_openai_file( name ,src ):
     os.makedirs( os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), exist_ok=True )
     dst = os.path.join(os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), src)
     name = dst.split('/')[-1];
+    print(f"UPLOAD NAME = {name}")
     ts = OpenAIFile.objects.filter(name=name)
     if not ts :
         if not src == dst :
@@ -769,6 +771,13 @@ class Mode(models.Model):
         except cls.DoesNotExist:
             return ""
 
+def get_openai_dir( filename ):
+    name = '.'.join( filename.split('.')[:-1])
+    name = name.upper()
+    return name
+
+
+
 
 class Assistant( models.Model ):
     name =   models.CharField(max_length=255,blank=True)
@@ -797,8 +806,9 @@ class Assistant( models.Model ):
 
 
     def add_file(self,  filename, uploaded_file ):
-        name = '.'.join( filename.split('.')[:-1])
+        name = get_openai_dir( filename)
         filename = f"{name}/{filename}"
+        print(f"NAME={name} FILENAME = {filename}")
         upload_storage.save(filename , uploaded_file)
         file_url = settings.MEDIA_URL + upload_storage.url(filename)
         src = settings.OPENAI_UPLOAD_STORAGE + '/' + filename
@@ -818,9 +828,12 @@ class Assistant( models.Model ):
             raise FileNotFoundError(f"File not found: {full_path}")
 
         base = os.path.basename(full_path)
+        filename = base
+        name = get_openai_dir( filename)
         stem = '.'.join(base.split('.')[:-1]) or base
-        relpath = f"{stem}/{base}"
-
+        relpath = f"{name}/{base}"
+        ##### FIX_PATH 
+        print(f"STEM = {stem} BASE={base} relpath={relpath} ")
         dst = os.path.join(settings.OPENAI_UPLOAD_STORAGE, relpath)
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         shutil.copy2(full_path, dst)
