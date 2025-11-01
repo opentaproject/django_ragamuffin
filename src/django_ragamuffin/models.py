@@ -138,7 +138,8 @@ def validate_file_extension(value):
         raise ValidationError(f"Unsupported file extension '{ext}'.")
 
 def hashed_upload_to(instance, filename):
-    dirname = '.'.join( instance.file.name.split('.')[:-1] )
+    #dirname = '.'.join( instance.file.name.split('.')[:-1] ).upper()
+    dirname = get_openai_dir( instance.file.name )
     print(f"DIRNAME = {dirname} INSTANCE = {instance.file.name}")
     os.makedirs(os.path.join( settings.OPENAI_UPLOAD_STORAGE, dirname ) ,  exist_ok=True)
     return os.path.join( dirname, instance.file.name )
@@ -806,6 +807,8 @@ class Assistant( models.Model ):
 
 
     def add_file(self,  filename, uploaded_file ):
+        #name = '.'.join( filename.split('.')[:-1])
+        #name = name.upper()
         name = get_openai_dir( filename)
         filename = f"{name}/{filename}"
         print(f"NAME={name} FILENAME = {filename}")
