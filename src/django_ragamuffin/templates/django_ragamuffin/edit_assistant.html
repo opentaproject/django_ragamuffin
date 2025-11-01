@@ -79,10 +79,10 @@
         <div style="margin: 2 auto; padding: 0rem;  ">
 
 	{% if form.custom_data %}
-            {% for k,v  in  form.custom_data %}
+            {% for k,v,c in  form.custom_data %}
 	    <small>
 		    [ <span name='file_row' class="form-row"> 
-<a href="/django_ragamuffin/media/{{v|strip_extension}}/{{ v }}"> {{v}} </a>  </span> ]
+			    <a href="/django_ragamuffin/media/{{c}}/{{ v }}"> {{v}} </a>  </span> ]
 		    </span>
 	    </small>
             {% endfor %}
@@ -92,10 +92,10 @@
 	<p/> <b> Local files </b>
           <form method="post" style="display: inline;" >
             {% csrf_token %}
-            {% for k,v  in  form.local_files %}
+            {% for k,v,c  in  form.local_files %}
 	    <small>
 		    [ <span name='file_row' class="form-row"> <input name="deletion" type="checkbox" value="{{ k }}"> </input> 
-			    <a href="/django_ragamuffin/media/{{v|strip_extension}}/{{ v }}"> {{v}} </a>  </span> ]
+			    <a href="/django_ragamuffin/media/{{c}}/{{ v }}"> {{v}} </a>  </span> ]
 	    </small>
             {% endfor %}
 	 <div>

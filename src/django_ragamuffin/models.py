@@ -40,6 +40,41 @@ CHOICES = {0 : 'Unread' ,
 
 
 
+
+#class HashedPathStorage(FileSystemStorage):
+#    def get_available_name(self, name, max_length=None):
+#        # Prevent Django from appending suffixes to avoid collisions; our hash is unique
+#        return name
+#
+#    def save(self, name, content, max_length=None):
+#        # Compute digest from file bytes
+#        #hasher = hashlib.sha256()
+#        #print(f"PRINT HASHED_PATH_SAVE")
+#        ## content may be at non-zero position; ensure start
+#        #try:
+#        #    content.seek(0)
+#        #except Exception:
+#        #    pass
+#        #for chunk in getattr(content, "chunks", lambda: [content.read()])():
+#        #    hasher.update(chunk)
+#        #digest = hasher.hexdigest()
+#        # Build canonical path
+#        digest = hashlib.md5(condent.encode() ).hexdigest()
+#        base = name.split('/')[-1];
+#        print(f"DIGEST = {digest}")
+#        name = os.path.join("/subdomain-data/query", digest, base )
+#        # Rewind for the actual write
+#        try:
+#            content.seek(0)
+#        except Exception:
+#            pass
+#        return super().save(name, content, max_length=max_length)
+#
+#hashed_upload_to = HashedPathStorage()
+
+
+
+
 def randstring(tag, length=8):
     characters = string.ascii_letters + string.digits  # A-Z, a-z, 0-9
     return tag + '-' + ''.join(random.choices(characters, k=length))
@@ -138,7 +173,10 @@ def validate_file_extension(value):
         raise ValidationError(f"Unsupported file extension '{ext}'.")
 
 def hashed_upload_to(instance, filename):
-    dirname = '.'.join( instance.file.name.split('.')[:-1] )
+    #dirname = '.'.join( instance.file.name.split('.')[:-1] ).upper()
+    content = instance.file.read();
+    dirname = get_openai_dir( instance.file.name , content, "SRC3" )
+    print(f"DIRNAME = {dirname} INSTANCE = {instance.file.name}")
     os.makedirs(os.path.join( settings.OPENAI_UPLOAD_STORAGE, dirname ) ,  exist_ok=True)
     return os.path.join( dirname, instance.file.name )
 
@@ -186,10 +224,14 @@ def create_or_retrieve_thread( assistant, name, user ) :
 
 
 def upload_or_retrieve_openai_file( name ,src ):
+    print(f"UPLOAD_OR_RETRIEVE {name} {src}")
     os.makedirs( os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), exist_ok=True )
     dst = os.path.join(os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), src)
     name = dst.split('/')[-1];
-    ts = OpenAIFile.objects.filter(name=name)
+    print(f"UPLOAD NAME = {name}")
+    print(f"UPLOAD_OR_RETRIEVE {name} {src} {dst} ")
+    p = '/'.join( src.split('/')[0:-1] )
+    ts = OpenAIFile.objects.filter(path=p)
     if not ts :
         if not src == dst :
             shutil.copy2(src, dst)
@@ -198,6 +240,7 @@ def upload_or_retrieve_openai_file( name ,src ):
         t1.save();
     else :
         t1 = ts[0]
+    print(f"T1 = {t1}  path={t1.path} t1.file.path =  {t1.file.path}")
     return t1
 
 def split_long_chunks(chunks, max_len=800):
@@ -413,8 +456,6 @@ class OpenAIClient( OpenAI ):
         remote_wait_for_vector_store_ready(self, vector_store_id=vector_store_id, timeout=settings.MAXWAIT)
         assert checksum == vs.get_checksum() , "FAIL6b"
         return vector_store_id
-
-
 
 
 
@@ -769,6 +810,24 @@ class Mode(models.Model):
         except cls.DoesNotExist:
             return ""
 
+def get_openai_dir( filename , content, src ):
+    print(f"SRC = {src}")
+    #path_exists = os.path.exists( f"{content}"  )
+    #s = ''
+    #if path_exists :
+    #    s = open( content, "r", encoding='utf-8').read()
+    #if src == 'SRC1' :
+    #    s = content.read()
+    #elif src == 'SRC3' :
+    #    s = content.read()
+    #name = '.'.join( filename.split('.')[:-1])
+    #name = name.upper()
+    name = hashlib.md5(content).hexdigest()
+    print(f"RETURN_NAME {name}")
+    return name
+
+
+
 
 class Assistant( models.Model ):
     name =   models.CharField(max_length=255,blank=True)
@@ -797,13 +856,31 @@ class Assistant( models.Model ):
 
 
     def add_file(self,  filename, uploaded_file ):
-        name = '.'.join( filename.split('.')[:-1])
+        #name = '.'.join( filename.split('.')[:-1])
+        #name = name.upper()
+        content = uploaded_file.read();
+        name = get_openai_dir( filename, content , "SRC1" )
+        ofilename = filename
         filename = f"{name}/{filename}"
+        print(f"NAME={name} FILENAME = {filename}")
+        old_files = self.files();
+        opkd = None
+        for ( opk,oname,ochecksum ) in old_files :
+            print(f"ONAME = {oname} FILENAME = {ofilename} ")
+            if oname == ofilename :
+                opkd = opk
+                print(f"NAME {oname} {opk} ALREADY OCCURS!")
         upload_storage.save(filename , uploaded_file)
         file_url = settings.MEDIA_URL + upload_storage.url(filename)
         src = settings.OPENAI_UPLOAD_STORAGE + '/' + filename
         t1 = upload_or_retrieve_openai_file( name, src )
         self.add_raw_file( t1 )
+        print(f"T1PK = {t1.pk}")
+        if opkd and not t1.pk  == opkd :
+            self.delete_file( opkd )
+        else :
+            t1.name = ofilename
+            t1.save(update_fields=['name'] )
         return file_url
 
     def add_file_by_name(self, full_path):
@@ -818,9 +895,25 @@ class Assistant( models.Model ):
             raise FileNotFoundError(f"File not found: {full_path}")
 
         base = os.path.basename(full_path)
-        stem = '.'.join(base.split('.')[:-1]) or base
-        relpath = f"{stem}/{base}"
+        filename = base
 
+        print(f"FILENAME FOR ADD_FILE_BY_NAME = {filename}")
+
+        for o in self.files() :
+            print(f"O = {o}")
+            if o.name == filename :
+                print(f"DELETE OLD FILE  {o.name} {o.pk} ")
+                self.delete_file( o.pk)
+
+
+        with open(full_path , "r", encoding="utf-8") as f:
+            content = f.read()
+        content = content.encode('utf-8')
+        name = get_openai_dir( filename, content , "SRC2")
+        stem = '.'.join(base.split('.')[:-1]) or base
+        relpath = f"{name}/{base}"
+        ##### FIX_PATH 
+        print(f"STEM = {stem} BASE={base} relpath={relpath} ")
         dst = os.path.join(settings.OPENAI_UPLOAD_STORAGE, relpath)
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         shutil.copy2(full_path, dst)
@@ -1059,7 +1152,7 @@ class Assistant( models.Model ):
         f = []
         for v in vs :
             for vf in v.files.all():
-                f.append( ( vf.pk , vf.name ) )
+                f.append( ( vf.pk , vf.name , vf.checksum) )
         return f
 
     def local_files( self, *args, **kwargs ):
@@ -1067,7 +1160,7 @@ class Assistant( models.Model ):
         f = []
         for v in vs :
             for vf in v.files.all():
-                f.append( ( vf.pk , vf.name ) )
+                f.append( ( vf.pk , vf.name ,vf.checksum) )
         return f
 
 
@@ -1273,12 +1366,11 @@ class Thread(models.Model) :
                         )
                     except Exception as err:
                         logger.error(f"ERROR5 {str(err)} ")
-                        if "Previous response with id" in str(err) :
-                            previous_response_id = None
-                        import ast
-                        payload_str = str(err).split(" - ", 1)[1]
-                        payload = ast.literal_eval(payload_str)   # safe parse to dict
-                        msg = payload["error"]["message"]
+                        previous_response_id = None
+                        #import ast
+                        #payload_str = str(err).split(" - ", 1)[1]
+                        #payload = ast.literal_eval(payload_str)   # safe parse to dict
+                        msg = str(err) # payload["error"]["message"]
                         RESPONSE = openai.responses.create(
                             model=model,
                             input=query,
