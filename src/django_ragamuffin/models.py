@@ -40,6 +40,41 @@ CHOICES = {0 : 'Unread' ,
 
 
 
+
+#class HashedPathStorage(FileSystemStorage):
+#    def get_available_name(self, name, max_length=None):
+#        # Prevent Django from appending suffixes to avoid collisions; our hash is unique
+#        return name
+#
+#    def save(self, name, content, max_length=None):
+#        # Compute digest from file bytes
+#        #hasher = hashlib.sha256()
+#        #print(f"PRINT HASHED_PATH_SAVE")
+#        ## content may be at non-zero position; ensure start
+#        #try:
+#        #    content.seek(0)
+#        #except Exception:
+#        #    pass
+#        #for chunk in getattr(content, "chunks", lambda: [content.read()])():
+#        #    hasher.update(chunk)
+#        #digest = hasher.hexdigest()
+#        # Build canonical path
+#        digest = hashlib.md5(condent.encode() ).hexdigest()
+#        base = name.split('/')[-1];
+#        print(f"DIGEST = {digest}")
+#        name = os.path.join("/subdomain-data/query", digest, base )
+#        # Rewind for the actual write
+#        try:
+#            content.seek(0)
+#        except Exception:
+#            pass
+#        return super().save(name, content, max_length=max_length)
+#
+#hashed_upload_to = HashedPathStorage()
+
+
+
+
 def randstring(tag, length=8):
     characters = string.ascii_letters + string.digits  # A-Z, a-z, 0-9
     return tag + '-' + ''.join(random.choices(characters, k=length))
@@ -139,7 +174,8 @@ def validate_file_extension(value):
 
 def hashed_upload_to(instance, filename):
     #dirname = '.'.join( instance.file.name.split('.')[:-1] ).upper()
-    dirname = get_openai_dir( instance.file.name )
+    content = instance.file.read();
+    dirname = get_openai_dir( instance.file.name , content, "SRC3" )
     print(f"DIRNAME = {dirname} INSTANCE = {instance.file.name}")
     os.makedirs(os.path.join( settings.OPENAI_UPLOAD_STORAGE, dirname ) ,  exist_ok=True)
     return os.path.join( dirname, instance.file.name )
@@ -416,8 +452,6 @@ class OpenAIClient( OpenAI ):
         remote_wait_for_vector_store_ready(self, vector_store_id=vector_store_id, timeout=settings.MAXWAIT)
         assert checksum == vs.get_checksum() , "FAIL6b"
         return vector_store_id
-
-
 
 
 
@@ -772,7 +806,18 @@ class Mode(models.Model):
         except cls.DoesNotExist:
             return ""
 
-def get_openai_dir( filename ):
+def get_openai_dir( filename , content, src ):
+    print(f"SRC = {src}")
+    #path_exists = os.path.exists( f"{content}"  )
+    #s = ''
+    #if path_exists :
+    #    s = open( content, "r", encoding='utf-8').read()
+    #if src == 'SRC1' :
+    #    s = content.read()
+    #elif src == 'SRC3' :
+    #    s = content.read()
+    print(f"CONTENT {content}  {type(content)} ")
+
     name = '.'.join( filename.split('.')[:-1])
     name = name.upper()
     return name
@@ -809,7 +854,8 @@ class Assistant( models.Model ):
     def add_file(self,  filename, uploaded_file ):
         #name = '.'.join( filename.split('.')[:-1])
         #name = name.upper()
-        name = get_openai_dir( filename)
+        content = uploaded_file.read();
+        name = get_openai_dir( filename, content , "SRC1" )
         filename = f"{name}/{filename}"
         print(f"NAME={name} FILENAME = {filename}")
         upload_storage.save(filename , uploaded_file)
@@ -832,7 +878,10 @@ class Assistant( models.Model ):
 
         base = os.path.basename(full_path)
         filename = base
-        name = get_openai_dir( filename)
+        with open(full_path , "r", encoding="utf-8") as f:
+            content = f.read()
+        content = content.encode('utf-8')
+        name = get_openai_dir( filename, content , "SRC2")
         stem = '.'.join(base.split('.')[:-1]) or base
         relpath = f"{name}/{base}"
         ##### FIX_PATH 
