@@ -865,7 +865,7 @@ class Assistant( models.Model ):
         print(f"NAME={name} FILENAME = {filename}")
         old_files = self.files();
         opkd = None
-        for ( opk,oname,ochecksum ) in old_files :
+        for ( opk,oname,ochecksum ,opath ) in old_files :
             print(f"ONAME = {oname} FILENAME = {ofilename} ")
             if oname == ofilename :
                 opkd = opk
@@ -898,29 +898,41 @@ class Assistant( models.Model ):
         filename = base
 
         print(f"FILENAME FOR ADD_FILE_BY_NAME = {filename}")
+        print(f"FILES = {self.files()}")
 
-        for o in self.files() :
-            print(f"O = {o}")
-            if o.name == filename :
-                print(f"DELETE OLD FILE  {o.name} {o.pk} ")
-                self.delete_file( o.pk)
+        def delete_old_files_with_same_name( filename ):
+            for o in self.files() :
+                print(f"O1 = {o}")
+                (opk,oname,ocksum,odir) = o
+                if oname == filename :
+                    print(f"DELETE OLD FILE  {oname} {opk} ")
+                    self.delete_file( opk)
+        print(f"NOW ADD THE FILE BY NAME {full_path}")
 
 
-        with open(full_path , "r", encoding="utf-8") as f:
+        with open(full_path , "rb") as f:
             content = f.read()
-        content = content.encode('utf-8')
+        print(f"DID READ THE FILE")
         name = get_openai_dir( filename, content , "SRC2")
         stem = '.'.join(base.split('.')[:-1]) or base
         relpath = f"{name}/{base}"
         ##### FIX_PATH 
+        print(f"SELF_FILES = {self.files()}")
+        print(f"NAME = {name}")
         print(f"STEM = {stem} BASE={base} relpath={relpath} ")
         dst = os.path.join(settings.OPENAI_UPLOAD_STORAGE, relpath)
-        os.makedirs(os.path.dirname(dst), exist_ok=True)
-        shutil.copy2(full_path, dst)
-
-        # Register with our OpenAIFile model and link to vector store
-        t1 = upload_or_retrieve_openai_file(stem, dst)
-        self.add_raw_file(t1)
+        oldcksums = [ i[2] for i in self.files() ]
+        print(f"OLDCKSUMS = {oldcksums}")
+        if not name in oldcksums :
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(full_path, dst)
+            delete_old_files_with_same_name( filename)
+            t1 = upload_or_retrieve_openai_file(stem, dst)
+            self.add_raw_file(t1)
+            if not t1.name == filename :
+                print(f"FIX NAME ")
+                t1.name = filename;
+                t1.save();
 
         file_url = settings.MEDIA_URL + upload_storage.url(relpath)
         return file_url
@@ -1152,7 +1164,8 @@ class Assistant( models.Model ):
         f = []
         for v in vs :
             for vf in v.files.all():
-                f.append( ( vf.pk , vf.name , vf.checksum) )
+                d = vf.file.path.split('/')[-2] 
+                f.append( ( vf.pk , vf.name , vf.checksum, d ) )
         return f
 
     def local_files( self, *args, **kwargs ):
@@ -1160,7 +1173,8 @@ class Assistant( models.Model ):
         f = []
         for v in vs :
             for vf in v.files.all():
-                f.append( ( vf.pk , vf.name ,vf.checksum) )
+                d = vf.file.path.split('/')[-2] 
+                f.append( ( vf.pk , vf.name ,vf.checksum, d ) )
         return f
 
 

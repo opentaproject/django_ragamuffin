@@ -206,6 +206,7 @@ def edit_assistant(request, pk):
         #    form.save()
         return redirect('edit_assistant', pk=assistant.pk)  # or another success URL
     else:
+        print(f"ASSISTANT FILES = {assistant.files()}")
         form = AssistantEditForm(instance=assistant, custom_data=assistant.files(), local_files=assistant.local_files()  )
         if form.is_valid() :
             form.save()
