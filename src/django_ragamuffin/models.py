@@ -113,7 +113,7 @@ def has_changed(obj):
 
 
 def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=settings.MAXWAIT):
-    print(f"WAIT_FOR_VECTOR_STORE_READY {vector_store_id}")
+    #print(f"WAIT_FOR_VECTOR_STORE_READY {vector_store_id}")
     start_time = time.time()
     client = OpenAIClient()
     i = 0;
@@ -145,7 +145,7 @@ def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=settings
     stable_reads = 0;
 
     while i < imax  and stable_reads < 3 :
-        print(f"VSID2 = {vector_store_id}")
+        #print(f"VSID2 = {vector_store_id}")
         try : 
             file_list = client.vector_stores.files.list(vector_store_id=vector_store_id)
             #print(f"FILE_LIST = {file_list}")
@@ -176,7 +176,7 @@ def hashed_upload_to(instance, filename):
     #dirname = '.'.join( instance.file.name.split('.')[:-1] ).upper()
     content = instance.file.read();
     dirname = get_openai_dir( instance.file.name , content, "SRC3" )
-    print(f"DIRNAME = {dirname} INSTANCE = {instance.file.name}")
+    #print(f"DIRNAME = {dirname} INSTANCE = {instance.file.name}")
     os.makedirs(os.path.join( settings.OPENAI_UPLOAD_STORAGE, dirname ) ,  exist_ok=True)
     return os.path.join( dirname, instance.file.name )
 
@@ -224,12 +224,12 @@ def create_or_retrieve_thread( assistant, name, user ) :
 
 
 def upload_or_retrieve_openai_file( name ,src ):
-    print(f"UPLOAD_OR_RETRIEVE {name} {src}")
+    #print(f"UPLOAD_OR_RETRIEVE {name} {src}")
     os.makedirs( os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), exist_ok=True )
     dst = os.path.join(os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), src)
     name = dst.split('/')[-1];
-    print(f"UPLOAD NAME = {name}")
-    print(f"UPLOAD_OR_RETRIEVE {name} {src} {dst} ")
+    #print(f"UPLOAD NAME = {name}")
+    #print(f"UPLOAD_OR_RETRIEVE {name} {src} {dst} ")
     p = '/'.join( src.split('/')[0:-1] )
     ts = OpenAIFile.objects.filter(path=p)
     if not ts :
@@ -240,7 +240,7 @@ def upload_or_retrieve_openai_file( name ,src ):
         t1.save();
     else :
         t1 = ts[0]
-    print(f"T1 = {t1}  path={t1.path} t1.file.path =  {t1.file.path}")
+    #print(f"T1 = {t1}  path={t1.path} t1.file.path =  {t1.file.path}")
     return t1
 
 def split_long_chunks(chunks, max_len=800):
@@ -728,7 +728,7 @@ class VectorStore( models.Model ):
         return set( file_ids) == set( remote_ids) 
 
     def save( self, *args, **kwargs ):
-        print(f"SAVE_VECTOR_STORE")
+        #print(f"SAVE_VECTOR_STORE")
         is_new = self._state.adding and not self.pk
         if is_new :
             super().save(*args,**kwargs)
@@ -742,7 +742,7 @@ class VectorStore( models.Model ):
         else :
             if has_changed( self ):
                 do_save = True
-        print(f"DO_SAVE = {do_save}")
+        #print(f"DO_SAVE = {do_save}")
         if not do_save :
             return 
         remote_wait_for_vector_store_ready(client, self.vsid, timeout=settings.MAXWAIT)
@@ -811,7 +811,7 @@ class Mode(models.Model):
             return ""
 
 def get_openai_dir( filename , content, src ):
-    print(f"SRC = {src}")
+    #print(f"SRC = {src}")
     #path_exists = os.path.exists( f"{content}"  )
     #s = ''
     #if path_exists :
@@ -823,7 +823,7 @@ def get_openai_dir( filename , content, src ):
     #name = '.'.join( filename.split('.')[:-1])
     #name = name.upper()
     name = hashlib.md5(content).hexdigest()
-    print(f"RETURN_NAME {name}")
+    #print(f"RETURN_NAME {name}")
     return name
 
 
@@ -862,20 +862,20 @@ class Assistant( models.Model ):
         name = get_openai_dir( filename, content , "SRC1" )
         ofilename = filename
         filename = f"{name}/{filename}"
-        print(f"NAME={name} FILENAME = {filename}")
+        #print(f"NAME={name} FILENAME = {filename}")
         old_files = self.files();
         opkd = None
         for ( opk,oname,ochecksum ,opath ) in old_files :
-            print(f"ONAME = {oname} FILENAME = {ofilename} ")
+            #print(f"ONAME = {oname} FILENAME = {ofilename} ")
             if oname == ofilename :
                 opkd = opk
-                print(f"NAME {oname} {opk} ALREADY OCCURS!")
+                #print(f"NAME {oname} {opk} ALREADY OCCURS!")
         upload_storage.save(filename , uploaded_file)
         file_url = settings.MEDIA_URL + upload_storage.url(filename)
         src = settings.OPENAI_UPLOAD_STORAGE + '/' + filename
         t1 = upload_or_retrieve_openai_file( name, src )
         self.add_raw_file( t1 )
-        print(f"T1PK = {t1.pk}")
+        #print(f"T1PK = {t1.pk}")
         if opkd and not t1.pk  == opkd :
             self.delete_file( opkd )
         else :
@@ -897,32 +897,32 @@ class Assistant( models.Model ):
         base = os.path.basename(full_path)
         filename = base
 
-        print(f"FILENAME FOR ADD_FILE_BY_NAME = {filename}")
-        print(f"FILES = {self.files()}")
+        #print(f"FILENAME FOR ADD_FILE_BY_NAME = {filename}")
+        #print(f"FILES = {self.files()}")
 
         def delete_old_files_with_same_name( filename ):
             for o in self.files() :
-                print(f"O1 = {o}")
+                #print(f"O1 = {o}")
                 (opk,oname,ocksum,odir) = o
                 if oname == filename :
-                    print(f"DELETE OLD FILE  {oname} {opk} ")
+                    #print(f"DELETE OLD FILE  {oname} {opk} ")
                     self.delete_file( opk)
-        print(f"NOW ADD THE FILE BY NAME {full_path}")
+        #print(f"NOW ADD THE FILE BY NAME {full_path}")
 
 
         with open(full_path , "rb") as f:
             content = f.read()
-        print(f"DID READ THE FILE")
+        #print(f"DID READ THE FILE")
         name = get_openai_dir( filename, content , "SRC2")
         stem = '.'.join(base.split('.')[:-1]) or base
         relpath = f"{name}/{base}"
         ##### FIX_PATH 
-        print(f"SELF_FILES = {self.files()}")
-        print(f"NAME = {name}")
-        print(f"STEM = {stem} BASE={base} relpath={relpath} ")
+        #print(f"SELF_FILES = {self.files()}")
+        #print(f"NAME = {name}")
+        #print(f"STEM = {stem} BASE={base} relpath={relpath} ")
         dst = os.path.join(settings.OPENAI_UPLOAD_STORAGE, relpath)
         oldcksums = [ i[2] for i in self.files() ]
-        print(f"OLDCKSUMS = {oldcksums}")
+        #print(f"OLDCKSUMS = {oldcksums}")
         if not name in oldcksums :
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             shutil.copy2(full_path, dst)
@@ -930,7 +930,7 @@ class Assistant( models.Model ):
             t1 = upload_or_retrieve_openai_file(stem, dst)
             self.add_raw_file(t1)
             if not t1.name == filename :
-                print(f"FIX NAME ")
+                #print(f"FIX NAME ")
                 t1.name = filename;
                 t1.save();
 
