@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 setup(
     name='django_ragamuffin',  
-    version='1.107.1.16',
+    version='1.107.1.19',
     packages=find_packages(),
     include_package_data=True,  # Important for static files/migrations
     license='MIT License',  # Choose your license
@@ -55,7 +55,6 @@ setup(
         "packaging>=25.0",
         "pip-autoremove>=0.10.0",
         "pluggy>=1.6.0",
-        "psycopg2>=2.9.10",
         "psycopg2-binary>=2.9.10",
         "pydantic>=2.11.7",
         "pydantic_core>=2.33.2",

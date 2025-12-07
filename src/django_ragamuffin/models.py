@@ -15,6 +15,7 @@ import time
 import tiktoken
 from django.core.files.storage import FileSystemStorage
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 import hashlib
 import openai
 from django.db.models.signals import m2m_changed, pre_delete, post_delete
@@ -88,7 +89,9 @@ def dump_remote_vector_stores(s='') :
     logger.error(f"^^^^^^")
 
 
-def remote_wait_for_vector_store_delete(vector_store_id, timeout=settings.MAXWAIT, interval=2):
+def remote_wait_for_vector_store_delete(vector_store_id, timeout=None, interval=2):
+    if timeout is None:
+        timeout = getattr(settings, "MAXWAIT", 60)
     #print(f"WAIT_FOR_VECTOR_STORE_DELETE {vector_store_id}")
     client = OpenAIClient()
     start_time = time.time()
@@ -112,7 +115,9 @@ def has_changed(obj):
     return False
 
 
-def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=settings.MAXWAIT):
+def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=None):
+    if timeout is None:
+        timeout = getattr(settings, "MAXWAIT", 60)
     #print(f"WAIT_FOR_VECTOR_STORE_READY {vector_store_id}")
     start_time = time.time()
     client = OpenAIClient()
@@ -131,7 +136,7 @@ def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=settings
     #    time.sleep(10)
     i = 0;
     interval = 5;
-    imax = settings.MAXWAIT / interval;
+    imax = timeout / interval;
     #print(f"VSID1 = {vector_store_id}")
     client = OpenAIClient()
     try :
@@ -318,7 +323,12 @@ class OpenAIClient( OpenAI ):
 
 
     def __init__(self, **kwargs):
-        super().__init__(api_key=settings.AI_KEY, **kwargs)
+        api_key = getattr(settings, "AI_KEY", None)
+        if not api_key:
+            raise ImproperlyConfigured(
+                "AI_KEY is not configured. Define `AI_KEY` in the consuming project's Django settings."
+            )
+        super().__init__(api_key=api_key, **kwargs)
 
     def get_or_update_remote_vector_store(self, vs , old_checksum=None,old_file_ids=[]):
         new_checksum = vs.get_checksum();
@@ -419,7 +429,7 @@ class OpenAIClient( OpenAI ):
         checksum = vs.get_checksum()
         try :
             self.vector_stores.files.delete(vector_store_id=vector_store_id,file_id=file_id)
-            remote_wait_for_vector_store_ready(self, vector_store_id, timeout=settings.MAXWAIT)
+            remote_wait_for_vector_store_ready(self, vector_store_id)
         except  openai.NotFoundError as e: 
             return False
         try :
@@ -443,7 +453,7 @@ class OpenAIClient( OpenAI ):
         checksum = vs.get_checksum()
         vector_store_id = vs.get_vector_store_id()
         self.vector_stores.files.delete( vector_store_id=vector_store_id , file_id=file_id)
-        remote_wait_for_vector_store_ready(self, vector_store_id, timeout=settings.MAXWAIT)
+        remote_wait_for_vector_store_ready(self, vector_store_id)
         assert checksum == vs.get_checksum() , "FAIL5b"
         return vector_store_id
 
@@ -453,7 +463,7 @@ class OpenAIClient( OpenAI ):
         vector_store_id = vs.get_vector_store_id()
         self.vector_stores.files.create( vector_store_id=vector_store_id , file_id=file_id , 
              metadata={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] , "checksum" : new_checksum }  )
-        remote_wait_for_vector_store_ready(self, vector_store_id=vector_store_id, timeout=settings.MAXWAIT)
+        remote_wait_for_vector_store_ready(self, vector_store_id=vector_store_id)
         assert checksum == vs.get_checksum() , "FAIL6b"
         return vector_store_id
 
@@ -745,7 +755,7 @@ class VectorStore( models.Model ):
         #print(f"DO_SAVE = {do_save}")
         if not do_save :
             return 
-        remote_wait_for_vector_store_ready(client, self.vsid, timeout=settings.MAXWAIT)
+        remote_wait_for_vector_store_ready(client, self.vsid)
         super().save(*args,**kwargs)
 
 
@@ -757,7 +767,7 @@ def custom_delete_remote_vector_store(sender, instance, **kwargs):
     vector_store_id = instance.vector_store_id
     try :
         client.vector_stores.delete( vector_store_id )
-        remote_wait_for_vector_store_delete(vector_store_id, timeout=settings.MAXWAIT, interval=2)
+        remote_wait_for_vector_store_delete(vector_store_id, interval=2)
     except Exception as e :
         logger.error(f"FAILED REMOTE_VECTOR_STORE_CLIENT_DELETE {vector_store_id} {str(e)} ")
         pass

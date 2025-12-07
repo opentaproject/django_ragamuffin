@@ -5,18 +5,24 @@ import tiktoken
 import time
 import tiktoken
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 import hashlib
 import openai
 from openai._exceptions import NotFoundError
 import re
 import os
 logger = logging.getLogger(__name__)
-client = openai.OpenAI(api_key=settings.AI_KEY)
+def get_openai_client():
+    api_key = getattr(settings, "AI_KEY", None)
+    if not api_key:
+        raise ImproperlyConfigured("AI_KEY is not configured in the consuming project's settings.")
+    return openai.OpenAI(api_key=api_key)
 
 
 from openai import OpenAIError, RateLimitError, APIError, Timeout
 
-timeout = settings.MAXWAIT
+def get_timeout_default():
+    return getattr(settings, "MAXWAIT", 60)
 
 def create_run_with_retry(thread_id, assistant_id, timeout, truncation_strategy, tools, max_retries=5):
     delay = 2  # initial delay in seconds
@@ -66,12 +72,10 @@ def run_remote_query( context ):
     truncation_strategy = { "type": "last_messages", "last_messages": last_messages }
     tools=[ { "type": "file_search", "file_search": { "max_num_results": max_num_results , "ranking_options": { "score_threshold": 0.0 } } } ]
     #print(f"TOOLS = {tools} TRUNCATION_STRATEGY = {truncation_strategy}")
-    if last_messages is None:
-        run = create_run_with_retry(thread_id, assistant_id, timeout, truncation_strategy, tools)
-    else:
-        run = create_run_with_retry(thread_id, assistant_id, timeout, truncation_strategy, tools)
+    timeout = get_timeout_default()
+    run = create_run_with_retry(thread_id, assistant_id, timeout, truncation_strategy, tools)
     interval = 5;
-    imax = settings.MAXWAIT / interval
+    imax = timeout / interval
     i = 0;
     #print(f"RUN QUERY {query}")
     while i < imax :
@@ -87,7 +91,7 @@ def run_remote_query( context ):
     usage = run_status.usage
     model = run.model
     assistant_id_ = run_status.assistant_id
-    used_instructions =  client.beta.assistants.retrieve(assistant_id=assistant_id_).instructions
+    used_instructions =  openai.beta.assistants.retrieve(assistant_id=assistant_id_).instructions
     #assert i < imax , f"Request timed out after {settings.MAXWAIT} seconds; try again ; try to change the question."
     messages = openai.beta.threads.messages.list(thread_id=thread_id)
     i = 0;
@@ -96,7 +100,7 @@ def run_remote_query( context ):
         if msg.role == "assistant":
             res = msg
     if i == imax :
-        txt =  f"Request timed out after {settings.MAXWAIT} seconds; try again ; try to change the question."
+        txt =  f"Request timed out after {int(timeout)} seconds; try again; try to change the question."
     else :
         txt =   str( msg.content[0].text.value )
         #print(f"TXT = {txt}")
@@ -117,4 +121,3 @@ def run_remote_query( context ):
             'max_num_results' : max_num_results,
             'hash' : h }
     return msg
-
