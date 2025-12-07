@@ -1,19 +1,20 @@
 import os
 import sys
 from django.conf import settings
-AI_KEY =  os.environ.get("OPENAI_API_KEY",None)
-AI_MODEL = os.environ.get('AI_MODEL','gpt-5-mini')
-OPENAI_UPLOAD_STORAGE =  os.environ.get("OPENAI_UPLOAD_STORAGE",'/tmp/openaifiles')
+print(f"GETTINGS SETTINGS FROM DJANGO_RAGAMUFFIN")
+AI_KEY =  globals().get("OPENAI_API_KEY", os.environ.get("OPENAI_API_KEY", None))
+AI_MODEL = globals().get('AI_MODEL', os.environ.get('AI_MODEL', 'gpt-5-mini'))
+OPENAI_UPLOAD_STORAGE =  globals().get("OPENAI_UPLOAD_STORAGE", os.environ.get("OPENAI_UPLOAD_STORAGE", '/tmp/openaifiles'))
 os.makedirs(OPENAI_UPLOAD_STORAGE, exist_ok=True)
-API_APP = os.environ.get('API_APP','localhost')
-DJANGO_RAGAMUFFIN_DB = os.environ.get("DJANGO_RAGAMUFFIN_DB",None) 
+API_APP = globals().get('API_APP', os.environ.get('API_APP', 'localhost'))
+DJANGO_RAGAMUFFIN_DB = globals().get("DJANGO_RAGAMUFFIN_DB", os.environ.get("DJANGO_RAGAMUFFIN_DB", None)) 
 d = settings.DATABASES['default'];
 PGDATABASE = d.get('NAME','postgres')
 PGHOST = d.get('HOST','localhost')
 PGUSER = d.get('USER','postgres')
 PGPASSWORD = d.get('PASSWORD','postgres')
 if not hasattr(settings, 'SUBDOMAIN' ):
-    SUBDOMAIN = os.environ.get('SUBDOMAIN','query')
+    SUBDOMAIN = globals().get('SUBDOMAIN', os.environ.get('SUBDOMAIN', 'query'))
 MAXWAIT = 480 ; # WAIT MAX 120 seconds
 DEFAULT_TEMPERATURE = 0.2;
 LAST_MESSAGES = 99
@@ -37,19 +38,19 @@ if not RUNTESTS :
     else :
         DATABASE_ROUTERS = ['django_ragamuffin.db_routers.RagamuffinRouter'] + settings.DATABASE_ROUTERS
 
-APP_KEY = os.environ.get('APP_KEY',None)
-APP_ID = os.environ.get('APP_ID',None)
-USE_MATHPIX = os.environ.get('USE_MATHPIX','False') == 'True'
+APP_KEY = globals().get('APP_KEY', os.environ.get('APP_KEY', None))
+APP_ID = globals().get('APP_ID', os.environ.get('APP_ID', None))
+USE_MATHPIX = globals().get('USE_MATHPIX', os.environ.get('USE_MATHPIX', 'False') == 'True')
 if APP_KEY == None or APP_ID == None :
     USE_MATHPIX = False
 DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 CHATGPT_TIMEOUT = 240
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
-USE_CHATGPT =  os.environ.get("USE_CHATGPT",False) == 'True'
+OPENAI_API_KEY = globals().get('OPENAI_API_KEY', os.environ.get('OPENAI_API_KEY'))
+USE_CHATGPT =  globals().get("USE_CHATGPT", os.environ.get("USE_CHATGPT", False) == 'True')
 DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
-APP_KEY = os.environ.get('APP_KEY',None)
-APP_ID = os.environ.get('APP_ID',None)
-USE_MATHPIX = os.environ.get('USE_MATHPIX','False') == 'True'
+APP_KEY = globals().get('APP_KEY', os.environ.get('APP_KEY', None))
+APP_ID = globals().get('APP_ID', os.environ.get('APP_ID', None))
+USE_MATHPIX = globals().get('USE_MATHPIX', os.environ.get('USE_MATHPIX', 'False') == 'True')
 if APP_KEY == None or APP_ID == None :
     USE_MATHPIX = False
 
@@ -62,7 +63,6 @@ if hasattr(settings,'EFFORT' ) :
     EFFORT = settings.EFFORT
 else :
     EFFORT = 'medium'
-DJANGO_RAGAMUFFIN_DB = os.environ.get("DJANGO_RAGAMUFFIN_DB",None) 
 if not RUNTESTS :
     settings.DATABASES.update({
         'django_ragamuffin': {
