@@ -331,6 +331,7 @@ class OpenAIClient( OpenAI ):
         super().__init__(api_key=api_key, **kwargs)
 
     def get_or_update_remote_vector_store(self, vs , old_checksum=None,old_file_ids=[]):
+        client = OpenAIClient()
         new_checksum = vs.get_checksum();
         checksum = vs.get_checksum()
         new_checksum = checksum
@@ -358,7 +359,7 @@ class OpenAIClient( OpenAI ):
                     try :
                         self.vector_stores.files.delete(vector_store_id=vector_store_id, file_id=f)
                         #remote_wait_for_vector_store_ready(self, vector_store_id, timeout=settings.MAXWAIT)
-                    except openai.NotFoundError as e:
+                    except client.NotFoundError as e:
                         logger.error(f"File {f} not found in vector store {vector_store_id}: {e}")
                         continue
                 added_files = list( set( new_file_ids) - set( old_file_ids) )
@@ -424,17 +425,18 @@ class OpenAIClient( OpenAI ):
         return vector_store
 
     def delete_file_from_vs( self,  vs, vector_store_id, file_id ):
+        client = OpenAIClient()
         assert vs.get_vector_store_id() == vector_store_id, "FAIL4"
         vector_store_id = vs.get_vector_store_id()
         checksum = vs.get_checksum()
         try :
             self.vector_stores.files.delete(vector_store_id=vector_store_id,file_id=file_id)
             remote_wait_for_vector_store_ready(self, vector_store_id)
-        except  openai.NotFoundError as e: 
+        except  client.NotFoundError as e: 
             return False
         try :
             self.files.delete( file_id )
-        except  openai.NotFoundError as e: 
+        except  client.NotFoundError as e: 
             return False
         assert checksum == vs.get_checksum() , "FAIL4b"
         return True
@@ -485,6 +487,7 @@ class OpenAIFile(models.Model) :
 
 
     def save( self, *args, **kwargs ):
+        client = OpenAIClient()
         is_new = self._state.adding  and not self.pk
         name =  f"{self.file}".split('/')[-1]
         super().save(*args, **kwargs)  # Save first, so file is processed
@@ -515,7 +518,7 @@ class OpenAIFile(models.Model) :
                 shutil.copy2(src, dst)
             data = self.file.read()
             self.checksum = hashlib.md5(data).hexdigest()
-            uploaded_file = openai.files.create( file=open( dst, "rb"), purpose="assistants"  )
+            uploaded_file = client.files.create( file=open( dst, "rb"), purpose="assistants"  )
             self.file_ids = [uploaded_file.id ]
             self.path = os.path.dirname( self.file.path )
 
@@ -1346,7 +1349,8 @@ class Thread(models.Model) :
             previous_response_id = None
         user = self.user
         model = get_current_model(self.user)
-        context = {'openai' : openai, 'instructions' : instructions, 'model' : model, 
+        client = OpenAIClient()
+        context = {'client' : client, 'instructions' : instructions, 'model' : model, 
                     'thread_id': thread_id, 'assistant_id' : assistant_id, 'query': query, 
                     'last_messages' : last_messages, 'max_num_results' : max_num_results, 
                    'previous_response_id' : previous_response_id ,'vss' : vss , 'clear' : clear ,'subdomain' : subdomain}
@@ -1354,7 +1358,7 @@ class Thread(models.Model) :
         def my_run_remote_query( context ) :
             now = time.time();
             vss = context['vss']
-            openai = context['openai']; 
+            client = context['client']; 
             thread_id = context['thread_id'];
             assistant_id = context['assistant_id'];
             query = context['query'];
@@ -1377,7 +1381,7 @@ class Thread(models.Model) :
             try :
                 if vss :
                     try :
-                        RESPONSE = openai.responses.create(
+                        RESPONSE = client.responses.create(
                             model=model,
                             input=query,
                             previous_response_id=previous_response_id,
@@ -1395,7 +1399,7 @@ class Thread(models.Model) :
                         #payload_str = str(err).split(" - ", 1)[1]
                         #payload = ast.literal_eval(payload_str)   # safe parse to dict
                         msg = str(err) # payload["error"]["message"]
-                        RESPONSE = openai.responses.create(
+                        RESPONSE = client.responses.create(
                             model=model,
                             input=query,
                             previous_response_id=previous_response_id,
@@ -1412,7 +1416,7 @@ class Thread(models.Model) :
     
                 else :
                     try :
-                        RESPONSE = openai.responses.create(
+                        RESPONSE = client.responses.create(
                             model=model,
                             input=query,
                             previous_response_id=previous_response_id,
@@ -1428,7 +1432,7 @@ class Thread(models.Model) :
                         msg = payload["error"]["message"]
 
                         if "Previous response with id" in str(err) :
-                            RESPONSE = openai.responses.create(
+                            RESPONSE = client.responses.create(
                                 model=model,
                                 input=query,
                                 instructions=instructions,
@@ -1436,7 +1440,7 @@ class Thread(models.Model) :
                                 timeout=timeout,
                                 )
                         else :
-                            RESPONSE = openai.responses.create(
+                            RESPONSE = client.responses.create(
                                 model=model,
                                 input=query,
                                 previous_response_id=previous_response_id,
