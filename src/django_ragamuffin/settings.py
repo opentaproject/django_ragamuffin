@@ -45,7 +45,7 @@ if APP_KEY == None or APP_ID == None :
 DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 CHATGPT_TIMEOUT = 240
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
-USE_CHATGPT =  ((getattr(settings, "USE_CHATGPT", None) or os.environ.get("USE_CHATGPT", False)) == 'True')
+USE_CHATGPT =  getattr(settings, "USE_CHATGPT", None) or os.environ.get("USE_CHATGPT", False) == 'True'
 DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 APP_KEY = (getattr(settings, 'APP_KEY', None) or os.environ.get('APP_KEY', None))
 APP_ID = (getattr(settings, 'APP_ID', None) or os.environ.get('APP_ID', None))
