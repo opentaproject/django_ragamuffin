@@ -26,7 +26,10 @@ import re
 import os
 logger = logging.getLogger(__name__)
 
-upload_storage = FileSystemStorage(location="/subdomain-data/query", base_url="/media/")
+# Use the default FileSystemStorage, which reads location/base_url from
+# settings.MEDIA_ROOT and settings.MEDIA_URL. This keeps the storage path
+# configurable via OPENAI_UPLOAD_STORAGE in settings rather than hard-coding.
+upload_storage = FileSystemStorage()
 
 from openai import OpenAIError, RateLimitError, APIError, Timeout
 
