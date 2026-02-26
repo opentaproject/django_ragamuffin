@@ -887,7 +887,8 @@ class Assistant( models.Model ):
                 opkd = opk
                 #print(f"NAME {oname} {opk} ALREADY OCCURS!")
         upload_storage.save(filename , uploaded_file)
-        file_url = settings.MEDIA_URL + upload_storage.url(filename)
+        # FileSystemStorage.url() already includes MEDIA_URL; avoid double-prefixing.
+        file_url = upload_storage.url(filename)
         src = settings.OPENAI_UPLOAD_STORAGE + '/' + filename
         t1 = upload_or_retrieve_openai_file( name, src )
         self.add_raw_file( t1 )
@@ -950,7 +951,8 @@ class Assistant( models.Model ):
                 t1.name = filename;
                 t1.save();
 
-        file_url = settings.MEDIA_URL + upload_storage.url(relpath)
+        # FileSystemStorage.url() already includes MEDIA_URL; avoid double-prefixing.
+        file_url = upload_storage.url(relpath)
         return file_url
 
     def add_raw_files(self,  t1 ):

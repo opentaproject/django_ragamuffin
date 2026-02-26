@@ -260,16 +260,10 @@ RUNTESTS = "pytest" in sys.modules
 #INSTALLED_APPS.append('django_ragamuffin')
 DATABASE_ROUTERS = [ 'django_ragamuffin.db_routers.RagamuffinRouter' ]
 from django_ragamuffin.settings import *
-if True or RUNTESTS :
-    import tempfile
-    OPENAI_UPLOAD_STORAGE = "/subdomain-data/query"
-    os.makedirs(OPENAI_UPLOAD_STORAGE, exist_ok=True)
-    MEDIA_ROOT = OPENAI_UPLOAD_STORAGE
-else :
-    OPENAI_UPLOAD_STORAGE =  os.environ.get("OPENAI_UPLOAD_STORAGE",'/tmp/openaifiles')
-    MEDIA_ROOT = OPENAI_UPLOAD_STORAGE
-    OPENAI_UPLOAD_STORAGE =  os.environ.get("OPENAI_UPLOAD_STORAGE",'/tmp/openaifiles')
-    os.makedirs(OPENAI_UPLOAD_STORAGE, exist_ok=True)
+# Configure upload storage root here for app and tests; avoid hard-coded paths elsewhere.
+OPENAI_UPLOAD_STORAGE = "/subdomain-data/query"
+os.makedirs(OPENAI_UPLOAD_STORAGE, exist_ok=True)
+MEDIA_ROOT = OPENAI_UPLOAD_STORAGE
 print(f"AI_KEY {settings.AI_KEY}")
 print(f"OPENAI_API_KEY {OPENAI_API_KEY}")
 try :

@@ -46,7 +46,8 @@
 APP_ID = os.environ.get("APP_ID",None) # Mathpix
 APP_KEY = os.environ.get("APP_KEY",None) #mathpix
 AI_KEY =  os.environ.get("OPENAI_API_KEY",None) #openai.com
-OPENAI_UPLOAD_STORAGE =  os.environ.get("OPENAI_UPLOAD_STORAGE",'/tmp/openaifiles')
+# Storage root for uploaded/processed files. Override via env or settings.
+OPENAI_UPLOAD_STORAGE =  os.environ.get("OPENAI_UPLOAD_STORAGE", '/subdomain-data/query')
 os.makedirs(OPENAI_UPLOAD_STORAGE, exist_ok=True)
 INSTALLED_APPS.append('django_ragamuffin')
 STATIC_ROOT = os.path.join(BASE_DIR, "deploystatic")

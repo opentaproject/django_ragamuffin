@@ -3,7 +3,9 @@ import sys
 from django.conf import settings
 AI_KEY =  (getattr(settings, "OPENAI_API_KEY", None) or os.environ.get("OPENAI_API_KEY", None))
 AI_MODEL = (getattr(settings, 'AI_MODEL', None) or os.environ.get('AI_MODEL', 'gpt-5-mini'))
-OPENAI_UPLOAD_STORAGE =  (getattr(settings, "OPENAI_UPLOAD_STORAGE", None) or os.environ.get("OPENAI_UPLOAD_STORAGE", '/tmp/openaifiles'))
+# Default to '/subdomain-data/query' to keep a single source of truth.
+# Projects can override this in their settings if needed.
+OPENAI_UPLOAD_STORAGE =  (getattr(settings, "OPENAI_UPLOAD_STORAGE", None) or os.environ.get("OPENAI_UPLOAD_STORAGE", '/subdomain-data/query'))
 os.makedirs(OPENAI_UPLOAD_STORAGE, exist_ok=True)
 API_APP = (getattr(settings, 'API_APP', None) or os.environ.get('API_APP', 'localhost'))
 DJANGO_RAGAMUFFIN_DB = (getattr(settings, "DJANGO_RAGAMUFFIN_DB", None) or os.environ.get("DJANGO_RAGAMUFFIN_DB", None)) 

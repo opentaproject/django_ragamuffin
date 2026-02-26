@@ -216,7 +216,8 @@ def doarchive( thread, msg ):
         assistant , _ = Assistant.objects.get_or_create(name=thread.name)
     h = msg.get('hash',get_hash() )
     subdir =  assistant.name.split('.')
-    p = os.path.join('/subdomain-data','openai','queries', *subdir,thread.user.username,)
+    # Archive under the configured upload storage root rather than hard-coding paths.
+    p = os.path.join(settings.OPENAI_UPLOAD_STORAGE, 'openai', 'queries', *subdir, thread.user.username)
     os.makedirs(p, exist_ok=True )
     fn = f"{p}/{h}.json"
     msgsave = msg
@@ -354,4 +355,3 @@ def messages_to_pdf( assistant , messages, prints ):
     except  Exception as err :
         tex_path = "/tmp/tmp.tex"
         return FileResponse(open(tex_path, 'rb'), content_type='application/tex')
-

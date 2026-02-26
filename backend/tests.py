@@ -455,7 +455,8 @@ class OpenAI(TestCase):
         # Create a temporary file under /tmp
         base = "test.txt"
         filename = f"{base}"
-        tmp_path = f"/subdomain-data/query/{base}"
+        # Create the file under the configured upload storage root
+        tmp_path = os.path.join(settings.OPENAI_UPLOAD_STORAGE, base)
         print(f"TMP_PATH = {tmp_path}")
         with open(tmp_path, "wb") as f:
             f.write(b"hello from add_file_by_name test\n")
