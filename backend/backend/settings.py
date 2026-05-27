@@ -181,7 +181,6 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 import os
 AI_KEY =  os.environ.get("OPENAI_API_KEY",None)
-AI_MODEL = os.environ.get('AI_MODEL','gpt-5-mini')
 STATIC_ROOT = os.path.join(BASE_DIR, "deploystatic")
 STATIC_URL = "deploystatic/"
 MEDIA_URL = 'media/'
@@ -192,7 +191,6 @@ DEFAULT_TEMPERATURE = 0.2;
 LAST_MESSAGES = 99
 MAX_NUM_RESULTS = None
 MAX_TOKENS = 8000 # NOT IMPLMENTED AS OF openai==1.173.0 
-AI_MODELS = {'staff' : 'gpt-5-mini', 'default' : AI_MODEL }
 API_APP = 'localhost'
 
 # Default primary key field type

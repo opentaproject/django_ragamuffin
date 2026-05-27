@@ -1,8 +1,33 @@
 import os
 import sys
 from django.conf import settings
+from openai import OpenAI
+import re
+
+def get_latest_mini_model() :
+    client = OpenAI()
+    models = client.models.list()
+    mini_models = []
+    for m in models.data:
+        model_id = m.id
+        if re.match(r"^gpt-5(\.\d+)?-mini", model_id):
+            mini_models.append(model_id)
+    def model_sort_key(model_id):
+        m = re.match(r"^gpt-(\d+)(?:\.(\d+))?-mini", model_id)
+        major = int(m.group(1))
+        minor = int(m.group(2) or 0)
+        date_match = re.search(r"(\d{4})-(\d{2})-(\d{2})$", model_id)
+        if date_match:
+            date_tuple = tuple(map(int, date_match.groups()))
+        else:
+            date_tuple = (0, 0, 0)
+        return (major, minor, date_tuple)
+    latest = sorted(mini_models, key=model_sort_key)[-1]
+    return latest
+latest = get_latest_mini_model();
+
 AI_KEY =  (getattr(settings, "OPENAI_API_KEY", None) or os.environ.get("OPENAI_API_KEY", None))
-AI_MODEL = (getattr(settings, 'AI_MODEL', None) or os.environ.get('AI_MODEL', 'gpt-5-mini'))
+AI_MODEL = (getattr(settings, 'AI_MODEL', None) or os.environ.get('AI_MODEL', latest ))
 # Default to '/subdomain-data/query' to keep a single source of truth.
 # Projects can override this in their settings if needed.
 OPENAI_UPLOAD_STORAGE =  (getattr(settings, "OPENAI_UPLOAD_STORAGE", None) or os.environ.get("OPENAI_UPLOAD_STORAGE", '/subdomain-data/query'))
@@ -21,7 +46,8 @@ DEFAULT_TEMPERATURE = 0.2;
 LAST_MESSAGES = 99
 MAX_NUM_RESULTS = None
 MAX_TOKENS = 8000 # NOT IMPLMENTED AS OF openai==1.173.0 
-AI_MODELS = {'staff' : 'gpt-5-mini' , 'default' : AI_MODEL }
+AI_MODELS = getattr(settings, 'AI_MODELS', {'staff' : AI_MODEL , 'default' : AI_MODEL }  )
+print(f"AI_MODELS = {AI_MODELS}")
 MEDIA_ROOT = OPENAI_UPLOAD_STORAGE
 if not 'django_ragamuffin' in settings.LOGGING['loggers'] :
     settings.LOGGING['loggers']['django_ragamuffin'] = {
@@ -59,7 +85,6 @@ DEFAULT_TEMPERATURE = 0.2;
 LAST_MESSAGES = 99
 MAX_NUM_RESULTS = None
 MAX_TOKENS = 8000 # NOT IMPLMENTED AS OF openai==1.173.0 
-AI_MODELS = {'staff' : 'gpt-5-mini', 'default' : AI_MODEL }
 if hasattr(settings,'EFFORT' ) :
     EFFORT = settings.EFFORT
 else :
