@@ -14,7 +14,6 @@ spec:
       labels:
         app: ragamuffin
     spec:  
-
       volumes:
       - name: ragamuffin-subdomain-vol
         persistentVolumeClaim:
@@ -29,8 +28,8 @@ spec:
           volumeMounts:
               - mountPath: "/subdomain-data"
                 name: ragamuffin-subdomain-vol
-              #- mountPath: "/srv/ragamuffin/blog/deploystatic"
-              #  name: ragamuffin-deploystatic-vol
+              - mountPath: "/srv/ragamuffin/backend/deploystatic"
+                name: ragamuffin-deploystatic-vol
     
           env: 
             - name: TZ
@@ -73,6 +72,7 @@ spec:
           command: ["/bin/bash","-c"]
           args: 
             - cd backend;
+              pip install -e /srv/django_ragamuffin/src;
               /usr/bin/supervisord -c /srv/django_ragamuffin/backend/supervisord.conf 
               #npx @tailwindcss/cli -i static/css/input.css -o static/css/output.css;
               #python manage.py collectstatic --no-input;
@@ -87,10 +87,6 @@ spec:
               name: ragamuffin-subdomain-vol
             - mountPath: "/deploystatic"
               name: ragamuffin-deploystatic-vol
-
-
-
-
 
     
 ---
