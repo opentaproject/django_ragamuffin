@@ -4,5 +4,6 @@ echo creating dockerfile django_ragamuffin:${BASE_VERSION}
 echo "The next command may take a few minutes"
 rm -rf django_ragamuffin
 git clone https://github.com/opentaproject/django_ragamuffin.git -b development
+cp ../../src/django_ragamuffin/settings.py django_ragamuffin/src/django_ragamuffin/settings.py
 docker buildx build   --platform linux/amd64 -t opentaproject/ragamuffin:${BASE_VERSION} --push .
 #docker push  opentaproject/django_ragamuffin:${BASE_VERSION}
