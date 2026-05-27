@@ -85,7 +85,7 @@ spec:
           volumeMounts:
             - mountPath: "/subdomain-data"
               name: ragamuffin-subdomain-vol
-            - mountPath: "/deploystatic"
+            - mountPath: "/srv/django_ragamuffin/backend/deploystatic"
               name: ragamuffin-deploystatic-vol
 
     
