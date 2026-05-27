@@ -1,4 +1,4 @@
-export BASE_VERSION='v20260526'
+export BASE_VERSION='latest'
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
 cd "$SCRIPT_DIR"

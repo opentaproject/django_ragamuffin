@@ -24,7 +24,7 @@ spec:
 
       containers:
         - name: ragamuffin
-          image: 'opentaproject/ragamuffin:v20260526'
+          image: 'opentaproject/ragamuffin:latest'
           volumeMounts:
               - mountPath: "/subdomain-data"
                 name: ragamuffin-subdomain-vol
@@ -79,7 +79,7 @@ spec:
               #python manage.py runserver
 
         - name: nginx
-          image: 'opentaproject/ragamuffin-nginx:v20260526'
+          image: 'opentaproject/ragamuffin-nginx:latest'
           ports: 
             - containerPort: 8080
           volumeMounts:

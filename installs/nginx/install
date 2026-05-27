@@ -1,4 +1,4 @@
-export VERSION=v20260526
+export VERSION=latest
 echo creating docker ragamuffin-nginx:${VERSION}
 #eval $(minikube docker-env)
 docker buildx build --platform linux/amd64  -t opentaproject/ragamuffin-nginx:${VERSION} --push .
