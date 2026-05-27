@@ -1,9 +1,12 @@
 export BASE_VERSION='v20260526'
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
+cd "$SCRIPT_DIR"
 #microk8s kubectl delete pods sidecar-0
 echo creating dockerfile django_ragamuffin:${BASE_VERSION}
 echo "The next command may take a few minutes"
 rm -rf django_ragamuffin
 git clone https://github.com/opentaproject/django_ragamuffin.git -b development
-cp ../../src/django_ragamuffin/settings.py django_ragamuffin/src/django_ragamuffin/settings.py
+cp "$REPO_ROOT/src/django_ragamuffin/settings.py" django_ragamuffin/src/django_ragamuffin/settings.py
 docker buildx build   --platform linux/amd64 -t opentaproject/ragamuffin:${BASE_VERSION} --push .
 #docker push  opentaproject/django_ragamuffin:${BASE_VERSION}
