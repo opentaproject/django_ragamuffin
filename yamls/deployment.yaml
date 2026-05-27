@@ -28,7 +28,7 @@ spec:
           volumeMounts:
               - mountPath: "/subdomain-data"
                 name: ragamuffin-subdomain-vol
-              - mountPath: "/srv/ragamuffin/backend/deploystatic"
+              - mountPath: "/srv/django_ragamuffin/backend/deploystatic"
                 name: ragamuffin-deploystatic-vol
     
           env: 
@@ -71,11 +71,11 @@ spec:
           imagePullPolicy: Always
           command: ["/bin/bash","-c"]
           args: 
-            - cd backend;
+            - cd /srv/django_ragamuffin/backend;
               pip install -e /srv/django_ragamuffin/src;
+              python manage.py collectstatic --no-input;
               /usr/bin/supervisord -c /srv/django_ragamuffin/backend/supervisord.conf 
               #npx @tailwindcss/cli -i static/css/input.css -o static/css/output.css;
-              #python manage.py collectstatic --no-input;
               #python manage.py runserver
 
         - name: nginx
@@ -85,7 +85,7 @@ spec:
           volumeMounts:
             - mountPath: "/subdomain-data"
               name: ragamuffin-subdomain-vol
-            - mountPath: "/srv/django_ragamuffin/backend/deploystatic"
+            - mountPath: "/deploystatic"
               name: ragamuffin-deploystatic-vol
 
     
@@ -103,4 +103,3 @@ spec:
     - port: 8000
       targetPort: 8080
       name: http
-
