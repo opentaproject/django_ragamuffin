@@ -2,16 +2,27 @@ import os
 import sys
 from django.conf import settings
 from openai import OpenAI
+from openai import OpenAIError
 import re
 
-def get_latest_mini_model() :
-    client = OpenAI()
-    models = client.models.list()
+DEFAULT_AI_MODEL = 'gpt-4o-mini'
+
+def get_latest_mini_model(default=DEFAULT_AI_MODEL) :
+    api_key = getattr(settings, "OPENAI_API_KEY", None) or os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        return default
+    client = OpenAI(api_key=api_key)
+    try:
+        models = client.models.list()
+    except (OpenAIError, TypeError):
+        return default
     mini_models = []
     for m in models.data:
         model_id = m.id
         if re.match(r"^gpt-5(\.\d+)?-mini", model_id):
             mini_models.append(model_id)
+    if not mini_models:
+        return default
     def model_sort_key(model_id):
         m = re.match(r"^gpt-(\d+)(?:\.(\d+))?-mini", model_id)
         major = int(m.group(1))
@@ -22,12 +33,10 @@ def get_latest_mini_model() :
         else:
             date_tuple = (0, 0, 0)
         return (major, minor, date_tuple)
-    latest = sorted(mini_models, key=model_sort_key)[-1]
-    return latest
-latest = get_latest_mini_model();
+    return sorted(mini_models, key=model_sort_key)[-1]
 
 AI_KEY =  (getattr(settings, "OPENAI_API_KEY", None) or os.environ.get("OPENAI_API_KEY", None))
-AI_MODEL = (getattr(settings, 'AI_MODEL', None) or os.environ.get('AI_MODEL', latest ))
+AI_MODEL = (getattr(settings, 'AI_MODEL', None) or os.environ.get('AI_MODEL', DEFAULT_AI_MODEL ))
 # Default to '/subdomain-data/query' to keep a single source of truth.
 # Projects can override this in their settings if needed.
 OPENAI_UPLOAD_STORAGE =  (getattr(settings, "OPENAI_UPLOAD_STORAGE", None) or os.environ.get("OPENAI_UPLOAD_STORAGE", '/subdomain-data/query'))

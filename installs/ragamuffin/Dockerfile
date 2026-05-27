@@ -34,7 +34,6 @@ WORKDIR /srv/django_ragamuffin
 RUN pip install gunicorn
 RUN pip install -e /srv/django_ragamuffin/src
 WORKDIR /srv/django_ragamuffin/backend
-ENV OPENAI_ADMIN_KEY='dummy'
 RUN python manage.py collectstatic --no-input
 #RUN npm install
 #RUN npx @tailwindcss/cli -i static/css/input.css -o static/css/output.css
