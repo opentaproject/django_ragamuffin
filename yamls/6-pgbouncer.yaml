@@ -1,0 +1,127 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: blog-pgbouncer-auth
+data:
+  userlist.txt: |
+    "${PGUSER}" "${SCRAM_PASSWORD}"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: blog-pgbouncer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: blog-pgbouncer
+  template:
+    metadata:
+      labels:
+        app: blog-pgbouncer
+    spec:
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: blog-subdomain-vol
+        persistentVolumeClaim:
+          claimName: subdomain-pvc
+      - name: blog-pgbouncer-auth
+        configMap:
+          name: blog-pgbouncer-auth
+
+      containers:
+      - env:
+        - name: TZ
+          value: "Europe/Stockholm" # Set your desired timezone
+        - name: DB_HOST
+          value: db-server
+        - name: DB_PASSWORD
+          value: 'postgres'
+        - name: PGPASSWORD
+          value: 'postgres'
+        - name: DB_USER
+          value: 'postgres'
+        - name: PG_HOST
+          value: 'blog-pgbouncer-service'
+        - name: POOL_MODE
+          value: transaction
+        - name: SERVER_RESET_QUERY
+          value: "DISCARD ALL"
+        # Pool sizing and timeouts
+        - name: DEFAULT_POOL_SIZE
+          value: "10"
+        - name: MIN_POOL_SIZE
+          value: "2"
+        - name: RESERVE_POOL_SIZE
+          value: "5"
+        - name: SERVER_IDLE_TIMEOUT
+          value: "120"
+        - name: QUERY_WAIT_TIMEOUT
+          value: "120"
+        - name: SERVER_LIFETIME
+          value: "14400"  # 4h
+        - name: MAX_DB_CONNECTIONS
+          value: "50"
+        - name: PGHOST
+          value: 'blog-pgbouncer-service'
+        - name: MAX_CLIENT_CONN
+          value: '500'  # matched to max_client_conn in blog-pgbouncer.ini
+        image: 'opentaproject/openta-blog-pgbouncer:latest'
+        imagePullPolicy: Always
+        lifecycle:
+          preStop:
+            exec:
+              command: ["sh", "-c", "psql -h 127.0.0.1 -U postgres -d blog-pgbouncer -c 'PAUSE' -q; sleep 5"]
+        # Probes open a real connection through blog-pgbouncer to postgres and run SELECT 1.
+        # Unlike pg_isready (TCP-only), this actually acquires a server connection from the pool
+        # and will fail with "too many connections" if postgres is saturated.
+        # On liveness failure: Kubernetes restarts blog-pgbouncer, dropping all pooled server
+        # connections back to postgres and allowing it to recover.
+        # PGPASSWORD is already set in env above so psql can authenticate without a password flag.
+        startupProbe:
+          exec:
+            command: ["sh", "-c", "psql -h 127.0.0.1 -U postgres -d postgres -c 'SELECT 1' -q"]
+          periodSeconds: 5
+          failureThreshold: 30  # allow up to ~150s for Postgres/auth to become ready
+        livenessProbe:
+          exec:
+            command: ["sh", "-c", "psql -h 127.0.0.1 -U postgres -d postgres -c 'SELECT 1' -q"]
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3  # restart blog-pgbouncer after 3 consecutive failures (~90s)
+        readinessProbe:
+          exec:
+            command: ["sh", "-c", "psql -h 127.0.0.1 -U postgres -d postgres -c 'SELECT 1' -q"]
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 2  # pull from service load balancer faster than liveness triggers restart
+        volumeMounts:
+          - mountPath: "/subdomain-data"
+            name: blog-subdomain-vol
+          - name: blog-pgbouncer-auth
+            mountPath: /etc/blog-pgbouncer/userlist.txt
+            subPath: userlist.txt
+    
+        name: blog-pgbouncer
+        ports:
+        - containerPort: 5432
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - all
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: blog-pgbouncer-service
+spec:
+  ports:
+  - port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    app: blog-pgbouncer

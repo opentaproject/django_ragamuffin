@@ -1,0 +1,24 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sidecar2
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "700m"
+spec:
+  tls:
+    - hosts:
+      - 'sidecar.openta.dev'   #EDIR
+      secretName: openta-tls-secret
+  ingressClassName: public
+  rules:
+    - host: "sidecar.openta.dev" #EDIT THIS
+      http:
+        paths:
+          - pathType: "ImplementationSpecific"
+            path: /
+            backend:
+              service:
+                name: sidecar-service
+                port:
+                  number: 8000
+

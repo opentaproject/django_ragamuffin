@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ragamuffin # prefix for  pod names
+  labels:
+    app: ragamuffin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app:  ragamuffin
+  template:
+    metadata:
+      labels:
+        app: ragamuffin
+    spec:  
+
+      volumes:
+      - name: ragamuffin-subdomain-vol
+        persistentVolumeClaim:
+          claimName: ragamuffin-subdomain-pvc
+      - name: ragamuffin-deploystatic-vol
+        persistentVolumeClaim:
+          claimName: ragamuffin-deploystatic-pvc
+
+      containers:
+        - name: ragamuffin
+          image: 'opentaproject/ragamuffin:v20260526'
+          volumeMounts:
+              - mountPath: "/subdomain-data"
+                name: ragamuffin-subdomain-vol
+              #- mountPath: "/srv/ragamuffin/blog/deploystatic"
+              #  name: ragamuffin-deploystatic-vol
+    
+          env: 
+            - name: TZ
+              value: "Europe/Stockholm" # Set your desired timezone
+            - name: PGHOST
+              value: 'ragamuffin-db-server'
+            - name: NOT_PGHOST
+              value: 'ragamuffin-pgbouncer-service'
+            - name: DBHOST
+              value: 'ragamuffin-db-server' # EDIT 
+            - name: DEBUG
+              value: 'True'
+            - name:  SUBDOMAIN
+              value: 'ragamuffin'
+            - name: OPENAI_API_KEY
+              value: ${OPENAI_API_KEY}
+            - name: SUPERUSER_PASSWORD
+              value: ${SUPERUSER_PASSWORD}
+            - name: PGPASSWORD
+              value: ${PGPASSWORD}
+            - name: PGUSER
+              value: ${PGUSER}
+            - name: SECRET_KEY
+              value: ${SECRET_KEY}
+            - name: SUPERUSER
+              value: ${SUPERUSER}
+            - name: PGDATABASE_NAME
+              value: ${PGDATABASE_NAME}
+            - name: LTI_KEY
+              value: ${LTI_KEY}
+            - name: LTI_SECRET
+              value: ${LTI_SECRET}
+            - name: PGDATABASE
+              value: ${PGDATABASE}
+            - name: HTTP_PROTOCOL
+              value: "https"
+            - name: HTTP_SERVER_PORT
+              value: "443"
+          imagePullPolicy: Always
+          command: ["/bin/bash","-c"]
+          args: 
+            - cd backend;
+              /usr/bin/supervisord -c /srv/django_ragamuffin/backend/supervisord.conf 
+              #npx @tailwindcss/cli -i static/css/input.css -o static/css/output.css;
+              #python manage.py collectstatic --no-input;
+              #python manage.py runserver
+
+        - name: nginx
+          image: 'opentaproject/ragamuffin-nginx:v20260526'
+          ports: 
+            - containerPort: 8080
+          volumeMounts:
+            - mountPath: "/subdomain-data"
+              name: ragamuffin-subdomain-vol
+            - mountPath: "/deploystatic"
+              name: ragamuffin-deploystatic-vol
+
+
+
+
+
+    
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: ragamuffin-service
+spec:
+  selector:
+    app: ragamuffin
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: 8080
+      name: http
+

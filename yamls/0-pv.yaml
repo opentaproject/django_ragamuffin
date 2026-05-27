@@ -1,0 +1,85 @@
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: ragamuffin-minikube-vol
+  labels:
+    type: local
+spec:
+  capacity:
+    storage: 10Gi
+  storageClassName: local-hostpath
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/pv/ragamuffin-minikube-vol"
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: ragamuffin-minikube-pvc
+spec:
+  storageClassName: local-hostpath
+  accessModes:
+    - ReadWriteOnce
+  volumeName: ragamuffin-minikube-vol
+  resources:
+    requests:
+      storage: 10Gi
+---
+
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: ragamuffin-deploystatic-vol
+  labels:
+    type: local
+spec:
+  capacity:
+    storage: 1Gi
+  storageClassName: local-hostpath
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/pv/ragamuffin-deploystatic-vol"
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: ragamuffin-deploystatic-pvc
+spec:
+  storageClassName: local-hostpath
+  accessModes:
+    - ReadWriteOnce
+  volumeName: ragamuffin-deploystatic-vol
+  resources:
+    requests:
+      storage: 1Gi
+
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: ragamuffin-subdomain-vol
+  labels:
+    type: local
+spec:
+  capacity:
+    storage: 20Gi
+  storageClassName: local-hostpath
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/mnt/pv/ragamuffin-subdomain-vol"
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: ragamuffin-subdomain-pvc
+spec:
+  storageClassName: local-hostpath
+  accessModes:
+    - ReadWriteOnce
+  volumeName: ragamuffin-subdomain-vol
+  resources:
+    requests:
+      storage: 10Gi

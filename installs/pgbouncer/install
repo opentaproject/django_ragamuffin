@@ -1,0 +1,4 @@
+export VERSION=latest
+echo creating docker ragamuffin-pgbouncer:${VERSION}
+docker buildx build  --platform linux/amd64   -t opentaproject/ragamuffin-pgbouncer:${VERSION} --push .
+#docker push opentaproject/ragamuffin-pgbouncer:${VERSION}

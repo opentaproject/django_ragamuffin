@@ -1,0 +1,75 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: ragamuffin-db-server
+  labels:
+    app: ragamuffin-db-server
+spec:
+    volumes:
+    - name: ragamuffin-minikube-vol
+      persistentVolumeClaim:
+        claimName: ragamuffin-minikube-pvc
+
+    restartPolicy: Always
+    containers:
+      - name: postgres
+        volumeMounts:
+          - mountPath: "/var/lib/postgresql/data"
+            name: ragamuffin-minikube-vol
+        ports:
+          - containerPort: 5432
+            name: "port-5432"
+        image: postgres:14-alpine
+        args:
+          - "-c"
+          - "max_connections=200"  # more headroom; PgBouncer caps pools per DB/user
+          - "-c"
+          - "superuser_reserved_connections=5"  # keep admin headroom under saturation
+        startupProbe:
+          exec:
+            command: ["pg_isready", "-U", "postgres"]
+          periodSeconds: 10
+          failureThreshold: 30  # up to 5 minutes for initial start or crash recovery before pod is restarted
+          timeoutSeconds: 5
+        livenessProbe:
+          exec:
+            command: ["pg_isready", "-U", "postgres"]
+          periodSeconds: 10
+          timeoutSeconds: 5
+          # initialDelaySeconds not needed — startupProbe gates liveness until postgres is up
+        readinessProbe:
+          exec:
+            command: ["pg_isready", "-U", "postgres"]
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+
+        env:
+        - name: TZ
+          value: "Europe/Stockholm" # Set your desired timezone
+        - name: PGDATA
+          value: "/var/lib/postgresql/data/db14"
+        - name: POSTGRES_PASSWORD
+          value: ${PGPASSWORD}
+        - name: POSTGRES_USER
+          value: ${PGUSER}
+        - name: POSTGRES_DEFAULT_DB
+          value: ${POSTGRES_DEFAULT_DB}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ragamuffin-db-server
+  labels:
+    run: ragamuffin-db-server
+spec:
+  #type: NodePort
+  ports:
+    - name: "port-5432"
+      protocol: TCP
+      port: 5432 
+      targetPort: 5432
+
+
+  selector:
+    app: ragamuffin-db-server
