@@ -7,18 +7,18 @@ metadata:
 spec:
   capacity:
     storage: 10Gi
-  storageClassName: local-hostpath
+  storageClassName: pv-nvme-hostpath
   accessModes:
     - ReadWriteOnce
   hostPath:
-    path: "/mnt/pv/ragamuffin-minikube-vol"
+    path: "/mnt/pv-nvme/ragamuffin-minikube-vol"
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: ragamuffin-minikube-pvc
 spec:
-  storageClassName: local-hostpath
+  storageClassName: pv-nvme-hostpath
   accessModes:
     - ReadWriteOnce
   volumeName: ragamuffin-minikube-vol
