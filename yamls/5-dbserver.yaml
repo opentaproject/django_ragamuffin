@@ -19,7 +19,7 @@ spec:
         ports:
           - containerPort: 5432
             name: "port-5432"
-        image: postgres:14-alpine
+        image: postgres:18-alpine
         args:
           - "-c"
           - "max_connections=200"  # more headroom; PgBouncer caps pools per DB/user
@@ -48,7 +48,7 @@ spec:
         - name: TZ
           value: "Europe/Stockholm" # Set your desired timezone
         - name: PGDATA
-          value: "/var/lib/postgresql/data/db14"
+          value: "/var/lib/postgresql/data/db18"
         - name: POSTGRES_PASSWORD
           value: ${PGPASSWORD}
         - name: POSTGRES_USER
