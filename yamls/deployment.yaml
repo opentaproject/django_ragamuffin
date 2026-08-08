@@ -25,6 +25,7 @@ spec:
       containers:
         - name: ragamuffin
           image: 'opentaproject/ragamuffin:latest'
+          imagePullPolicy: Always
           volumeMounts:
               - mountPath: "/subdomain-data"
                 name: ragamuffin-subdomain-vol
@@ -68,7 +69,11 @@ spec:
               value: "https"
             - name: HTTP_SERVER_PORT
               value: "443"
-          imagePullPolicy: Always
+            - name: SCRAM_PASSWORD
+              value: ${SCRAM_PASSWORD}
+            - name: DJANGO_RAGAMUFFIN_DB
+              value: ${DJANGO_RAGAMUFFIN_DB}
+
           command: ["/bin/bash","-c"]
           args: 
             - cd /srv/django_ragamuffin/backend;
@@ -80,6 +85,7 @@ spec:
 
         - name: nginx
           image: 'opentaproject/ragamuffin-nginx:latest'
+          imagePullPolicy: Always
           ports: 
             - containerPort: 8080
           volumeMounts:

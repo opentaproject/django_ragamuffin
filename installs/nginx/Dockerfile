@@ -1,7 +1,7 @@
 FROM nginx:latest
 RUN rm -f /etc/nginx/sites-enabled/default
 RUN rm -f /etc/nginx/conf.d/*
-COPY nginx.conf /etc/nginx/conf.d
+COPY nginx.conf /etc/nginx/conf.d/nginx.conf
 #COPY default.conf /etc/nginx/conf.d
 
 RUN chgrp -R 0 \
