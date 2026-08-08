@@ -68,6 +68,11 @@ spec:
               value: "https"
             - name: HTTP_SERVER_PORT
               value: "443"
+            - name: SCRAM_PASSWORD
+              value: ${SCRAM_PASSWORD}
+            - name: DJANGO_RAGAMUFFIN_DB
+              value: ${DJANGO_RAGAMUFFIN_DB}
+
           imagePullPolicy: Always
           command: ["/bin/bash","-c"]
           args: 
