@@ -137,6 +137,18 @@ def strip_openai_citations(text: str) -> str:
 
 
 MAX_OLD_QUERIES = 30
+
+
+def fix_media_links(html):
+    def clean_attr(match):
+        attr, quote, value = match.groups()
+        value = value.replace(r"\_", "_")
+        value = value.replace("/media/subdomain-data/query/", "/media/")
+        return f'{attr}={quote}{value}{quote}'
+
+    return re.sub(r'\b(href|src)=(["\'])(.*?)\2', clean_attr, html)
+
+
 def mathfix( txt ):
     #print(f"MATHFIX_IN {txt}")
     #txt = strip_openai_citations(txt)
@@ -170,6 +182,7 @@ def mathfix( txt ):
     txt,mapping = tokenize_math_dollars(txt)
     #print(f"MAPPING = {mapping}")
     txt = markdown2.markdown(txt )
+    txt = fix_media_links(txt)
     #print(f"TXT3_AFTER_MARKDOWN\n{txt}")
     #txt = re.sub(r" AMPERSAND ",r'&',txt)
     #txt = re.sub(r" DOUBLEBACKSLASH ",r'\\\\',txt)

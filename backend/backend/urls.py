@@ -15,10 +15,15 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.http import HttpResponsePermanentRedirect
+from django.urls import path, include, re_path
 from .views import login_view, logout_view
 from django.conf.urls.static import static
 from django.conf import settings
+
+
+def redirect_legacy_query_media(request, path):
+    return HttpResponsePermanentRedirect(f"{settings.MEDIA_URL}{path}")
 
 
 urlpatterns = [
@@ -27,8 +32,8 @@ urlpatterns = [
     path('logout/', logout_view, name='logout'),
     path("admin/", admin.site.urls),
     path('django_ragamuffin/', include('django_ragamuffin.urls')),
+    re_path(r'^media/subdomain-data/query/(?P<path>.*)$', redirect_legacy_query_media),
     path('', login_view, name='login'),
     
 ]
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_URL)
-
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

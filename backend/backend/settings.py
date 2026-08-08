@@ -98,8 +98,8 @@ PGDATABASE = os.environ.get('PGDATABASE')
 PGDATABASE_NAME = os.environ.get('PGDATABASE_NAME','default')
 
 
-DJANGO_RAGAMUFFIN_DB = os.environ.get("DJANGO_RAGAMUFFIN_DB",None) 
-#DJANGO_RAGAMUFFIN_DB = 'rsaasdfsdsf39'
+#DJANGO_RAGAMUFFIN_DB = os.environ.get("DJANGO_RAGAMUFFIN_DB",None) 
+DJANGO_RAGAMUFFIN_DB = 'rsaasdfsdsf39'
 
 
 DATABASES = {
@@ -185,7 +185,7 @@ import os
 AI_KEY =  os.environ.get("OPENAI_API_KEY",None)
 STATIC_ROOT = os.path.join(BASE_DIR, "deploystatic")
 STATIC_URL = "deploystatic/"
-MEDIA_URL = 'media/'
+MEDIA_URL = '/media/'
 
 STATIC_URL = "/static/"
 MAXWAIT = 120 ; # WAIT MAX 120 seconds
