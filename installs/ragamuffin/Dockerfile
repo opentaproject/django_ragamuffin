@@ -14,7 +14,7 @@ RUN apt update -y \
     memcached \
     libmemcached-dev \
     vim \
-    postgresql-14 \
+    postgresql-18 \
     apt-utils \
     redis \
     supervisor \
