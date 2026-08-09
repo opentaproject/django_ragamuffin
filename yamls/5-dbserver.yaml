@@ -1,42 +1,52 @@
 kind: Pod
 apiVersion: v1
 metadata:
-  name: ragamuffin-db-server
+  name: ${DB_PREFIX}db-server
   labels:
-    app: ragamuffin-db-server
+    app: ${DB_PREFIX}db-server
 spec:
+    securityContext:
+      seccompProfile:
+        type: RuntimeDefault
     volumes:
-    - name: ragamuffin-minikube-vol
+    - name: ${DB_PREFIX}minikube-vol
       persistentVolumeClaim:
-        claimName: ragamuffin-minikube-pvc
+        claimName: ${DB_PREFIX}minikube-pvc
 
     restartPolicy: Always
     containers:
       - name: postgres
         volumeMounts:
           - mountPath: "/var/lib/postgresql/data"
-            name: ragamuffin-minikube-vol
+            name: ${DB_PREFIX}minikube-vol
         ports:
           - containerPort: 5432
             name: "port-5432"
-        image: postgres:18-alpine
-        args:
-          - "-c"
-          - "max_connections=200"  # more headroom; PgBouncer caps pools per DB/user
-          - "-c"
-          - "superuser_reserved_connections=5"  # keep admin headroom under saturation
+        image: opentaproject/db-server:${OPENTA_PG_TAG}
+        imagePullPolicy: Always
+        securityContext:
+          allowPrivilegeEscalation: false
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+        # PID 1 is supervisord, so startup/liveness must track supervisord, not postgres.
+        # Otherwise `supervisorctl stop postgres` would fail liveness and restart the pod.
         startupProbe:
           exec:
-            command: ["pg_isready", "-U", "postgres"]
-          periodSeconds: 10
-          failureThreshold: 30  # up to 5 minutes for initial start or crash recovery before pod is restarted
+            command: ["supervisorctl", "pid"]
+          periodSeconds: 5
+          failureThreshold: 12
           timeoutSeconds: 5
         livenessProbe:
           exec:
-            command: ["pg_isready", "-U", "postgres"]
+            command: ["supervisorctl", "pid"]
           periodSeconds: 10
           timeoutSeconds: 5
-          # initialDelaySeconds not needed — startupProbe gates liveness until postgres is up
+        # Readiness still tracks postgres, so a stopped server is pulled out of the Service.
         readinessProbe:
           exec:
             command: ["pg_isready", "-U", "postgres"]
@@ -45,6 +55,14 @@ spec:
           timeoutSeconds: 5
 
         env:
+        - name: BACKUP_INTERVAL
+          value: "${BACKUP_INTERVAL}"  # minutes between online base backups; 0 disables
+        - name: DB_GENERATIONS
+          value: "${DB_GENERATIONS}"   # round-robin backup slots: 0..DB_GENERATIONS-1
+        - name: DOMAIN_NAME
+          value: "${DOMAIN_NAME}"      # recorded in each backup's 'latest' sentinel
+        - name: POSTGRES_ARGS
+          value: "-c max_connections=200 -c superuser_reserved_connections=5"
         - name: TZ
           value: "Europe/Stockholm" # Set your desired timezone
         - name: PGDATA
@@ -59,9 +77,9 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ragamuffin-db-server
+  name: ${DB_PREFIX}db-server
   labels:
-    run: ragamuffin-db-server
+    run: ${DB_PREFIX}db-server
 spec:
   #type: NodePort
   ports:
@@ -72,4 +90,4 @@ spec:
 
 
   selector:
-    app: ragamuffin-db-server
+    app: ${DB_PREFIX}db-server
