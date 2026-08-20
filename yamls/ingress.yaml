@@ -1,13 +1,13 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: ${SERVER_PREFIX}-ragamuffin
+  name: ${SUBDOMAIN}
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "700m"
 spec:
   tls:
     - hosts:
-      - '${SUBDOMAIN}.openta.dev'   #EDIR
+      - "${SUBDOMAIN}.openta.dev"   #EDIR
       secretName: openta-tls-secret
   ingressClassName: public
   rules:
@@ -18,7 +18,7 @@ spec:
             path: /
             backend:
               service:
-                name: ${SERVER_PREFIX}service
+                name: "${SUBDOMAIN}-service"
                 port:
                   number: 8000
 
