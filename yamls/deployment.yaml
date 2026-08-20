@@ -15,12 +15,12 @@ spec:
         app: ragamuffin
     spec:  
       volumes:
-      - name: ragamuffin-subdomain-vol
+      - name: ${DB_PREFIX}subdomain-vol
         persistentVolumeClaim:
-          claimName: ragamuffin-subdomain-pvc
-      - name: ragamuffin-deploystatic-vol
+          claimName: ${DB_PREFIX}subdomain-pvc
+      - name: ${DB_PREFIX}deploystatic-vol
         persistentVolumeClaim:
-          claimName: ragamuffin-deploystatic-pvc
+          claimName: ${DB_PREFIX}deploystatic-pvc
 
       containers:
         - name: ragamuffin
@@ -28,19 +28,19 @@ spec:
           imagePullPolicy: Always
           volumeMounts:
               - mountPath: "/subdomain-data"
-                name: ragamuffin-subdomain-vol
+                name: ${DB_PREFIX}subdomain-vol
               - mountPath: "/srv/django_ragamuffin/backend/deploystatic"
-                name: ragamuffin-deploystatic-vol
+                name: ${DB_PREFIX}deploystatic-vol
     
           env: 
             - name: TZ
               value: "Europe/Stockholm" # Set your desired timezone
             - name: PGHOST
-              value: 'ragamuffin-db-server'
+              value: '${DB_PREFIX}db-server'
             - name: NOT_PGHOST
-              value: 'ragamuffin-pgbouncer-service'
+              value: '${DB_PREFIX}pgbouncer-service'
             - name: DBHOST
-              value: 'ragamuffin-db-server' # EDIT 
+              value: '${DB_PREFIX}db-server' # EDIT 
             - name: DEBUG
               value: 'True'
             - name:  SUBDOMAIN
@@ -90,9 +90,9 @@ spec:
             - containerPort: 8080
           volumeMounts:
             - mountPath: "/subdomain-data"
-              name: ragamuffin-subdomain-vol
+              name: ${DB_PREFIX}subdomain-vol
             - mountPath: "/deploystatic"
-              name: ragamuffin-deploystatic-vol
+              name: ${DB_PREFIX}deploystatic-vol
 
     
 ---
@@ -100,7 +100,7 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: ragamuffin-service
+  name: ${DB_PREFIX}service
 spec:
   selector:
     app: ragamuffin

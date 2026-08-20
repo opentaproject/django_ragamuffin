@@ -1,7 +1,7 @@
 kind: PersistentVolume
 apiVersion: v1
 metadata:
-  name: ragamuffin-minikube-vol
+  name: ${SERVER_PREFIX}minikube-vol
   labels:
     type: local
 spec:
@@ -11,17 +11,17 @@ spec:
   accessModes:
     - ReadWriteOnce
   hostPath:
-    path: "/mnt/pv-nvme/ragamuffin-minikube-vol"
+    path: "/mnt/pv-nvme/${SERVER_PREFIX}minikube-vol"
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: ragamuffin-minikube-pvc
+  name: ${SERVER_PREFIX}minikube-pvc
 spec:
   storageClassName: pv-nvme-hostpath
   accessModes:
     - ReadWriteOnce
-  volumeName: ragamuffin-minikube-vol
+  volumeName: ${SERVER_PREFIX}minikube-vol
   resources:
     requests:
       storage: 10Gi
@@ -30,7 +30,7 @@ spec:
 kind: PersistentVolume
 apiVersion: v1
 metadata:
-  name: ragamuffin-deploystatic-vol
+  name: ${SERVER_PREFIX}deploystatic-vol
   labels:
     type: local
 spec:
@@ -40,17 +40,17 @@ spec:
   accessModes:
     - ReadWriteOnce
   hostPath:
-    path: "/mnt/pv/ragamuffin-deploystatic-vol"
+    path: "/mnt/pv/${SERVER_PREFIX}deploystatic-vol"
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: ragamuffin-deploystatic-pvc
+  name: ${SERVER_PREFIX}deploystatic-pvc
 spec:
   storageClassName: local-hostpath
   accessModes:
     - ReadWriteOnce
-  volumeName: ragamuffin-deploystatic-vol
+  volumeName: ${SERVER_PREFIX}deploystatic-vol
   resources:
     requests:
       storage: 1Gi
@@ -59,7 +59,7 @@ spec:
 kind: PersistentVolume
 apiVersion: v1
 metadata:
-  name: ragamuffin-subdomain-vol
+  name: ${SERVER_PREFIX}subdomain-vol
   labels:
     type: local
 spec:
@@ -69,17 +69,17 @@ spec:
   accessModes:
     - ReadWriteOnce
   hostPath:
-    path: "/mnt/pv/ragamuffin-subdomain-vol"
+    path: "/mnt/pv/${SERVER_PREFIX}subdomain-vol"
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: ragamuffin-subdomain-pvc
+  name: ${SERVER_PREFIX}subdomain-pvc
 spec:
   storageClassName: local-hostpath
   accessModes:
     - ReadWriteOnce
-  volumeName: ragamuffin-subdomain-vol
+  volumeName: ${SERVER_PREFIX}subdomain-vol
   resources:
     requests:
       storage: 10Gi
