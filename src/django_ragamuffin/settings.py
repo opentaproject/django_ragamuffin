@@ -5,7 +5,7 @@ from openai import OpenAI
 from openai import OpenAIError
 import re
 
-DEFAULT_AI_MODEL = 'gpt-4o-mini'
+DEFAULT_AI_MODEL = 'gpt-5.4-mini'
 
 def get_latest_mini_model(default=DEFAULT_AI_MODEL) :
     api_key = getattr(settings, "OPENAI_API_KEY", None) or os.environ.get("OPENAI_API_KEY")

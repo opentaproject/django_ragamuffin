@@ -7,6 +7,7 @@ import random, string
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 import shutil
+import json
 from .mathpix import mathpix
 from .remote_calls import run_remote_query
 
@@ -138,46 +139,35 @@ def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=None):
     #        raise TimeoutError("⏱️ Timeout: Vector store not ready in time.")
     #    time.sleep(10)
     i = 0;
-    interval = 5;
+    interval = 1;
     imax = timeout / interval;
     #print(f"VSID1 = {vector_store_id}")
     client = OpenAIClient()
-    try :
-        vector_store_files = client.vector_stores.files.list( vector_store_id=vector_store_id)
-    except :
-        vector_store_files = []
+    vector_store_files = client.vector_stores.files.list( vector_store_id=vector_store_id)
     remote_ids = []
     for f in vector_store_files:
         remote_ids.append( f.id)
     #print(f"REMOTE_IDS = {remote_ids}")
-    stable_reads = 0;
 
-    while i < imax  and stable_reads < 3 :
+    while i < imax :
         #print(f"VSID2 = {vector_store_id}")
-        try : 
-            file_list = client.vector_stores.files.list(vector_store_id=vector_store_id)
-            #print(f"FILE_LIST = {file_list}")
-            statuses = [file.status for file in file_list.data]
-            print(f"WAIT FOR REMOTE_VECTOR_STORES I={i} IMAX={imax} {statuses} ")
-        except :
-            statuses = []
+        file_list = client.vector_stores.files.list(vector_store_id=vector_store_id)
+        #print(f"FILE_LIST = {file_list}")
+        statuses = [file.status for file in file_list.data]
+        print(f"WAIT FOR REMOTE_VECTOR_STORES I={i} IMAX={imax} {statuses} ")
         if all(status == "completed" for status in statuses):
-            stable_reads += 1;
-            time.sleep(interval)
+            return
         elif any(status == "failed" for status in statuses):
             raise Exception(f"❌ Some files failed to process! {statuses}")
         else:
             time.sleep(interval)  # Wait before polling again
         i = i + 1 ;
-    assert i < imax , "VECTOR STORE READY TIMED OUT"
-    if True : # i > 0 :
-        print(f"VECTOR STORE OK; NOW SNOOZE JUST {interval}")
-        #time.sleep( interval )
+    raise TimeoutError(f"Vector store {vector_store_id} not ready within {timeout} seconds.")
 
 
 def validate_file_extension(value):
     ext = os.path.splitext(value.name)[-1].lower()
-    if ext not in ['.md','.txt','.pdf','.tex']:
+    if ext not in ['.md','.txt','.pdf','.tex','.json']:
         raise ValidationError(f"Unsupported file extension '{ext}'.")
 
 def hashed_upload_to(instance, filename):
@@ -254,29 +244,41 @@ def upload_or_retrieve_openai_file( name ,src ):
 def split_long_chunks(chunks, max_len=800):
     new_chunks = []
     for chunk in chunks:
-        words = chunk["content"].split()
+        content = chunk.get("content") or ""
+        words = content.split()
         for i in range(0, len(words), max_len):
             part = ' '.join(words[i:i+max_len])
-            new_chunks.append({
-                "heading": chunk["heading"],
-                "content": part
-            })
+            if part:
+                new_chunks.append({
+                    "heading": chunk.get("heading") or "",
+                    "content": part
+                })
     return new_chunks
 
 def chunk_mmd(linestring):
+    if not isinstance(linestring, str):
+        raise TypeError(f"Expected Mathpix output to be str, got {type(linestring).__name__}")
+    if linestring.startswith("Conversion error:"):
+        raise RuntimeError(linestring)
     chunks = []
     current_chunk = []
     current_heading = ''
     lines  = linestring.splitlines()
 
     for line in lines:
-        if re.match(r'^#{1,6} ', line) or line == ''  or re.match(r'\\section', line ) :
+        markdown_heading = re.match(r'^(#{1,6})\s+(.*)', line)
+        tex_heading = re.match(r'\\section\*?\{(.*)\}', line)
+        if markdown_heading or line == ''  or tex_heading :
+            if markdown_heading:
+                current_heading = markdown_heading.group(2).strip()
+            if tex_heading:
+                current_heading = tex_heading.group(1).strip()
             if re.match(r'\\section',line) :
                 current_heading = line.strip() 
             if current_chunk:
                 chunks.append({
                     "heading": current_heading,
-                    "content": ''.join(current_chunk).strip()
+                    "content": '\n'.join(current_chunk).strip()
                 })
             current_chunk = []
         else:
@@ -285,13 +287,11 @@ def chunk_mmd(linestring):
     if current_chunk:
         chunks.append({
             "heading": current_heading,
-            "content": ''.join(current_chunk).strip()
+            "content": '\n'.join(current_chunk).strip()
         })
 
-    s = f"{chunks}"
     chunks = split_long_chunks( chunks );
-    s = re.sub(r"},","},\n",s)
-    return s.encode('utf-8')
+    return json.dumps(chunks, ensure_ascii=False, indent=2).encode('utf-8')
 
 
 
@@ -451,7 +451,7 @@ class OpenAIClient( OpenAI ):
             return True
         except Exception as err :
             logger.error(f"GLOBAL DELETION ERROR {str(err)}")
-            return False
+            raise
 
     def vector_stores_files_delete( self, vs, vector_store_id, file_id ):
         assert vs.get_vector_store_id() == vector_store_id, "FAIL5"
@@ -499,13 +499,13 @@ class OpenAIFile(models.Model) :
             self.name = self.file.name.split('/')[-1]
             src = self.file.path
             extension = src.split('.')[-1];
-            if extension == 'pdf' :
+            if extension == 'json':
+                chunks = open(src,'rb').read()
+            elif extension == 'pdf' :
                 txt = mathpix( src ,format_out='mmd')
-            else :
-                txt = ( open(src,'rb').read() ).decode('utf-8')
-            if extension == 'pdf' :
                 chunks = chunk_mmd(txt)
             else :
+                txt = ( open(src,'rb').read() ).decode('utf-8')
                 chunks = txt.encode()
             chunkdir = os.path.join( os.path.dirname( src ), 'chunks')
             os.makedirs( chunkdir, exist_ok=True )
@@ -572,7 +572,7 @@ def custom_delete_openaifile(sender, instance, **kwargs):
         shutil.rmtree(instance.path)
     except Exception as e:
         logger.error(f" FILE/ {instance.path} DOES NOT EXIST")
-        return
+        raise
 
 
 
@@ -776,7 +776,7 @@ def custom_delete_remote_vector_store(sender, instance, **kwargs):
         remote_wait_for_vector_store_delete(vector_store_id, interval=2)
     except Exception as e :
         logger.error(f"FAILED REMOTE_VECTOR_STORE_CLIENT_DELETE {vector_store_id} {str(e)} ")
-        pass
+        raise
 
 
 
@@ -789,6 +789,10 @@ def get_current_model( user=None ):
     else :
         model = settings.AI_MODELS['default']
     return model
+
+
+def model_supports_reasoning(model):
+    return model.startswith('gpt-5') or re.match(r"^o\d", model) is not None
 
 
 DEFAULT_INSTRUCTIONS = """Answer only questions about the enclosed document. 
@@ -984,6 +988,7 @@ class Assistant( models.Model ):
             self.save()
         except Exception as err:
             dump_remote_vector_stores("ERROR IN ADD_RAW_FILE")
+            raise
         assistant_id = self.assistant_id
         self.save();
         return 
@@ -1321,13 +1326,11 @@ class Thread(models.Model) :
     
         """ last_messages is either None for auto or an integer for length of thread history to keep at OpenAI. 
         The entire history is kept in the local database"""
-        try :
-            assistant = self.assistant
-            if not assistant :
-                assistants = Assistant.objects.filter(name=self.name ).all()
-                assistant = assistants[0]
-        except :
-            logger.error(f" NAME = {self.name}")
+        assistant = self.assistant
+        if not assistant:
+            assistant = Assistant.objects.filter(name=self.name).first()
+        if not assistant:
+            raise Assistant.DoesNotExist(f"No assistant found for thread {self.pk} named {self.name!r}")
         threads = assistant.get_all_threads();
         assistant_id = assistant.assistant_id
         vector_stores = assistant.get_vector_stores()
@@ -1383,38 +1386,39 @@ class Thread(models.Model) :
             #print(f"MAXWAIT = {settings.MAXWAIT}")
             #print(f"EFFORT = {settings.EFFORT}")
             timeout = settings.MAXWAIT
+            create_kwargs = {
+                'model': model,
+                'input': query,
+                'instructions': instructions,
+                'timeout': timeout,
+            }
+            if model_supports_reasoning(model):
+                create_kwargs['reasoning'] = reasoning
             try :
                 if vss :
                     try :
                         RESPONSE = client.responses.create(
-                            model=model,
-                            input=query,
+                            **create_kwargs,
                             previous_response_id=previous_response_id,
-                            instructions=instructions,
-                            reasoning=reasoning,
-                            timeout=timeout,
                             tools=[{"type": "file_search",
                                 "vector_store_ids": vss  # your vector store id
-                                }]
-                        )
+                                }],
+                            )
                     except Exception as err:
                         logger.error(f"ERROR5 {str(err)} ")
+                        if "Previous response with id" not in str(err):
+                            raise
                         previous_response_id = None
                         #import ast
                         #payload_str = str(err).split(" - ", 1)[1]
                         #payload = ast.literal_eval(payload_str)   # safe parse to dict
                         msg = str(err) # payload["error"]["message"]
                         RESPONSE = client.responses.create(
-                            model=model,
-                            input=query,
+                            **create_kwargs,
                             previous_response_id=previous_response_id,
-                            instructions=instructions,
-                            reasoning=reasoning,
-                            timeout=timeout,
                             tools=[{"type": "file_search",
                                 "vector_store_ids": vss  # your vector store id
-                                }]
-
+                                }],
                             )
     
     
@@ -1422,40 +1426,32 @@ class Thread(models.Model) :
                 else :
                     try :
                         RESPONSE = client.responses.create(
-                            model=model,
-                            input=query,
+                            **create_kwargs,
                             previous_response_id=previous_response_id,
-                            instructions=instructions,
-                            reasoning=reasoning,
-                            timeout=timeout,
                             )
                     except  Exception as err :
                         logger.error(f"ERROR6 {str(err)} ")
-                        import ast
-                        payload_str = str(err).split(" - ", 1)[1]
-                        payload = ast.literal_eval(payload_str)   # safe parse to dict
-                        msg = payload["error"]["message"]
+                        if "Previous response with id" not in str(err):
+                            raise
+                        msg = str(err)
+                        try:
+                            import ast
+                            payload_str = str(err).split(" - ", 1)[1]
+                            payload = ast.literal_eval(payload_str)   # safe parse to dict
+                            msg = payload["error"]["message"]
+                        except (IndexError, KeyError, SyntaxError, ValueError) as parse_err:
+                            logger.warning(
+                                "Could not parse OpenAI error payload; using raw error text: %s",
+                                parse_err,
+                            )
 
-                        if "Previous response with id" in str(err) :
-                            RESPONSE = client.responses.create(
-                                model=model,
-                                input=query,
-                                instructions=instructions,
-                                reasoning=reasoning,
-                                timeout=timeout,
-                                )
-                        else :
-                            RESPONSE = client.responses.create(
-                                model=model,
-                                input=query,
-                                previous_response_id=previous_response_id,
-                                instructions=instructions,
-                                reasoning=reasoning,
-                                timeout=timeout,
-                                )
+                        RESPONSE = client.responses.create(
+                            **create_kwargs,
+                            )
 
             except  Exception as e :
                 logger.error(f"ERROR7 {str(e)}")
+                raise
 
     
             output = RESPONSE.output
@@ -1511,11 +1507,7 @@ class Thread(models.Model) :
         #else :
         #    thread.messages = [msg]
         #thread.save()
-        previous = None
-        try :
-            previous = Message.objects.filter(thread=thread).last();
-        except :
-            pass
+        previous = Message.objects.filter(thread=thread).last();
         message = Message(query=msg['user'],
             response=msg['assistant'],
             summary=msg['summary'],
@@ -1585,6 +1577,7 @@ def custom_delete_assistant(sender, instance, **kwargs):
                 client.delete_vector_store( vector_store_id)
     except Exception as err :
         logger.error(f"ERROR8 = {str(err)}")
+        raise
 
 @receiver(post_delete, sender=Assistant)
 def post_delete_assistant(sender, instance, **kwargs):
@@ -1601,10 +1594,7 @@ def handle_assistants_changed(sender, instance, action, **kwargs):
     if getattr(instance, '_updating_from_m2m', False):
         return
     instance._updating_from_m2m = True
-    try :
-        instance._count = instance._count + 1 
-    except :
-        instance._count = 0 
+    instance._count = getattr(instance, '_count', -1) + 1
     if instance._count > 1 :
         return
 
@@ -1660,7 +1650,6 @@ def handle_files_changed(sender, instance, action, reverse, model, pk_set, **kwa
     if action in {"pre_add", "pre_remove", "pre_clear"}:
         instance._old_file_ids =  instance.file_ids() # [i[0] for i in instance.files.values_list('file_ids', flat=True)  ]
         instance._old_checksum = instance.get_checksum();
-        pass
 
     elif action == "post_add" or action == 'post_remove' :
         old_file_ids  =  getattr(instance, '_old_file_ids', [] )

@@ -1,26 +1,26 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: ragamuffin # prefix for  pod names
+  name: ${SUBDOMAIN}
   labels:
-    app: ragamuffin
+    app: ${SUBDOMAIN}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app:  ragamuffin
+      app:  ${SUBDOMAIN}
   template:
     metadata:
       labels:
-        app: ragamuffin
+        app: ${SUBDOMAIN}
     spec:  
       volumes:
-      - name: ragamuffin-subdomain-vol
+      - name: ${SERVER_PREFIX}subdomain-vol
         persistentVolumeClaim:
-          claimName: ragamuffin-subdomain-pvc
-      - name: ragamuffin-deploystatic-vol
+          claimName: ${SERVER_PREFIX}subdomain-pvc
+      - name: ${SERVER_PREFIX}deploystatic-vol
         persistentVolumeClaim:
-          claimName: ragamuffin-deploystatic-pvc
+          claimName: ${SERVER_PREFIX}deploystatic-pvc
 
       containers:
         - name: ragamuffin
@@ -28,25 +28,29 @@ spec:
           imagePullPolicy: Always
           volumeMounts:
               - mountPath: "/subdomain-data"
-                name: ragamuffin-subdomain-vol
+                name: ${SERVER_PREFIX}subdomain-vol
               - mountPath: "/srv/django_ragamuffin/backend/deploystatic"
-                name: ragamuffin-deploystatic-vol
+                name: ${SERVER_PREFIX}deploystatic-vol
     
           env: 
             - name: TZ
               value: "Europe/Stockholm" # Set your desired timezone
             - name: PGHOST
-              value: 'ragamuffin-db-server'
+              value: "${SERVER_PREFIX}db-server"
             - name: NOT_PGHOST
-              value: 'ragamuffin-pgbouncer-service'
+              value: "${SERVER_PREFIX}pgbouncer-service"
             - name: DBHOST
-              value: 'ragamuffin-db-server' # EDIT 
+              value: "${SERVER_PREFIX}db-server" # EDIT 
             - name: DEBUG
               value: 'True'
             - name:  SUBDOMAIN
-              value: 'ragamuffin'
+              value: ${SUBDOMAIN}
             - name: OPENAI_API_KEY
               value: ${OPENAI_API_KEY}
+            - name: APP_ID
+              value: ${APP_ID}
+            - name: APP_KEY
+              value: ${APP_KEY}
             - name: SUPERUSER_PASSWORD
               value: ${SUPERUSER_PASSWORD}
             - name: PGPASSWORD
@@ -90,9 +94,9 @@ spec:
             - containerPort: 8080
           volumeMounts:
             - mountPath: "/subdomain-data"
-              name: ragamuffin-subdomain-vol
+              name: ${SERVER_PREFIX}subdomain-vol
             - mountPath: "/deploystatic"
-              name: ragamuffin-deploystatic-vol
+              name: ${SERVER_PREFIX}deploystatic-vol
 
     
 ---
@@ -100,10 +104,10 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: ragamuffin-service
+  name: ${SUBDOMAIN}-service
 spec:
   selector:
-    app: ragamuffin
+    app: ${SUBDOMAIN}
   type: ClusterIP
   ports:
     - port: 8000

@@ -276,7 +276,7 @@
                         <form id='myForm'>
                             {% csrf_token %}
                             <input type="text" style="display: none"  name="thread" value="{{request.path}}" />
-                            <input type="test" style="display: none" id="newmessage_index" name="newmessage_index" value="{{ mindex }}"  />
+                            <input type="text" style="display: none" id="newmessage_index" name="newmessage_index" value="{{ mindex }}"  />
                             <div class="form-row">
                                 {% for  i , c   in choices.items %}
                                     {% if i ==  choice  %}
@@ -296,7 +296,7 @@
             </div>
         </div>
     </body>
-    <script src="{% static 'django_ragamuffin/script.js' %}"></script>
+    <script src="{% static 'django_ragamuffin/script.js' %}?v=input-clean-2"></script>
 <script>
   const elems = document.querySelectorAll(".wrap-summary");
   elems.forEach(el => { el.innerHTML = marked.parse( el.innerText ) ;  }  );
@@ -310,18 +310,4 @@
     document.getElementById("backLink").href = "/";
   }
 </script>
-<script>
-document.addEventListener("input", function(e) {
-  if (e.target.tagName.toLowerCase() === "textarea") {
-    e.target.style.height = "auto";
-    e.target.style.height = e.target.scrollHeight + "px";
-  }
-});
-</script>
-
-
-
-
-
 </html>
-

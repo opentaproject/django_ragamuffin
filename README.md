@@ -58,7 +58,7 @@ DEFAULT_TEMPERATURE = 0.2;
 LAST_MESSAGES = 99
 MAX_NUM_RESULTS = None
 MAX_TOKENS = 8000 # NOT IMPLMENTED AS OF openai==1.173.0
-AI_MODELS = {'staff' : 'gpt-4o-mini' , 'default' : AI_MODEL }
+AI_MODELS = {'staff' : 'gpt-5.4-mini' , 'default' : AI_MODEL }
 API_APP = 'localhost'
 DJANGO_RAGAMUFFIN_DB = 'query4'
 DATABASE_ROUTERS = ['django_ragamuffin.db_routers.RagamuffinRouter']

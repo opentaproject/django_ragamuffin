@@ -31,11 +31,9 @@ class AssistantEditForm(forms.ModelForm):
         instance = self.instance
         # Set initial value for the readonly field
         #self.fields['actual_instructions'].initial = instance.get_instructions() + ' '.join( DEFAULT_INSTRUCTIONS.split() )  if self.instance.pk else "N/A"
+        instructions = ''
         if self.instance.pk :
-            try :
-                instructions = ' '.join( instance.get_instructions().split() );
-            except :
-                instructions = ''
+            instructions = ' '.join( instance.get_instructions().split() );
             directory_name = instance.name.split('.')[-1];
         self.fields['directory_name'].initial = instance.name.split('.')[-1];
         self.fields['actual_instructions'].initial = instructions if self.instance.pk else "N/A"
@@ -249,22 +247,19 @@ def feedback_view(request,subpath):
         i = int( options[0] );
         comment = options[1];
         choice = i
-    try :
-        message = Message.objects.get(pk=index)
-        message.choice = choice;
-        message.comment = comment;
-        message.save(update_fields=['comment','choice'] );
-        #if len( thread.messages) > 0 :
-        #    try :
-        #        thread.messages[index].update( {'comment': comment , 'choice' : choice })
-        #        msg = thread.messages[index];
-        #        thread.save();
-        #        doarchive(thread, msg )
-        #    except Exception as err :
-        #        print(f"ERROR1 {str(err)}")
-        return JsonResponse({"success": True,'index' : index ,'comment' : comment , 'choice' :choice  })
-    except Exception as err :
-        return JsonResponse({"success": False,'index' : index ,'comment' : 'error', 'choice' :choice  })
+    message = Message.objects.get(pk=index)
+    message.choice = choice;
+    message.comment = comment;
+    message.save(update_fields=['comment','choice'] );
+    #if len( thread.messages) > 0 :
+    #    try :
+    #        thread.messages[index].update( {'comment': comment , 'choice' : choice })
+    #        msg = thread.messages[index];
+    #        thread.save();
+    #        doarchive(thread, msg )
+    #    except Exception as err :
+    #        print(f"ERROR1 {str(err)}")
+    return JsonResponse({"success": True,'index' : index ,'comment' : comment , 'choice' :choice  })
 
 
 FILENAME = "../README.md"
@@ -307,22 +302,25 @@ def query_view(request,subpath):
     elif 'filter' in request.POST.getlist('action' ) :
         response = redirect(f"/django_ragamuffin/query/{assistant.name}/")
     d = {'status' : 'pending' , 'result' : 'RESULT' }
-    if  user.is_staff : 
-        base_msgs = list( Message.objects.filter(thread__name=name) ) or []
-    else :
-        base_msgs = list( thread.thread_messages.all() ) or []
-    uname = thread.user.username if getattr(thread, "user", None) else ""
-    messages = []
-    for _mm in base_msgs:
-        m =  model_to_dict(_mm , fields=[f.name for f in _mm._meta.fields])
-        #if isinstance(_m, dict):
-        #    m = dict(_m)
-        m["username"] = _mm.username()
-        m["pk"] = _mm.pk
-        m["date"] = str( _mm.date)
-        if m['choice'] == None :
-            m['choice'] = 0;
-        messages.append(m)
+    def get_messages():
+        if  user.is_staff :
+            base_msgs = list( Message.objects.filter(thread__name=name) ) or []
+        else :
+            base_msgs = list( thread.thread_messages.all() ) or []
+        messages = []
+        for _mm in base_msgs:
+            m =  model_to_dict(_mm , fields=[f.name for f in _mm._meta.fields])
+            #if isinstance(_m, dict):
+            #    m = dict(_m)
+            m["username"] = _mm.username()
+            m["pk"] = _mm.pk
+            m["date"] = str( _mm.date)
+            if m['choice'] == None :
+                m['choice'] = 0;
+            messages.append(m)
+        return messages
+
+    messages = get_messages()
 
 
     if 'print' in request.POST.getlist('action') :
@@ -332,6 +330,8 @@ def query_view(request,subpath):
             return response
     mindex = 0
     comment = ''
+    query = ''
+    summary = ''
     time_spent = 0;
     now = time.time();
     ntokens = 0;
@@ -346,30 +346,23 @@ def query_view(request,subpath):
                     txt = "*You already asked that!*<p/>" + message['response']
                     comment = message.get('comment','')
                     choice = message.get('choice','0')
-                    mindex = mindex - 1;
+                    mindex = message['pk'];
                     ntokens = message.get('ntokens')
                     date = message.get('date',None)
                     break
-            try:
-                if txt is None:
-                    msg = thread.run_query(query=query, last_messages=last_messages, max_num_results=max_num_results)
-                    txt = msg['assistant']
-                    summary = msg.get('summary','NONE3')
-                    ntokens = msg['ntokens']
-            except (KeyError, AttributeError, ValueError) as e:
-                txt = f"ERROR2 {type(e).__name__}: {str(e)}"
-            except Exception  as e:
-                txt = f"ERROR3 {type(e).__name__}: {str(e)}"
-            try :
-                txtnew = mathfix(txt)
-                txt = txtnew 
-            except Exception as err  :
-                txt = txt + f": Mathfix error {type(err).__name__} {str(err)}"
+            if txt is None:
+                msg = thread.run_query(query=query, last_messages=last_messages, max_num_results=max_num_results)
+                txt = msg['assistant']
+                summary = msg.get('summary','NONE3')
+                ntokens = msg['ntokens']
+                mindex = msg['pk']
+            txt = mathfix(txt)
             html = mark_safe(txt )
             response = f" <h4> Query: </h4>  {query}  <h4> Response: </h4> {html}  "
             response = f"{html}"
     else:
         form = QueryForm()
+    messages = get_messages()
     time_spent = int( ( time.time() - now  ) + 0.5 )
     keeps =  [ int(i) for i in keeps ]
     resolved_choices = [(i, choices[i]) for i in keeps]
@@ -387,20 +380,12 @@ def query_view(request,subpath):
        'previous_response_id' : item.get('previous_response_id',None),
        'date' : item.get('date',None),
        'time_spent' : item.get('time_spent', time_spent) }  for index, item in enumerate( messages )  ] 
-    # Sort by 'date' (descending). Items with missing dates come first.
-    try:
-        f_.sort(key=lambda x: x.get('date') or "", reverse=True)
-    except Exception:
-        pass
+    # Show messages oldest first so the newest query appears last.
+    f_.sort(key=lambda x: x.get('pk') or 0)
     ff = [ item for item in f_ if item.get('choice',0)  in keeps ]
-    if ff:
-        summary = ff[-1].get('summary','None')
-    else :
-        summary = ''
-    try :
-        if  len( query.strip() ) == 0 :
-            summary = ''
-    except :
+    if not summary and ff:
+        summary = ff[0].get('summary','None')
+    if  len( query.strip() ) == 0 :
         summary = ''
     f = [ { **item, 'index' : index}   for index,item in enumerate(ff)]
     children = assistant.children();

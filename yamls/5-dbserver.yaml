@@ -1,24 +1,24 @@
 kind: Pod
 apiVersion: v1
 metadata:
-  name: ${DB_PREFIX}db-server
+  name: ${SERVER_PREFIX}db-server
   labels:
-    app: ${DB_PREFIX}db-server
+    app: ${SERVER_PREFIX}db-server
 spec:
     securityContext:
       seccompProfile:
         type: RuntimeDefault
     volumes:
-    - name: ${DB_PREFIX}minikube-vol
+    - name: ${SERVER_PREFIX}minikube-vol
       persistentVolumeClaim:
-        claimName: ${DB_PREFIX}minikube-pvc
+        claimName: ${SERVER_PREFIX}minikube-pvc
 
     restartPolicy: Always
     containers:
       - name: postgres
         volumeMounts:
           - mountPath: "/var/lib/postgresql/data"
-            name: ${DB_PREFIX}minikube-vol
+            name: ${SERVER_PREFIX}minikube-vol
         ports:
           - containerPort: 5432
             name: "port-5432"
@@ -77,9 +77,9 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ${DB_PREFIX}db-server
+  name: ${SERVER_PREFIX}db-server
   labels:
-    run: ${DB_PREFIX}db-server
+    run: ${SERVER_PREFIX}db-server
 spec:
   #type: NodePort
   ports:
@@ -90,4 +90,4 @@ spec:
 
 
   selector:
-    app: ${DB_PREFIX}db-server
+    app: ${SERVER_PREFIX}db-server
