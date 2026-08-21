@@ -55,12 +55,6 @@ document.addEventListener("DOMContentLoaded", function () {
   console.log("Document is ready!");
 });
 
-document.addEventListener("input", function (event) {
-  if (event.target && event.target.id === "id_query") {
-    console.log("QUERY_TEXTAREA_INPUT", event.target.value.length);
-  }
-});
-
 function button_color(btn, color) {
   btn.disabled = color !== "green";
   btn.style.backgroundColor = color;
