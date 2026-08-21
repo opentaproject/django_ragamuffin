@@ -380,8 +380,8 @@ def query_view(request,subpath):
        'previous_response_id' : item.get('previous_response_id',None),
        'date' : item.get('date',None),
        'time_spent' : item.get('time_spent', time_spent) }  for index, item in enumerate( messages )  ] 
-    # Show newest messages first.
-    f_.sort(key=lambda x: x.get('pk') or 0, reverse=True)
+    # Show messages oldest first so the newest query appears last.
+    f_.sort(key=lambda x: x.get('pk') or 0)
     ff = [ item for item in f_ if item.get('choice',0)  in keeps ]
     if not summary and ff:
         summary = ff[0].get('summary','None')
