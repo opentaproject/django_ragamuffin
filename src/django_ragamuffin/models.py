@@ -172,7 +172,7 @@ def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=None):
 
 def validate_file_extension(value):
     ext = os.path.splitext(value.name)[-1].lower()
-    if ext not in ['.md','.txt','.pdf','.tex']:
+    if ext not in ['.md','.txt','.pdf','.tex','.json']:
         raise ValidationError(f"Unsupported file extension '{ext}'.")
 
 def hashed_upload_to(instance, filename):
@@ -504,13 +504,13 @@ class OpenAIFile(models.Model) :
             self.name = self.file.name.split('/')[-1]
             src = self.file.path
             extension = src.split('.')[-1];
-            if extension == 'pdf' :
+            if extension == 'json':
+                chunks = open(src,'rb').read()
+            elif extension == 'pdf' :
                 txt = mathpix( src ,format_out='mmd')
-            else :
-                txt = ( open(src,'rb').read() ).decode('utf-8')
-            if extension == 'pdf' :
                 chunks = chunk_mmd(txt)
             else :
+                txt = ( open(src,'rb').read() ).decode('utf-8')
                 chunks = txt.encode()
             chunkdir = os.path.join( os.path.dirname( src ), 'chunks')
             os.makedirs( chunkdir, exist_ok=True )
