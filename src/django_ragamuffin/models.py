@@ -139,7 +139,7 @@ def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=None):
     #        raise TimeoutError("⏱️ Timeout: Vector store not ready in time.")
     #    time.sleep(10)
     i = 0;
-    interval = 5;
+    interval = 1;
     imax = timeout / interval;
     #print(f"VSID1 = {vector_store_id}")
     client = OpenAIClient()
@@ -148,26 +148,21 @@ def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=None):
     for f in vector_store_files:
         remote_ids.append( f.id)
     #print(f"REMOTE_IDS = {remote_ids}")
-    stable_reads = 0;
 
-    while i < imax  and stable_reads < 3 :
+    while i < imax :
         #print(f"VSID2 = {vector_store_id}")
         file_list = client.vector_stores.files.list(vector_store_id=vector_store_id)
         #print(f"FILE_LIST = {file_list}")
         statuses = [file.status for file in file_list.data]
         print(f"WAIT FOR REMOTE_VECTOR_STORES I={i} IMAX={imax} {statuses} ")
         if all(status == "completed" for status in statuses):
-            stable_reads += 1;
-            time.sleep(interval)
+            return
         elif any(status == "failed" for status in statuses):
             raise Exception(f"❌ Some files failed to process! {statuses}")
         else:
             time.sleep(interval)  # Wait before polling again
         i = i + 1 ;
-    assert i < imax , "VECTOR STORE READY TIMED OUT"
-    if True : # i > 0 :
-        print(f"VECTOR STORE OK; NOW SNOOZE JUST {interval}")
-        #time.sleep( interval )
+    raise TimeoutError(f"Vector store {vector_store_id} not ready within {timeout} seconds.")
 
 
 def validate_file_extension(value):
