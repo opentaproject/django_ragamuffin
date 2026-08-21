@@ -328,6 +328,7 @@ def query_view(request,subpath):
     mindex = 0
     comment = ''
     query = ''
+    summary = ''
     time_spent = 0;
     now = time.time();
     ntokens = 0;
@@ -377,10 +378,8 @@ def query_view(request,subpath):
     # Sort by 'date' (descending). Items with missing dates come first.
     f_.sort(key=lambda x: x.get('date') or "", reverse=True)
     ff = [ item for item in f_ if item.get('choice',0)  in keeps ]
-    if ff:
-        summary = ff[-1].get('summary','None')
-    else :
-        summary = ''
+    if not summary and ff:
+        summary = ff[0].get('summary','None')
     if  len( query.strip() ) == 0 :
         summary = ''
     f = [ { **item, 'index' : index}   for index,item in enumerate(ff)]
