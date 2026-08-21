@@ -55,6 +55,12 @@ document.addEventListener("DOMContentLoaded", function () {
   console.log("Document is ready!");
 });
 
+document.addEventListener("input", function (event) {
+  if (event.target && event.target.id === "id_query") {
+    console.log("QUERY_TEXTAREA_INPUT", event.target.value.length);
+  }
+});
+
 function button_color(btn, color) {
   btn.disabled = color !== "green";
   btn.style.backgroundColor = color;
@@ -167,10 +173,6 @@ button_color(document.getElementById("send-button"), "red");
 button_color(document.getElementById("submitBtn"), "green");
 
 $(document).ready(function () {
-  document.getElementById("id_query")?.addEventListener("input", function (event) {
-    console.debug("query textarea input", event.target.value.length);
-  });
-
   const textarea = document.getElementById("id_query").innerHTML;
   if (textarea == "") {
     document.getElementById("response-block").style.display = "none";
