@@ -785,6 +785,10 @@ def get_current_model( user=None ):
     return model
 
 
+def model_supports_reasoning(model):
+    return model.startswith('gpt-5') or re.match(r"^o\d", model) is not None
+
+
 DEFAULT_INSTRUCTIONS = """Answer only questions about the enclosed document. 
     Do not offer helpful answers to questions that do not refer to the document. 
     Be concise. 
@@ -1376,20 +1380,24 @@ class Thread(models.Model) :
             #print(f"MAXWAIT = {settings.MAXWAIT}")
             #print(f"EFFORT = {settings.EFFORT}")
             timeout = settings.MAXWAIT
+            create_kwargs = {
+                'model': model,
+                'input': query,
+                'instructions': instructions,
+                'timeout': timeout,
+            }
+            if model_supports_reasoning(model):
+                create_kwargs['reasoning'] = reasoning
             try :
                 if vss :
                     try :
                         RESPONSE = client.responses.create(
-                            model=model,
-                            input=query,
+                            **create_kwargs,
                             previous_response_id=previous_response_id,
-                            instructions=instructions,
-                            reasoning=reasoning,
-                            timeout=timeout,
                             tools=[{"type": "file_search",
                                 "vector_store_ids": vss  # your vector store id
-                                }]
-                        )
+                                }],
+                            )
                     except Exception as err:
                         logger.error(f"ERROR5 {str(err)} ")
                         if "Previous response with id" not in str(err):
@@ -1400,16 +1408,11 @@ class Thread(models.Model) :
                         #payload = ast.literal_eval(payload_str)   # safe parse to dict
                         msg = str(err) # payload["error"]["message"]
                         RESPONSE = client.responses.create(
-                            model=model,
-                            input=query,
+                            **create_kwargs,
                             previous_response_id=previous_response_id,
-                            instructions=instructions,
-                            reasoning=reasoning,
-                            timeout=timeout,
                             tools=[{"type": "file_search",
                                 "vector_store_ids": vss  # your vector store id
-                                }]
-
+                                }],
                             )
     
     
@@ -1417,12 +1420,8 @@ class Thread(models.Model) :
                 else :
                     try :
                         RESPONSE = client.responses.create(
-                            model=model,
-                            input=query,
+                            **create_kwargs,
                             previous_response_id=previous_response_id,
-                            instructions=instructions,
-                            reasoning=reasoning,
-                            timeout=timeout,
                             )
                     except  Exception as err :
                         logger.error(f"ERROR6 {str(err)} ")
@@ -1441,11 +1440,7 @@ class Thread(models.Model) :
                             )
 
                         RESPONSE = client.responses.create(
-                            model=model,
-                            input=query,
-                            instructions=instructions,
-                            reasoning=reasoning,
-                            timeout=timeout,
+                            **create_kwargs,
                             )
 
             except  Exception as e :
