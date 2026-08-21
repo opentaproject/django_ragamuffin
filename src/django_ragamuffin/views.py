@@ -346,7 +346,7 @@ def query_view(request,subpath):
                     txt = "*You already asked that!*<p/>" + message['response']
                     comment = message.get('comment','')
                     choice = message.get('choice','0')
-                    mindex = mindex - 1;
+                    mindex = message['pk'];
                     ntokens = message.get('ntokens')
                     date = message.get('date',None)
                     break
@@ -355,6 +355,7 @@ def query_view(request,subpath):
                 txt = msg['assistant']
                 summary = msg.get('summary','NONE3')
                 ntokens = msg['ntokens']
+                mindex = msg['pk']
             txt = mathfix(txt)
             html = mark_safe(txt )
             response = f" <h4> Query: </h4>  {query}  <h4> Response: </h4> {html}  "
@@ -379,8 +380,8 @@ def query_view(request,subpath):
        'previous_response_id' : item.get('previous_response_id',None),
        'date' : item.get('date',None),
        'time_spent' : item.get('time_spent', time_spent) }  for index, item in enumerate( messages )  ] 
-    # Sort by 'date' (descending). Items with missing dates come first.
-    f_.sort(key=lambda x: x.get('date') or "", reverse=True)
+    # Show newest messages first.
+    f_.sort(key=lambda x: x.get('pk') or 0, reverse=True)
     ff = [ item for item in f_ if item.get('choice',0)  in keeps ]
     if not summary and ff:
         summary = ff[0].get('summary','None')
