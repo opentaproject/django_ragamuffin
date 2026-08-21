@@ -311,11 +311,18 @@
   }
 </script>
 <script>
-document.addEventListener("input", function(e) {
-  if (e.target.tagName.toLowerCase() === "textarea") {
+const queryTextarea = document.getElementById("id_query");
+let resizePending = false;
+queryTextarea?.addEventListener("input", function(e) {
+  if (resizePending) {
+    return;
+  }
+  resizePending = true;
+  requestAnimationFrame(() => {
     e.target.style.height = "auto";
     e.target.style.height = e.target.scrollHeight + "px";
-  }
+    resizePending = false;
+  });
 });
 </script>
 

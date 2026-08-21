@@ -168,30 +168,8 @@ button_color(document.getElementById("submitBtn"), "red");
 
 $(document).ready(function () {
   document.getElementsByName("query")[0].addEventListener("input", function () {
-    let selectedValue = document.querySelector(
-      'input[name="option"]:checked'
-    )?.value;
-    try {
-      fix_box();
-    } catch {}
     button_color(document.getElementById("send-button"), "red");
-    const response_area = document.getElementById("response").innerHTML;
-    // console.log("selectedValue", selectedValue, "len=", response_area.length , response_area);
-    var first_word = response_area.trim().split(/\s+/)[0];
-    console.log("FIRST_WORD = ", first_word);
-    if (selectedValue == 0  ){ // && first_word != 'None') {
-      button_color(document.getElementById("submitBtn"), "pink");
-      // Git rid of forcing comments before continuing!
-      // if (!first_word.includes("ERROR")) {
-      //   alert(
-      //     "You must read and assess the response before with a new related query."
-      //   );
-      // } else {
-      //   button_color(document.getElementById("submitBtn"), "green");
-     //  }
-    // } else {
-      button_color(document.getElementById("submitBtn"), "green");
-    }
+    button_color(document.getElementById("submitBtn"), "green");
   });
 
   const textarea = document.getElementById("id_query").innerHTML;
