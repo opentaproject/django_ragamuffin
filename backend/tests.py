@@ -8,7 +8,7 @@ import os
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 import tiktoken
 from django_ragamuffin.utils import print_messages
 import openai
@@ -19,7 +19,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 
 
 django.setup()
-from django_ragamuffin.models import OpenAIFile, VectorStore, Assistant,  Thread,  delete_remote_vector_stores, dump_remote_vector_stores, QUser
+from django_ragamuffin.models import OpenAIFile, VectorStore, Assistant,  Thread,  delete_remote_vector_stores, dump_remote_vector_stores, QUser, validate_file_extension
 from django.contrib.auth.models import User
 
 from django.conf import settings
@@ -39,6 +39,14 @@ def randstring(tag, length=8):
 
 class OpenAI(TestCase):
     databases = "__all__"
+
+    def test_validate_file_extension_allows_jsonl(self):
+        test_file = SimpleUploadedFile("records.jsonl", b'{"x": 1}\n', content_type="application/jsonl")
+        validate_file_extension(test_file)
+
+        bad_file = SimpleUploadedFile("records.csv", b"x\n", content_type="text/csv")
+        with self.assertRaises(ValidationError):
+            validate_file_extension(bad_file)
 
     @pytest.mark.django_db
     def create_testfile_from_string( self, s , name ):
