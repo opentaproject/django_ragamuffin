@@ -31,11 +31,9 @@ class AssistantEditForm(forms.ModelForm):
         instance = self.instance
         # Set initial value for the readonly field
         #self.fields['actual_instructions'].initial = instance.get_instructions() + ' '.join( DEFAULT_INSTRUCTIONS.split() )  if self.instance.pk else "N/A"
+        instructions = ''
         if self.instance.pk :
-            try :
-                instructions = ' '.join( instance.get_instructions().split() );
-            except :
-                instructions = ''
+            instructions = ' '.join( instance.get_instructions().split() );
             directory_name = instance.name.split('.')[-1];
         self.fields['directory_name'].initial = instance.name.split('.')[-1];
         self.fields['actual_instructions'].initial = instructions if self.instance.pk else "N/A"
@@ -249,22 +247,19 @@ def feedback_view(request,subpath):
         i = int( options[0] );
         comment = options[1];
         choice = i
-    try :
-        message = Message.objects.get(pk=index)
-        message.choice = choice;
-        message.comment = comment;
-        message.save(update_fields=['comment','choice'] );
-        #if len( thread.messages) > 0 :
-        #    try :
-        #        thread.messages[index].update( {'comment': comment , 'choice' : choice })
-        #        msg = thread.messages[index];
-        #        thread.save();
-        #        doarchive(thread, msg )
-        #    except Exception as err :
-        #        print(f"ERROR1 {str(err)}")
-        return JsonResponse({"success": True,'index' : index ,'comment' : comment , 'choice' :choice  })
-    except Exception as err :
-        return JsonResponse({"success": False,'index' : index ,'comment' : 'error', 'choice' :choice  })
+    message = Message.objects.get(pk=index)
+    message.choice = choice;
+    message.comment = comment;
+    message.save(update_fields=['comment','choice'] );
+    #if len( thread.messages) > 0 :
+    #    try :
+    #        thread.messages[index].update( {'comment': comment , 'choice' : choice })
+    #        msg = thread.messages[index];
+    #        thread.save();
+    #        doarchive(thread, msg )
+    #    except Exception as err :
+    #        print(f"ERROR1 {str(err)}")
+    return JsonResponse({"success": True,'index' : index ,'comment' : comment , 'choice' :choice  })
 
 
 FILENAME = "../README.md"
@@ -332,6 +327,7 @@ def query_view(request,subpath):
             return response
     mindex = 0
     comment = ''
+    query = ''
     time_spent = 0;
     now = time.time();
     ntokens = 0;
@@ -350,21 +346,12 @@ def query_view(request,subpath):
                     ntokens = message.get('ntokens')
                     date = message.get('date',None)
                     break
-            try:
-                if txt is None:
-                    msg = thread.run_query(query=query, last_messages=last_messages, max_num_results=max_num_results)
-                    txt = msg['assistant']
-                    summary = msg.get('summary','NONE3')
-                    ntokens = msg['ntokens']
-            except (KeyError, AttributeError, ValueError) as e:
-                txt = f"ERROR2 {type(e).__name__}: {str(e)}"
-            except Exception  as e:
-                txt = f"ERROR3 {type(e).__name__}: {str(e)}"
-            try :
-                txtnew = mathfix(txt)
-                txt = txtnew 
-            except Exception as err  :
-                txt = txt + f": Mathfix error {type(err).__name__} {str(err)}"
+            if txt is None:
+                msg = thread.run_query(query=query, last_messages=last_messages, max_num_results=max_num_results)
+                txt = msg['assistant']
+                summary = msg.get('summary','NONE3')
+                ntokens = msg['ntokens']
+            txt = mathfix(txt)
             html = mark_safe(txt )
             response = f" <h4> Query: </h4>  {query}  <h4> Response: </h4> {html}  "
             response = f"{html}"
@@ -388,19 +375,13 @@ def query_view(request,subpath):
        'date' : item.get('date',None),
        'time_spent' : item.get('time_spent', time_spent) }  for index, item in enumerate( messages )  ] 
     # Sort by 'date' (descending). Items with missing dates come first.
-    try:
-        f_.sort(key=lambda x: x.get('date') or "", reverse=True)
-    except Exception:
-        pass
+    f_.sort(key=lambda x: x.get('date') or "", reverse=True)
     ff = [ item for item in f_ if item.get('choice',0)  in keeps ]
     if ff:
         summary = ff[-1].get('summary','None')
     else :
         summary = ''
-    try :
-        if  len( query.strip() ) == 0 :
-            summary = ''
-    except :
+    if  len( query.strip() ) == 0 :
         summary = ''
     f = [ { **item, 'index' : index}   for index,item in enumerate(ff)]
     children = assistant.children();

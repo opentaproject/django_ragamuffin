@@ -142,10 +142,7 @@ def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=None):
     imax = timeout / interval;
     #print(f"VSID1 = {vector_store_id}")
     client = OpenAIClient()
-    try :
-        vector_store_files = client.vector_stores.files.list( vector_store_id=vector_store_id)
-    except :
-        vector_store_files = []
+    vector_store_files = client.vector_stores.files.list( vector_store_id=vector_store_id)
     remote_ids = []
     for f in vector_store_files:
         remote_ids.append( f.id)
@@ -154,13 +151,10 @@ def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=None):
 
     while i < imax  and stable_reads < 3 :
         #print(f"VSID2 = {vector_store_id}")
-        try : 
-            file_list = client.vector_stores.files.list(vector_store_id=vector_store_id)
-            #print(f"FILE_LIST = {file_list}")
-            statuses = [file.status for file in file_list.data]
-            print(f"WAIT FOR REMOTE_VECTOR_STORES I={i} IMAX={imax} {statuses} ")
-        except :
-            statuses = []
+        file_list = client.vector_stores.files.list(vector_store_id=vector_store_id)
+        #print(f"FILE_LIST = {file_list}")
+        statuses = [file.status for file in file_list.data]
+        print(f"WAIT FOR REMOTE_VECTOR_STORES I={i} IMAX={imax} {statuses} ")
         if all(status == "completed" for status in statuses):
             stable_reads += 1;
             time.sleep(interval)
@@ -451,7 +445,7 @@ class OpenAIClient( OpenAI ):
             return True
         except Exception as err :
             logger.error(f"GLOBAL DELETION ERROR {str(err)}")
-            return False
+            raise
 
     def vector_stores_files_delete( self, vs, vector_store_id, file_id ):
         assert vs.get_vector_store_id() == vector_store_id, "FAIL5"
@@ -572,7 +566,7 @@ def custom_delete_openaifile(sender, instance, **kwargs):
         shutil.rmtree(instance.path)
     except Exception as e:
         logger.error(f" FILE/ {instance.path} DOES NOT EXIST")
-        return
+        raise
 
 
 
@@ -776,7 +770,7 @@ def custom_delete_remote_vector_store(sender, instance, **kwargs):
         remote_wait_for_vector_store_delete(vector_store_id, interval=2)
     except Exception as e :
         logger.error(f"FAILED REMOTE_VECTOR_STORE_CLIENT_DELETE {vector_store_id} {str(e)} ")
-        pass
+        raise
 
 
 
@@ -984,6 +978,7 @@ class Assistant( models.Model ):
             self.save()
         except Exception as err:
             dump_remote_vector_stores("ERROR IN ADD_RAW_FILE")
+            raise
         assistant_id = self.assistant_id
         self.save();
         return 
@@ -1321,13 +1316,11 @@ class Thread(models.Model) :
     
         """ last_messages is either None for auto or an integer for length of thread history to keep at OpenAI. 
         The entire history is kept in the local database"""
-        try :
-            assistant = self.assistant
-            if not assistant :
-                assistants = Assistant.objects.filter(name=self.name ).all()
-                assistant = assistants[0]
-        except :
-            logger.error(f" NAME = {self.name}")
+        assistant = self.assistant
+        if not assistant:
+            assistant = Assistant.objects.filter(name=self.name).first()
+        if not assistant:
+            raise Assistant.DoesNotExist(f"No assistant found for thread {self.pk} named {self.name!r}")
         threads = assistant.get_all_threads();
         assistant_id = assistant.assistant_id
         vector_stores = assistant.get_vector_stores()
@@ -1399,6 +1392,8 @@ class Thread(models.Model) :
                         )
                     except Exception as err:
                         logger.error(f"ERROR5 {str(err)} ")
+                        if "Previous response with id" not in str(err):
+                            raise
                         previous_response_id = None
                         #import ast
                         #payload_str = str(err).split(" - ", 1)[1]
@@ -1431,31 +1426,31 @@ class Thread(models.Model) :
                             )
                     except  Exception as err :
                         logger.error(f"ERROR6 {str(err)} ")
-                        import ast
-                        payload_str = str(err).split(" - ", 1)[1]
-                        payload = ast.literal_eval(payload_str)   # safe parse to dict
-                        msg = payload["error"]["message"]
+                        if "Previous response with id" not in str(err):
+                            raise
+                        msg = str(err)
+                        try:
+                            import ast
+                            payload_str = str(err).split(" - ", 1)[1]
+                            payload = ast.literal_eval(payload_str)   # safe parse to dict
+                            msg = payload["error"]["message"]
+                        except (IndexError, KeyError, SyntaxError, ValueError) as parse_err:
+                            logger.warning(
+                                "Could not parse OpenAI error payload; using raw error text: %s",
+                                parse_err,
+                            )
 
-                        if "Previous response with id" in str(err) :
-                            RESPONSE = client.responses.create(
-                                model=model,
-                                input=query,
-                                instructions=instructions,
-                                reasoning=reasoning,
-                                timeout=timeout,
-                                )
-                        else :
-                            RESPONSE = client.responses.create(
-                                model=model,
-                                input=query,
-                                previous_response_id=previous_response_id,
-                                instructions=instructions,
-                                reasoning=reasoning,
-                                timeout=timeout,
-                                )
+                        RESPONSE = client.responses.create(
+                            model=model,
+                            input=query,
+                            instructions=instructions,
+                            reasoning=reasoning,
+                            timeout=timeout,
+                            )
 
             except  Exception as e :
                 logger.error(f"ERROR7 {str(e)}")
+                raise
 
     
             output = RESPONSE.output
@@ -1511,11 +1506,7 @@ class Thread(models.Model) :
         #else :
         #    thread.messages = [msg]
         #thread.save()
-        previous = None
-        try :
-            previous = Message.objects.filter(thread=thread).last();
-        except :
-            pass
+        previous = Message.objects.filter(thread=thread).last();
         message = Message(query=msg['user'],
             response=msg['assistant'],
             summary=msg['summary'],
@@ -1585,6 +1576,7 @@ def custom_delete_assistant(sender, instance, **kwargs):
                 client.delete_vector_store( vector_store_id)
     except Exception as err :
         logger.error(f"ERROR8 = {str(err)}")
+        raise
 
 @receiver(post_delete, sender=Assistant)
 def post_delete_assistant(sender, instance, **kwargs):
@@ -1601,10 +1593,7 @@ def handle_assistants_changed(sender, instance, action, **kwargs):
     if getattr(instance, '_updating_from_m2m', False):
         return
     instance._updating_from_m2m = True
-    try :
-        instance._count = instance._count + 1 
-    except :
-        instance._count = 0 
+    instance._count = getattr(instance, '_count', -1) + 1
     if instance._count > 1 :
         return
 
@@ -1660,7 +1649,6 @@ def handle_files_changed(sender, instance, action, reverse, model, pk_set, **kwa
     if action in {"pre_add", "pre_remove", "pre_clear"}:
         instance._old_file_ids =  instance.file_ids() # [i[0] for i in instance.files.values_list('file_ids', flat=True)  ]
         instance._old_checksum = instance.get_checksum();
-        pass
 
     elif action == "post_add" or action == 'post_remove' :
         old_file_ids  =  getattr(instance, '_old_file_ids', [] )
