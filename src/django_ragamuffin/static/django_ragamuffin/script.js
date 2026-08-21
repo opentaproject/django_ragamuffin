@@ -164,14 +164,9 @@ function fix_box() {
 }
 
 button_color(document.getElementById("send-button"), "red");
-button_color(document.getElementById("submitBtn"), "red");
+button_color(document.getElementById("submitBtn"), "green");
 
 $(document).ready(function () {
-  document.getElementsByName("query")[0].addEventListener("input", function () {
-    button_color(document.getElementById("send-button"), "red");
-    button_color(document.getElementById("submitBtn"), "green");
-  });
-
   const textarea = document.getElementById("id_query").innerHTML;
   if (textarea == "") {
     document.getElementById("response-block").style.display = "none";
