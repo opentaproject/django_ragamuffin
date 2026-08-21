@@ -7,6 +7,7 @@ import random, string
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 import shutil
+import json
 from .mathpix import mathpix
 from .remote_calls import run_remote_query
 
@@ -248,29 +249,41 @@ def upload_or_retrieve_openai_file( name ,src ):
 def split_long_chunks(chunks, max_len=800):
     new_chunks = []
     for chunk in chunks:
-        words = chunk["content"].split()
+        content = chunk.get("content") or ""
+        words = content.split()
         for i in range(0, len(words), max_len):
             part = ' '.join(words[i:i+max_len])
-            new_chunks.append({
-                "heading": chunk["heading"],
-                "content": part
-            })
+            if part:
+                new_chunks.append({
+                    "heading": chunk.get("heading") or "",
+                    "content": part
+                })
     return new_chunks
 
 def chunk_mmd(linestring):
+    if not isinstance(linestring, str):
+        raise TypeError(f"Expected Mathpix output to be str, got {type(linestring).__name__}")
+    if linestring.startswith("Conversion error:"):
+        raise RuntimeError(linestring)
     chunks = []
     current_chunk = []
     current_heading = ''
     lines  = linestring.splitlines()
 
     for line in lines:
-        if re.match(r'^#{1,6} ', line) or line == ''  or re.match(r'\\section', line ) :
+        markdown_heading = re.match(r'^(#{1,6})\s+(.*)', line)
+        tex_heading = re.match(r'\\section\*?\{(.*)\}', line)
+        if markdown_heading or line == ''  or tex_heading :
+            if markdown_heading:
+                current_heading = markdown_heading.group(2).strip()
+            if tex_heading:
+                current_heading = tex_heading.group(1).strip()
             if re.match(r'\\section',line) :
                 current_heading = line.strip() 
             if current_chunk:
                 chunks.append({
                     "heading": current_heading,
-                    "content": ''.join(current_chunk).strip()
+                    "content": '\n'.join(current_chunk).strip()
                 })
             current_chunk = []
         else:
@@ -279,13 +292,11 @@ def chunk_mmd(linestring):
     if current_chunk:
         chunks.append({
             "heading": current_heading,
-            "content": ''.join(current_chunk).strip()
+            "content": '\n'.join(current_chunk).strip()
         })
 
-    s = f"{chunks}"
     chunks = split_long_chunks( chunks );
-    s = re.sub(r"},","},\n",s)
-    return s.encode('utf-8')
+    return json.dumps(chunks, ensure_ascii=False, indent=2).encode('utf-8')
 
 
 

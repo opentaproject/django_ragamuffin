@@ -47,6 +47,10 @@ spec:
               value: ${SUBDOMAIN}
             - name: OPENAI_API_KEY
               value: ${OPENAI_API_KEY}
+            - name: APP_ID
+              value: ${APP_ID}
+            - name: APP_KEY
+              value: ${APP_KEY}
             - name: SUPERUSER_PASSWORD
               value: ${SUPERUSER_PASSWORD}
             - name: PGPASSWORD

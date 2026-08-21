@@ -7,6 +7,8 @@ import re
 import unicodedata
 import os
 import logging
+from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 logger = logging.getLogger(__name__)
 
 preamble = "\\documentclass{article} \n \
@@ -19,13 +21,18 @@ preamble = "\\documentclass{article} \n \
 
 
 
-APP_ID = os.environ.get('APP_ID')
-APP_KEY= os.environ.get('APP_KEY')
+def get_mathpix_credentials():
+    app_id = getattr(settings, 'APP_ID', None) or os.environ.get('APP_ID')
+    app_key = getattr(settings, 'APP_KEY', None) or os.environ.get('APP_KEY')
+    if not app_id or not app_key:
+        raise ImproperlyConfigured("Mathpix APP_ID and APP_KEY must be configured for PDF conversion.")
+    return app_id, app_key
 
 async def convert_pdf_file( pdf_path , format_out='mmd'):
+    app_id, app_key = get_mathpix_credentials()
     headers = {
-        "app_id": APP_ID,
-        "app_key": APP_KEY
+        "app_id": app_id,
+        "app_key": app_key
     }
 
     # Multipart form with file
@@ -44,10 +51,9 @@ async def convert_pdf_file( pdf_path , format_out='mmd'):
 
         if response.status_code == 200:
             job_id = response.json()["pdf_id"]
-            logger.info("✅ PDF submitted. Job ID:", job_id)
+            logger.info("PDF submitted. Job ID: %s", job_id)
         else:
-            logger.info("❌ Error:", response.status_code, response.text)
-            return None
+            raise RuntimeError(f"Mathpix PDF submission failed: {response.status_code} {response.text}")
 
         status_url =  f'https://api.mathpix.com/v3/converter/{job_id}'
         logger.info(f" Waiting for processing... from {status_url} ")
@@ -57,16 +63,17 @@ async def convert_pdf_file( pdf_path , format_out='mmd'):
             result = poll.json()
             status = result.get("status")
             if status == "completed":
-                logger.info("✅ PDF processed.")
+                logger.info("PDF processed.")
                 break
             elif status == "error":
-                logger.info("❌ Error:", result)
-                exit()
+                raise RuntimeError(f"Mathpix PDF processing failed: {result}")
             logger.info("...still processing...")
             time.sleep(2)
 
         result_url = f"https://api.mathpix.com/v3/pdf/{job_id}.{format_out}" 
         result = requests.get(result_url, headers=headers)
+        if result.status_code != 200:
+            raise RuntimeError(f"Mathpix result download failed: {result.status_code} {result.text}")
         s  = ( result.content ).decode('utf-8',errors='replace')
         s = re.sub(r'\\\(','$',s)
         s = re.sub(r'\\\)','$',s)
@@ -80,12 +87,7 @@ async def convert_pdf_file( pdf_path , format_out='mmd'):
         return s
         
 def mathpix( pdf_path, format_out='mmd' ):
-    try :
-        s = asyncio.run(convert_pdf_file(pdf_path ,format_out ))
-    except Exception as e :
-        s = f"Conversion error: {str(e)}"
-    #print(f"MATPIX S = {s}")
-    return s
+    return asyncio.run(convert_pdf_file(pdf_path ,format_out ))
 # Run it
 #s = asyncio.run(convert_pdf_file('./latex.pdf','tex'))
 #print(f"{s}")
