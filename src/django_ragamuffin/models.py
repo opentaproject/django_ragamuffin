@@ -170,6 +170,13 @@ def validate_file_extension(value):
     if ext not in ['.md','.txt','.pdf','.tex','.json','.jsonl']:
         raise ValidationError(f"Unsupported file extension '{ext}'.")
 
+def openai_upload_basename(src):
+    srcbase = Path(os.path.basename(src))
+    extension = srcbase.suffix.lstrip('.').lower()
+    if extension in ['pdf', 'jsonl']:
+        return srcbase.with_suffix('.json')
+    return srcbase.with_suffix('.' + extension)
+
 def hashed_upload_to(instance, filename):
     #dirname = '.'.join( instance.file.name.split('.')[:-1] ).upper()
     content = instance.file.read();
@@ -509,11 +516,7 @@ class OpenAIFile(models.Model) :
                 chunks = txt.encode()
             chunkdir = os.path.join( os.path.dirname( src ), 'chunks')
             os.makedirs( chunkdir, exist_ok=True )
-            srcbase = Path( os.path.basename(src) )
-            if extension == 'pdf' :
-                jbase = srcbase.with_suffix('.json')
-            else :
-                jbase = srcbase.with_suffix('.' + extension )
+            jbase = openai_upload_basename(src)
             dst = os.path.join( chunkdir, jbase )
             if chunks :
                 open( dst, "wb").write( chunks)
