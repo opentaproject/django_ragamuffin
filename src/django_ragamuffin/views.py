@@ -302,22 +302,25 @@ def query_view(request,subpath):
     elif 'filter' in request.POST.getlist('action' ) :
         response = redirect(f"/django_ragamuffin/query/{assistant.name}/")
     d = {'status' : 'pending' , 'result' : 'RESULT' }
-    if  user.is_staff : 
-        base_msgs = list( Message.objects.filter(thread__name=name) ) or []
-    else :
-        base_msgs = list( thread.thread_messages.all() ) or []
-    uname = thread.user.username if getattr(thread, "user", None) else ""
-    messages = []
-    for _mm in base_msgs:
-        m =  model_to_dict(_mm , fields=[f.name for f in _mm._meta.fields])
-        #if isinstance(_m, dict):
-        #    m = dict(_m)
-        m["username"] = _mm.username()
-        m["pk"] = _mm.pk
-        m["date"] = str( _mm.date)
-        if m['choice'] == None :
-            m['choice'] = 0;
-        messages.append(m)
+    def get_messages():
+        if  user.is_staff :
+            base_msgs = list( Message.objects.filter(thread__name=name) ) or []
+        else :
+            base_msgs = list( thread.thread_messages.all() ) or []
+        messages = []
+        for _mm in base_msgs:
+            m =  model_to_dict(_mm , fields=[f.name for f in _mm._meta.fields])
+            #if isinstance(_m, dict):
+            #    m = dict(_m)
+            m["username"] = _mm.username()
+            m["pk"] = _mm.pk
+            m["date"] = str( _mm.date)
+            if m['choice'] == None :
+                m['choice'] = 0;
+            messages.append(m)
+        return messages
+
+    messages = get_messages()
 
 
     if 'print' in request.POST.getlist('action') :
@@ -358,6 +361,7 @@ def query_view(request,subpath):
             response = f"{html}"
     else:
         form = QueryForm()
+    messages = get_messages()
     time_spent = int( ( time.time() - now  ) + 0.5 )
     keeps =  [ int(i) for i in keeps ]
     resolved_choices = [(i, choices[i]) for i in keeps]
