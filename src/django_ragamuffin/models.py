@@ -873,6 +873,13 @@ class Assistant( models.Model ):
         p = '/'.join( self.name.split('.') )
         return p
 
+    def base(self):
+        return self.name.split('.')[0]
+
+    def upload_dir_for_content(self, filename, content, src):
+        name = get_openai_dir(filename, content, src)
+        return os.path.join(self.base(), name)
+
     def get_all_threads(self) :
         threads = Thread.objects.filter(name=self.name).all()
         return threads
@@ -882,9 +889,10 @@ class Assistant( models.Model ):
         #name = '.'.join( filename.split('.')[:-1])
         #name = name.upper()
         content = uploaded_file.read();
-        name = get_openai_dir( filename, content , "SRC1" )
+        upload_dir = self.upload_dir_for_content(filename, content, "SRC1")
+        name = os.path.basename(upload_dir)
         ofilename = filename
-        filename = f"{name}/{filename}"
+        filename = os.path.join(upload_dir, filename)
         #print(f"NAME={name} FILENAME = {filename}")
         old_files = self.files();
         opkd = None
@@ -897,7 +905,7 @@ class Assistant( models.Model ):
         # FileSystemStorage.url() already includes MEDIA_URL; avoid double-prefixing.
         file_url = upload_storage.url(filename)
         src = settings.OPENAI_UPLOAD_STORAGE + '/' + filename
-        t1 = upload_or_retrieve_openai_file( name, src )
+        t1 = upload_or_retrieve_openai_file( upload_dir, src )
         self.add_raw_file( t1 )
         #print(f"T1PK = {t1.pk}")
         if opkd and not t1.pk  == opkd :
@@ -911,7 +919,7 @@ class Assistant( models.Model ):
         """Copy a local file into storage and register it.
 
         - `full_path`: absolute path to a local file to import.
-        - Copies the file into `OPENAI_UPLOAD_STORAGE/<stem>/<basename>`
+        - Copies the file into `OPENAI_UPLOAD_STORAGE/<assistant_base>/<hash>/<basename>`
           (matching the pattern used by `add_file`).
         - Returns a media URL to the stored file.
         """
@@ -937,9 +945,9 @@ class Assistant( models.Model ):
         with open(full_path , "rb") as f:
             content = f.read()
         #print(f"DID READ THE FILE")
-        name = get_openai_dir( filename, content , "SRC2")
-        stem = '.'.join(base.split('.')[:-1]) or base
-        relpath = f"{name}/{base}"
+        upload_dir = self.upload_dir_for_content(filename, content, "SRC2")
+        name = os.path.basename(upload_dir)
+        relpath = os.path.join(upload_dir, base)
         ##### FIX_PATH 
         #print(f"SELF_FILES = {self.files()}")
         #print(f"NAME = {name}")
@@ -951,7 +959,7 @@ class Assistant( models.Model ):
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             shutil.copy2(full_path, dst)
             delete_old_files_with_same_name( filename)
-            t1 = upload_or_retrieve_openai_file(stem, dst)
+            t1 = upload_or_retrieve_openai_file(upload_dir, dst)
             self.add_raw_file(t1)
             if not t1.name == filename :
                 #print(f"FIX NAME ")

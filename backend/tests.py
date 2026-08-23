@@ -49,6 +49,16 @@ class OpenAI(TestCase):
         with self.assertRaises(ValidationError):
             validate_file_extension(bad_file)
 
+    def test_assistant_upload_dir_includes_base(self):
+        content = b"assistant-scoped file content"
+        assistant = Assistant(name="nn.234234")
+
+        expected_hash = hashlib.md5(content).hexdigest()
+        self.assertEqual(
+            assistant.upload_dir_for_content("notes.txt", content, "TEST"),
+            os.path.join("nn", expected_hash),
+        )
+
     @pytest.mark.django_db
     def create_testfile_from_string( self, s , name ):
         print(f"TEST1")
