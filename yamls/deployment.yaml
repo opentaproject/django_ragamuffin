@@ -88,7 +88,7 @@ spec:
               #python manage.py runserver
 
         - name: nginx
-          image: 'opentaproject/ragamuffin-nginx:latest'
+          image: 'opentaproject/ragamuffin-nginx:v20260824'
           imagePullPolicy: Always
           ports: 
             - containerPort: 8080

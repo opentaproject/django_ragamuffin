@@ -180,6 +180,10 @@ def openai_upload_basename(src):
 def upload_relative_dir(file_path):
     return os.path.relpath(os.path.dirname(file_path), settings.OPENAI_UPLOAD_STORAGE)
 
+def upload_processed_relative_path(file_path):
+    processed_name = openai_upload_basename(file_path).name
+    return os.path.join(upload_relative_dir(file_path), 'chunks', processed_name)
+
 def hashed_upload_to(instance, filename):
     #dirname = '.'.join( instance.file.name.split('.')[:-1] ).upper()
     content = instance.file.read();
@@ -459,6 +463,9 @@ class OpenAIClient( OpenAI ):
             logger.info(f"DELETE GLOBALLY {file_id}")
             self.files.delete(file_id)
             return True
+        except NotFoundError as err:
+            logger.warning(f"REMOTE FILE ALREADY DELETED {file_id}: {str(err)}")
+            return False
         except Exception as err :
             logger.error(f"GLOBAL DELETION ERROR {str(err)}")
             raise
@@ -510,7 +517,7 @@ class OpenAIFile(models.Model) :
             src = self.file.path
             extension = src.split('.')[-1].lower();
             if extension in ['json', 'jsonl']:
-                chunks = open(src,'rb').read()
+                chunks = None
             elif extension == 'pdf' :
                 txt = mathpix( src ,format_out='mmd')
                 chunks = chunk_mmd(txt)
@@ -521,10 +528,10 @@ class OpenAIFile(models.Model) :
             os.makedirs( chunkdir, exist_ok=True )
             jbase = openai_upload_basename(src)
             dst = os.path.join( chunkdir, jbase )
-            if chunks :
-                open( dst, "wb").write( chunks)
-            else :
+            if chunks is None:
                 shutil.copy2(src, dst)
+            else:
+                open( dst, "wb").write( chunks)
             data = self.file.read()
             self.checksum = hashlib.md5(data).hexdigest()
             uploaded_file = client.files.create( file=open( dst, "rb"), purpose="assistants"  )
@@ -572,13 +579,12 @@ def custom_delete_openaifile(sender, instance, **kwargs):
                 vs.save()
                 new_checksum = vs.checksum
                 assert not new_checksum == old_checksum, f'CHECKSUMS UNCHANGED {old_checksum} for {vector_store_id}'
+            client.delete_file_globally( file_id )
 
-    try :
-        client.delete_file_globally( file_id )
+    try:
         shutil.rmtree(instance.path)
-    except Exception as e:
-        logger.error(f" FILE/ {instance.path} DOES NOT EXIST")
-        raise
+    except FileNotFoundError:
+        logger.warning(f"LOCAL FILE PATH ALREADY DELETED {instance.path}")
 
 
 
@@ -1201,8 +1207,8 @@ class Assistant( models.Model ):
         f = []
         for v in vs :
             for vf in v.files.all():
-                d = upload_relative_dir(vf.file.path)
-                f.append( ( vf.pk , vf.name , vf.checksum, d ) )
+                path = upload_processed_relative_path(vf.file.path)
+                f.append( ( vf.pk , vf.name , vf.checksum, path ) )
         return f
 
     def local_files( self, *args, **kwargs ):
@@ -1210,8 +1216,8 @@ class Assistant( models.Model ):
         f = []
         for v in vs :
             for vf in v.files.all():
-                d = upload_relative_dir(vf.file.path)
-                f.append( ( vf.pk , vf.name ,vf.checksum, d ) )
+                path = upload_processed_relative_path(vf.file.path)
+                f.append( ( vf.pk , vf.name ,vf.checksum, path ) )
         return f
 
 
