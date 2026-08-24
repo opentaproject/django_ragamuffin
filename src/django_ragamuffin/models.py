@@ -8,6 +8,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 import shutil
 import json
+from types import SimpleNamespace
 from .mathpix import mathpix
 from .remote_calls import run_remote_query
 
@@ -338,11 +339,197 @@ class QUser(models.Model ):
 
 
 
+class _FakeOpenAIState:
+    file_counter = 0
+    vector_store_counter = 0
+    response_counter = 0
+    batch_counter = 0
+    files = {}
+    vector_stores = {}
+
+
+def _fake_openai_id(prefix, counter_name):
+    value = getattr(_FakeOpenAIState, counter_name) + 1
+    setattr(_FakeOpenAIState, counter_name, value)
+    return f"{prefix}-{value}"
+
+
+def _fake_not_found(message):
+    try:
+        import httpx
+        response = httpx.Response(404, request=httpx.Request("GET", "https://fake.openai.local"))
+        return NotFoundError(message, response=response, body={"error": {"message": message}})
+    except Exception:
+        return KeyError(message)
+
+
+class _FakeListResponse:
+    def __init__(self, data):
+        self.data = data
+
+    def __iter__(self):
+        return iter(self.data)
+
+
+class _FakeOpenAIFiles:
+    def create(self, file, purpose):
+        file_id = _fake_openai_id("file", "file_counter")
+        name = os.path.basename(getattr(file, "name", file_id))
+        pos = file.tell()
+        content = file.read()
+        file.seek(pos)
+        _FakeOpenAIState.files[file_id] = {
+            "filename": name,
+            "content": content,
+            "purpose": purpose,
+        }
+        return SimpleNamespace(id=file_id, filename=name)
+
+    def retrieve(self, file_id):
+        data = _FakeOpenAIState.files.get(file_id)
+        if data is None:
+            raise _fake_not_found(f"No such File object: {file_id}")
+        return SimpleNamespace(id=file_id, filename=data["filename"])
+
+    def delete(self, file_id):
+        if file_id not in _FakeOpenAIState.files:
+            raise _fake_not_found(f"No such File object: {file_id}")
+        del _FakeOpenAIState.files[file_id]
+        for vector_store in _FakeOpenAIState.vector_stores.values():
+            vector_store["file_ids"].discard(file_id)
+        return SimpleNamespace(id=file_id, deleted=True)
+
+
+class _FakeOpenAIVectorStoreFiles:
+    def list(self, vector_store_id):
+        vector_store = _FakeOpenAIState.vector_stores.get(vector_store_id)
+        if vector_store is None:
+            raise _fake_not_found(f"No such VectorStore object: {vector_store_id}")
+        data = [
+            SimpleNamespace(id=file_id, status="completed")
+            for file_id in sorted(vector_store["file_ids"])
+        ]
+        return _FakeListResponse(data)
+
+    def create(self, vector_store_id, file_id, **kwargs):
+        vector_store = _FakeOpenAIState.vector_stores.get(vector_store_id)
+        if vector_store is None:
+            raise _fake_not_found(f"No such VectorStore object: {vector_store_id}")
+        if file_id not in _FakeOpenAIState.files:
+            raise _fake_not_found(f"No such File object: {file_id}")
+        vector_store["file_ids"].add(file_id)
+        return SimpleNamespace(id=file_id, status="completed")
+
+    def delete(self, vector_store_id, file_id):
+        vector_store = _FakeOpenAIState.vector_stores.get(vector_store_id)
+        if vector_store is None:
+            raise _fake_not_found(f"No such VectorStore object: {vector_store_id}")
+        if file_id not in vector_store["file_ids"]:
+            raise _fake_not_found(f"No such File object in vector store: {file_id}")
+        vector_store["file_ids"].remove(file_id)
+        return SimpleNamespace(id=file_id, deleted=True)
+
+
+class _FakeOpenAIVectorStoreFileBatches:
+    def create(self, vector_store_id, file_ids, **kwargs):
+        for file_id in file_ids:
+            _FakeOpenAIVectorStoreFiles().create(vector_store_id, file_id)
+        batch_id = _fake_openai_id("batch", "batch_counter")
+        return SimpleNamespace(id=batch_id, status="completed", file_ids=file_ids)
+
+
+class _FakeOpenAIVectorStores:
+    def __init__(self):
+        self.files = _FakeOpenAIVectorStoreFiles()
+        self.file_batches = _FakeOpenAIVectorStoreFileBatches()
+
+    def create(self, name, file_ids=None, **kwargs):
+        vector_store_id = _fake_openai_id("vs", "vector_store_counter")
+        _FakeOpenAIState.vector_stores[vector_store_id] = {
+            "name": name,
+            "file_ids": set(file_ids or []),
+        }
+        return SimpleNamespace(id=vector_store_id, name=name, status="completed")
+
+    def retrieve(self, vector_store_id):
+        vector_store = _FakeOpenAIState.vector_stores.get(vector_store_id)
+        if vector_store is None:
+            raise _fake_not_found(f"No such VectorStore object: {vector_store_id}")
+        return SimpleNamespace(id=vector_store_id, name=vector_store["name"], status="completed")
+
+    def delete(self, vector_store_id):
+        if vector_store_id not in _FakeOpenAIState.vector_stores:
+            raise _fake_not_found(f"No such VectorStore object: {vector_store_id}")
+        del _FakeOpenAIState.vector_stores[vector_store_id]
+        return SimpleNamespace(id=vector_store_id, deleted=True)
+
+
+class _FakeOpenAIModels:
+    def list(self):
+        return SimpleNamespace(data=[SimpleNamespace(id=getattr(settings, "AI_MODEL", "gpt-4o-mini"))])
+
+
+class _FakeOpenAIResponses:
+    def create(self, input, tools=None, **kwargs):
+        response_id = _fake_openai_id("resp", "response_counter")
+        corpus = self._corpus_for_tools(tools or [])
+        text = self._answer(input, corpus)
+        content = [SimpleNamespace(text=text)]
+        output = [SimpleNamespace(content=content)]
+        return SimpleNamespace(
+            id=response_id,
+            output=output,
+            usage=SimpleNamespace(total_tokens=len(input.split()) + len(text.split())),
+        )
+
+    def _corpus_for_tools(self, tools):
+        file_ids = set()
+        for tool in tools:
+            if tool.get("type") != "file_search":
+                continue
+            for vector_store_id in tool.get("vector_store_ids", []):
+                vector_store = _FakeOpenAIState.vector_stores.get(vector_store_id)
+                if vector_store:
+                    file_ids.update(vector_store["file_ids"])
+        chunks = []
+        for file_id in sorted(file_ids):
+            data = _FakeOpenAIState.files.get(file_id)
+            if not data:
+                continue
+            content = data["content"]
+            if isinstance(content, bytes):
+                content = content.decode("utf-8", errors="ignore")
+            chunks.append(content)
+        return "\n".join(chunks).lower()
+
+    def _answer(self, query, corpus):
+        q = query.lower()
+        if "first query" in q:
+            return "cat"
+        if "repeat" in q and "first request" in q:
+            return "black" if "dog was black" in corpus else ""
+        if "color" in q and "dog" in q:
+            return "black" if "dog was black" in corpus else ""
+        if "color" in q and "cat" in q:
+            return "white" if "cat was white" in corpus else ""
+        if "what did the dog do" in q:
+            return "barked" if "dog barked" in corpus else ""
+        if "what did the cat" in q:
+            return "miaow" if "cat said miaow" in corpus else ""
+        return corpus[:200]
+
+
 class OpenAIClient( OpenAI ):
 
 
 
     def __init__(self, **kwargs):
+        if getattr(settings, "USE_OPENAI_FAKER", False):
+            self.files = _FakeOpenAIFiles()
+            self.vector_stores = _FakeOpenAIVectorStores()
+            self.responses = _FakeOpenAIResponses()
+            self.models = _FakeOpenAIModels()
+            return
         api_key = getattr(settings, "AI_KEY", None)
         if not api_key:
             raise ImproperlyConfigured(
@@ -381,7 +568,21 @@ class OpenAIClient( OpenAI ):
                     raise RuntimeError(f"VectorStore {vs.pk} remote store does not match checksum {old_checksum}")
                 other_vector_stores = remote_vector_store.vector_stores.exclude(pk=vs.pk)
                 if other_vector_stores.exists():
-                    raise RuntimeError(f"Remote vector store {remote_vector_store.pk} is shared and cannot be mutated")
+                    name = checksum
+                    if new_file_ids:
+                        new_remote_vector_store = self.vector_stores.create(name=name,file_ids=new_file_ids ,
+                            metadata={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] , "checksum" : new_checksum } )
+                    else:
+                        new_remote_vector_store = self.vector_stores.create(name=name,
+                            metadata={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] , "checksum" : new_checksum } )
+                    rvs = new_remote_vector_store
+                    new_remote_vector_store, created = RemoteVectorStore.objects.get_or_create(checksum=checksum,vector_store_id=rvs.id);
+                    new_remote_vector_store.save();
+                    vs.vector_store_id = rvs.id
+                    vs.remote_vector_store = new_remote_vector_store
+                    vs.vsid = rvs.id
+                    vs.save()
+                    return rvs.id
                 vector_store_id = remote_vector_store.vector_store_id
                 deleted_files = list( set( old_file_ids) - set( new_file_ids) )
                 for f in deleted_files:

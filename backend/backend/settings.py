@@ -86,15 +86,16 @@ WSGI_APPLICATION = "backend.wsgi.application"
 #    }
 #}
 
-PGDATABASE = os.environ.get('PGDATABASE')
+PGDATABASE = os.environ.get('PGDATABASE', 'postgres')
 PGDATABASE_NAME = os.environ.get('PGDATABASE_NAME','default')
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 SUBDOMAIN = os.environ.get('SUBDOMAIN','query')
 ATOMIC_REQUESTS = False
 PGHOST = os.environ.get("PGHOST", "localhost")
-PGPASSWORD = os.environ.get("PGPASSWORD")
-PGUSER = os.environ.get("PGUSER")
-PGDATABASE = os.environ.get('PGDATABASE')
+PGPORT = os.environ.get("PGPORT", "5432")
+PGPASSWORD = os.environ.get("PGPASSWORD", "postgres")
+PGUSER = os.environ.get("PGUSER", "postgres")
+PGDATABASE = os.environ.get('PGDATABASE', 'postgres')
 PGDATABASE_NAME = os.environ.get('PGDATABASE_NAME','default')
 
 
@@ -109,7 +110,7 @@ DATABASES = {
         "USER": PGUSER,
         "PASSWORD": PGPASSWORD,
         "HOST": PGHOST,
-        "PORT": 5432,
+        "PORT": PGPORT,
         "ATOMIC_REQUESTS": ATOMIC_REQUESTS,
     },
     'django_ragamuffin': {
@@ -117,8 +118,8 @@ DATABASES = {
         'NAME': DJANGO_RAGAMUFFIN_DB,
         'USER': PGUSER,
         'PASSWORD': PGPASSWORD,
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'HOST': PGHOST,
+        'PORT': PGPORT,
         'ATOMIC_REQUESTS' : ATOMIC_REQUESTS
     }
 }

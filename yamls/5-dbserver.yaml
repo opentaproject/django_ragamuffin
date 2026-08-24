@@ -81,7 +81,7 @@ metadata:
   labels:
     run: ${SERVER_PREFIX}db-server
 spec:
-  #type: NodePort
+  type: NodePort
   ports:
     - name: "port-5432"
       protocol: TCP

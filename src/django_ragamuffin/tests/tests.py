@@ -5,28 +5,28 @@ import hashlib
 import django
 import time
 import os
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import ObjectDoesNotExist
 import tiktoken
-from django_ragamuffin.utils import print_messages
 import openai
 from openai import OpenAI
 from django.conf import settings
 import pytest
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 
 
 django.setup()
-from django_ragamuffin.models import OpenAIFile, VectorStore, Assistant,  Thread,  delete_remote_vector_stores, dump_remote_vector_stores, QUser
+from django_ragamuffin.utils import print_messages
+from django_ragamuffin.models import OpenAIClient, OpenAIFile, VectorStore, Assistant,  Thread,  delete_remote_vector_stores, dump_remote_vector_stores, QUser
 from django.contrib.auth.models import User
 
 from django.conf import settings
 settings.API_APP = 'test'
 
 model = 'gpt-4o-mini'
-client = OpenAI() 
+client = OpenAIClient()
 import string
 import random
 

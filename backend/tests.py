@@ -19,14 +19,14 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 
 
 django.setup()
-from django_ragamuffin.models import OpenAIFile, VectorStore, Assistant,  Thread,  delete_remote_vector_stores, dump_remote_vector_stores, QUser, validate_file_extension, openai_upload_basename, upload_original_relative_path, upload_processed_relative_path
+from django_ragamuffin.models import OpenAIClient, OpenAIFile, VectorStore, Assistant,  Thread,  delete_remote_vector_stores, dump_remote_vector_stores, QUser, validate_file_extension, openai_upload_basename, upload_original_relative_path, upload_processed_relative_path
 from django.contrib.auth.models import User
 
 from django.conf import settings
 settings.API_APP = 'test'
 
 model = 'gpt-4o-mini'
-client = OpenAI() 
+client = OpenAIClient()
 import string
 import random
 

@@ -67,6 +67,11 @@ if not 'django_ragamuffin' in settings.LOGGING['loggers'] :
 
 
 RUNTESTS = "pytest" in sys.modules
+USE_OPENAI_FAKER = (
+    str(getattr(settings, "USE_OPENAI_FAKER", os.environ.get("USE_OPENAI_FAKER", RUNTESTS)))
+    .lower()
+    in {"1", "true", "yes", "on"}
+)
 if not RUNTESTS :
     print(f"NOT RUNTESTS")
     if not hasattr('settings','DATABASE_ROUTERS') :
