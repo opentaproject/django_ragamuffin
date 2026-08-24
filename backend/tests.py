@@ -19,7 +19,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 
 
 django.setup()
-from django_ragamuffin.models import OpenAIFile, VectorStore, Assistant,  Thread,  delete_remote_vector_stores, dump_remote_vector_stores, QUser, validate_file_extension, openai_upload_basename
+from django_ragamuffin.models import OpenAIFile, VectorStore, Assistant,  Thread,  delete_remote_vector_stores, dump_remote_vector_stores, QUser, validate_file_extension, openai_upload_basename, upload_relative_dir
 from django.contrib.auth.models import User
 
 from django.conf import settings
@@ -58,6 +58,10 @@ class OpenAI(TestCase):
             assistant.upload_dir_for_content("notes.txt", content, "TEST"),
             os.path.join("nn", expected_hash),
         )
+
+    def test_upload_relative_dir_includes_nested_base(self):
+        file_path = os.path.join(settings.OPENAI_UPLOAD_STORAGE, "nn", "abc123", "records.json")
+        self.assertEqual(upload_relative_dir(file_path), os.path.join("nn", "abc123"))
 
     @pytest.mark.django_db
     def create_testfile_from_string( self, s , name ):

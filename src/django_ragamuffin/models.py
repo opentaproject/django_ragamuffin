@@ -177,6 +177,9 @@ def openai_upload_basename(src):
         return srcbase.with_suffix('.json')
     return srcbase.with_suffix('.' + extension)
 
+def upload_relative_dir(file_path):
+    return os.path.relpath(os.path.dirname(file_path), settings.OPENAI_UPLOAD_STORAGE)
+
 def hashed_upload_to(instance, filename):
     #dirname = '.'.join( instance.file.name.split('.')[:-1] ).upper()
     content = instance.file.read();
@@ -1198,7 +1201,7 @@ class Assistant( models.Model ):
         f = []
         for v in vs :
             for vf in v.files.all():
-                d = vf.file.path.split('/')[-2] 
+                d = upload_relative_dir(vf.file.path)
                 f.append( ( vf.pk , vf.name , vf.checksum, d ) )
         return f
 
@@ -1207,7 +1210,7 @@ class Assistant( models.Model ):
         f = []
         for v in vs :
             for vf in v.files.all():
-                d = vf.file.path.split('/')[-2] 
+                d = upload_relative_dir(vf.file.path)
                 f.append( ( vf.pk , vf.name ,vf.checksum, d ) )
         return f
 

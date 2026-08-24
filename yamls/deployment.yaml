@@ -24,7 +24,7 @@ spec:
 
       containers:
         - name: ragamuffin
-          image: 'opentaproject/ragamuffin:latest'
+          image: 'opentaproject/ragamuffin:v20260824'
           imagePullPolicy: Always
           volumeMounts:
               - mountPath: "/subdomain-data"
