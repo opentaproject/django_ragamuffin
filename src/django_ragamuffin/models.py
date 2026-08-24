@@ -350,8 +350,10 @@ class OpenAIClient( OpenAI ):
             )
         super().__init__(api_key=api_key, **kwargs)
 
-    def get_or_update_remote_vector_store(self, vs , old_checksum=None,old_file_ids=[]):
+    def get_or_update_remote_vector_store(self, vs , old_checksum=None, old_file_ids=None):
         client = OpenAIClient()
+        if old_file_ids is None:
+            old_file_ids = []
         new_checksum = vs.get_checksum();
         checksum = vs.get_checksum()
         new_checksum = checksum
@@ -371,26 +373,35 @@ class OpenAIClient( OpenAI ):
             return new_vector_store_id
         else :
             remote_vector_stores = RemoteVectorStore.objects.filter(checksum=old_checksum).all()
-            if  False and remote_vector_stores :
+            if old_checksum and remote_vector_stores :
+                if len(remote_vector_stores) > 1:
+                    raise RuntimeError(f"Multiple remote vector stores found for checksum {old_checksum}")
                 remote_vector_store = remote_vector_stores[0]
+                if vs.remote_vector_store_id and vs.remote_vector_store_id != remote_vector_store.pk:
+                    raise RuntimeError(f"VectorStore {vs.pk} remote store does not match checksum {old_checksum}")
+                other_vector_stores = remote_vector_store.vector_stores.exclude(pk=vs.pk)
+                if other_vector_stores.exists():
+                    raise RuntimeError(f"Remote vector store {remote_vector_store.pk} is shared and cannot be mutated")
                 vector_store_id = remote_vector_store.vector_store_id
                 deleted_files = list( set( old_file_ids) - set( new_file_ids) )
                 for f in deleted_files:
                     try :
                         self.vector_stores.files.delete(vector_store_id=vector_store_id, file_id=f)
-                        #remote_wait_for_vector_store_ready(self, vector_store_id, timeout=settings.MAXWAIT)
-                    except client.NotFoundError as e:
-                        logger.error(f"File {f} not found in vector store {vector_store_id}: {e}")
+                    except NotFoundError as e:
+                        logger.warning(f"File {f} not found in vector store {vector_store_id}: {e}")
                         continue
                 added_files = list( set( new_file_ids) - set( old_file_ids) )
                 vs.checksum = new_checksum
                 if not added_files == []:
                     self.vector_stores.file_batches.create( vector_store_id=vector_store_id, file_ids=added_files, 
-                        metadata={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] , "checksum" : new_checksum } )
-                    #remote_wait_for_vector_store_ready(self, vector_store_id, timeout=settings.MAXWAIT)
+                        attributes={"api_app" : settings.API_APP, "api_key": settings.AI_KEY[-8:] , "checksum" : new_checksum } )
+                remote_wait_for_vector_store_ready(self, vector_store_id, timeout=settings.MAXWAIT)
                 remote_vector_store.checksum = new_checksum;
                 new_vector_store_id = remote_vector_store.vector_store_id
                 remote_vector_store.save();
+                vs.remote_vector_store = remote_vector_store
+                vs.vsid = new_vector_store_id
+                vs.save()
 
             else :
                 name = checksum
@@ -469,9 +480,6 @@ class OpenAIClient( OpenAI ):
         except NotFoundError as err:
             logger.warning(f"REMOTE FILE ALREADY DELETED {file_id}: {str(err)}")
             return False
-        except Exception as err :
-            logger.error(f"GLOBAL DELETION ERROR {str(err)}")
-            raise
 
     def vector_stores_files_delete( self, vs, vector_store_id, file_id ):
         assert vs.get_vector_store_id() == vector_store_id, "FAIL5"
@@ -1674,7 +1682,7 @@ def handle_files_changed(sender, instance, action, reverse, model, pk_set, **kwa
         instance._old_file_ids =  instance.file_ids() # [i[0] for i in instance.files.values_list('file_ids', flat=True)  ]
         instance._old_checksum = instance.get_checksum();
 
-    elif action == "post_add" or action == 'post_remove' :
+    elif action in {"post_add", "post_remove", "post_clear"}:
         old_file_ids  =  getattr(instance, '_old_file_ids', [] )
         old_checksum  =  getattr(instance, '_old_checksum', None);
         instance.checksum = instance.get_checksum();
