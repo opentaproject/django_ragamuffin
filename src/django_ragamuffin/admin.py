@@ -2,6 +2,8 @@ from django.contrib import admin
 from django.db.models import Count, OuterRef, Subquery
 from django.conf import settings
 from django import forms
+from django.utils.encoding import filepath_to_uri
+from django.utils.html import format_html
 from .models import (
     OpenAIFile,
     VectorStore,
@@ -12,6 +14,7 @@ from .models import (
     Mode,
     ModeChoice,
     Message,
+    upload_processed_relative_path,
 )
 
 
@@ -49,8 +52,21 @@ class QUserAdmin(admin.ModelAdmin):
 
 @admin.register(OpenAIFile)
 class OpenAIFileAdmin(admin.ModelAdmin):
-    list_display = ('pk', 'name', 'file_ids', 'checksum', 'date')
-    readonly_fields = ('checksum','name','path','file_ids')
+    list_display = ('pk', 'name', 'processed_file_link', 'file_ids', 'checksum', 'date')
+    readonly_fields = ('processed_file_link', 'checksum','name','path','file_ids')
+
+    def processed_file_link(self, obj):
+        if not obj.pk or not obj.file:
+            return ""
+        path = filepath_to_uri(upload_processed_relative_path(obj.file.path))
+        return format_html('<a href="/django_ragamuffin/media/{}">{}</a>', path, obj.name)
+
+    processed_file_link.short_description = "Processed file"
+
+    def get_exclude(self, request, obj=None):
+        if obj:
+            return ('file',)
+        return super().get_exclude(request, obj)
 
 
 @admin.register(VectorStore)
