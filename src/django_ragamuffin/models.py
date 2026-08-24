@@ -180,6 +180,9 @@ def openai_upload_basename(src):
 def upload_relative_dir(file_path):
     return os.path.relpath(os.path.dirname(file_path), settings.OPENAI_UPLOAD_STORAGE)
 
+def upload_original_relative_path(file_path):
+    return os.path.join(upload_relative_dir(file_path), os.path.basename(file_path))
+
 def upload_processed_relative_path(file_path):
     processed_name = openai_upload_basename(file_path).name
     return os.path.join(upload_relative_dir(file_path), 'chunks', processed_name)
@@ -1207,7 +1210,7 @@ class Assistant( models.Model ):
         f = []
         for v in vs :
             for vf in v.files.all():
-                path = upload_processed_relative_path(vf.file.path)
+                path = upload_original_relative_path(vf.file.path)
                 f.append( ( vf.pk , vf.name , vf.checksum, path ) )
         return f
 
@@ -1216,7 +1219,7 @@ class Assistant( models.Model ):
         f = []
         for v in vs :
             for vf in v.files.all():
-                path = upload_processed_relative_path(vf.file.path)
+                path = upload_original_relative_path(vf.file.path)
                 f.append( ( vf.pk , vf.name ,vf.checksum, path ) )
         return f
 

@@ -19,7 +19,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 
 
 django.setup()
-from django_ragamuffin.models import OpenAIFile, VectorStore, Assistant,  Thread,  delete_remote_vector_stores, dump_remote_vector_stores, QUser, validate_file_extension, openai_upload_basename, upload_processed_relative_path
+from django_ragamuffin.models import OpenAIFile, VectorStore, Assistant,  Thread,  delete_remote_vector_stores, dump_remote_vector_stores, QUser, validate_file_extension, openai_upload_basename, upload_original_relative_path, upload_processed_relative_path
 from django.contrib.auth.models import User
 
 from django.conf import settings
@@ -64,6 +64,13 @@ class OpenAI(TestCase):
         self.assertEqual(
             upload_processed_relative_path(file_path),
             os.path.join("nn", "abc123", "chunks", "records.json"),
+        )
+
+    def test_upload_original_path_uses_parent_dir(self):
+        file_path = os.path.join(settings.OPENAI_UPLOAD_STORAGE, "nn", "abc123", "records.pdf")
+        self.assertEqual(
+            upload_original_relative_path(file_path),
+            os.path.join("nn", "abc123", "records.pdf"),
         )
 
     def test_upload_processed_path_normalizes_jsonl(self):
