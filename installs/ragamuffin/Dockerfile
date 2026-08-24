@@ -1,11 +1,11 @@
-FROM python:3.11.7-bullseye
+FROM python:3.14-trixie
 RUN apt update -y && apt install -y curl gnupg ca-certificates
 
 RUN curl https://www.postgresql.org/media/keys/ACCC4CF8.asc \
     | gpg --dearmor \
     | tee /etc/apt/trusted.gpg.d/apt.postgresql.org.gpg >/dev/null
 
-RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ bullseye-pgdg main" > /etc/apt/sources.list.d/postgresql.list'
+RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ trixie-pgdg main" > /etc/apt/sources.list.d/postgresql.list'
 
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 
