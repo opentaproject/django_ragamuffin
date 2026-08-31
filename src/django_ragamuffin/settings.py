@@ -5,7 +5,7 @@ from openai import OpenAI
 from openai import OpenAIError
 import re
 
-DEFAULT_AI_MODEL = 'gpt-5.4-mini'
+DEFAULT_AI_MODEL = None
 
 def get_latest_mini_model(default=DEFAULT_AI_MODEL) :
     api_key = getattr(settings, "OPENAI_API_KEY", None) or os.environ.get("OPENAI_API_KEY")
@@ -36,7 +36,7 @@ def get_latest_mini_model(default=DEFAULT_AI_MODEL) :
     return sorted(mini_models, key=model_sort_key)[-1]
 
 AI_KEY =  (getattr(settings, "OPENAI_API_KEY", None) or os.environ.get("OPENAI_API_KEY", None))
-AI_MODEL = (getattr(settings, 'AI_MODEL', None) or os.environ.get('AI_MODEL', DEFAULT_AI_MODEL ))
+AI_MODEL = getattr(settings, 'AI_MODEL', None) or os.environ.get('AI_MODEL')
 # Default to '/subdomain-data/query' to keep a single source of truth.
 # Projects can override this in their settings if needed.
 OPENAI_UPLOAD_STORAGE =  (getattr(settings, "OPENAI_UPLOAD_STORAGE", None) or os.environ.get("OPENAI_UPLOAD_STORAGE", '/subdomain-data/query'))
@@ -87,7 +87,7 @@ if APP_KEY == None or APP_ID == None :
 DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 CHATGPT_TIMEOUT = 240
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
-USE_CHATGPT =  getattr(settings, "USE_CHATGPT", None) or os.environ.get("USE_CHATGPT", False) == 'True'
+USE_CHATGPT = bool(getattr(settings, "USE_CHATGPT", False) and AI_MODEL and DJANGO_RAGAMUFFIN_DB)
 DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 APP_KEY = (getattr(settings, 'APP_KEY', None) or os.environ.get('APP_KEY', None))
 APP_ID = (getattr(settings, 'APP_ID', None) or os.environ.get('APP_ID', None))
@@ -103,7 +103,7 @@ if hasattr(settings,'EFFORT' ) :
     EFFORT = settings.EFFORT
 else :
     EFFORT = 'medium'
-if not RUNTESTS :
+if not RUNTESTS and DJANGO_RAGAMUFFIN_DB:
     settings.DATABASES.update({
         'django_ragamuffin': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -118,3 +118,5 @@ if not RUNTESTS :
 settings.INSTALLED_APPS.append('django.contrib.humanize')
 
 print(f"PGHOST = {PGHOST}")
+print(f"DJANGO_RAGAMUFFIN_DB = {DJANGO_RAGAMUFFIN_DB or '<not set>'}")
+print(f"AI_MODEL = {AI_MODEL or '<not set>'}")

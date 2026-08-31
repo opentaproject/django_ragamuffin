@@ -210,7 +210,16 @@ def edit_assistant(request, pk):
             form.save()
             return redirect('edit_assistant', pk=assistant.pk)  # or another success URL
     #print(f"FORM_CUSTOM_DATA = {form.custom_data}")
-    return render(request, 'django_ragamuffin/edit_assistant.html', {'form': form, 'assistant': assistant, 'custom_data' : form.custom_data  })
+    ragamuffin_db = settings.DATABASES.get('django_ragamuffin', {})
+    context = {
+        'form': form,
+        'assistant': assistant,
+        'custom_data': form.custom_data,
+        'ragamuffin_database': ragamuffin_db.get('NAME') or '<not set>',
+        'ragamuffin_database_alias': 'django_ragamuffin',
+        'ai_model': getattr(settings, 'AI_MODEL', None) or '<not set>',
+    }
+    return render(request, 'django_ragamuffin/edit_assistant.html', context)
 
 
 

@@ -239,20 +239,21 @@ def create_or_retrieve_thread( assistant, name, user ) :
 
 
 
-def upload_or_retrieve_openai_file( name ,src ):
+def upload_or_retrieve_openai_file(name, src):
     #print(f"UPLOAD_OR_RETRIEVE {name} {src}")
-    os.makedirs( os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), exist_ok=True )
-    dst = os.path.join(os.path.join( settings.OPENAI_UPLOAD_STORAGE, name ), src)
-    name = dst.split('/')[-1];
+    destination_dir = os.path.join(settings.OPENAI_UPLOAD_STORAGE, name)
+    os.makedirs(destination_dir, exist_ok=True)
+    dst = os.path.join(destination_dir, os.path.basename(src))
+    file_name = os.path.basename(dst)
     #print(f"UPLOAD NAME = {name}")
     #print(f"UPLOAD_OR_RETRIEVE {name} {src} {dst} ")
-    p = '/'.join( src.split('/')[0:-1] )
+    p = os.path.dirname(dst)
     ts = OpenAIFile.objects.filter(path=p)
     if not ts :
-        if not src == dst :
+        if os.path.abspath(src) != os.path.abspath(dst):
             shutil.copy2(src, dst)
         t1 = OpenAIFile(file=dst)
-        t1.name = name
+        t1.name = file_name
         t1.save();
     else :
         t1 = ts[0]
@@ -466,7 +467,7 @@ class _FakeOpenAIVectorStores:
 
 class _FakeOpenAIModels:
     def list(self):
-        return SimpleNamespace(data=[SimpleNamespace(id=getattr(settings, "AI_MODEL", "gpt-4o-mini"))])
+        return SimpleNamespace(data=[SimpleNamespace(id=getattr(settings, "AI_MODEL", None))])
 
 
 class _FakeOpenAIResponses:
@@ -1122,10 +1123,10 @@ class Assistant( models.Model ):
             if oname == ofilename :
                 opkd = opk
                 #print(f"NAME {oname} {opk} ALREADY OCCURS!")
-        upload_storage.save(filename , uploaded_file)
+        saved_name = upload_storage.save(filename, uploaded_file)
         # FileSystemStorage.url() already includes MEDIA_URL; avoid double-prefixing.
-        file_url = upload_storage.url(filename)
-        src = settings.OPENAI_UPLOAD_STORAGE + '/' + filename
+        file_url = upload_storage.url(saved_name)
+        src = upload_storage.path(saved_name)
         t1 = upload_or_retrieve_openai_file( upload_dir, src )
         self.add_raw_file( t1 )
         #print(f"T1PK = {t1.pk}")
@@ -1257,6 +1258,15 @@ class Assistant( models.Model ):
         else :
             return None
 
+    def get_temperature(self):
+        """Return the closest temperature set on this Assistant's path."""
+        assistant = self
+        while assistant is not None:
+            if assistant.temperature is not None:
+                return assistant.temperature
+            assistant = assistant.parent()
+        return settings.DEFAULT_TEMPERATURE
+
     def children( self ):
         name  = self.name;
         pattern = r'^%s\.[^.]+$' % name
@@ -1264,40 +1274,23 @@ class Assistant( models.Model ):
         res = [ {obj.pk : obj.name} for obj in children ]
         return res
 
-    def get_instructions( self ): # GET THE LAST INSTRUCTIONS IN THE TREE
-        prepended = ''
-        instructions = ''
-        if self.instructions :
-            prepended = self.instructions.strip();
-        #if self.instructions :
-        #    #do_append = self.instructions.split()[0].strip().rstrip(':').lower()  == 'append'
-        #    #if do_append :
-        #    #    prepended = ''.join( re.split(r'(\s+)', self.instructions)[1:] )
-        #    #    instructions = ''
-        #    #else :
-        #    instructions = self.instructions
-        a = self;
-        p = self;
-        base_instructions = ''
-        if self.mode_choice :
-                base_instructions = Mode.objects.get(choice=self.mode_choice).text
-                return f"{prepended}\n{base_instructions}\n"
-        if p :
-            i = 0;
-            logger.info(f"I={i} base_instructions = {base_instructions}  parent={p.parent}")
-            while not p.parent() == None and base_instructions == ''  and i < 4 :
-                logger.info(f"SO FETCH PARENT_INSTRUCTION FROM {p.parent()} ")
-                p = p.parent();
-                base_instructions = p.get_instructions();
-                logger.info(f"FETCHED {base_instructions}")
-                i = i + 1 ;
-        logger.info(f"APPENDED = {prepended} BASE_INSTRUDTIONS {base_instructions}")
-        if not prepended  == '' :
-            instructions = prepended + f"\n{base_instructions}\n"
-        else :
-            instructions = base_instructions
-        logger.info(f"GET_INSTRUCTIONS RETURNING = {instructions}")
-        return instructions
+    def get_instructions(self):
+        """Combine instruction fields from the base Assistant to this leaf."""
+        lineage = []
+        assistant = self
+        while assistant is not None:
+            lineage.append(assistant)
+            assistant = assistant.parent()
+
+        instructions = []
+        for assistant in reversed(lineage):
+            if assistant.mode_choice:
+                mode = Mode.objects.filter(choice=assistant.mode_choice).first()
+                if mode and mode.text.strip():
+                    instructions.append(mode.text.strip())
+            if assistant.instructions and assistant.instructions.strip():
+                instructions.append(assistant.instructions.strip())
+        return "\n".join(instructions)
 
 
     def get_vector_stores( self ): # GET THE LAST INSTRUCTIONS IN THE TREE
@@ -1568,6 +1561,7 @@ class Thread(models.Model) :
         vector_stores = assistant.get_vector_stores()
         vss = [ item.vsid for item in vector_stores ]
         instructions = assistant.get_instructions() + '\n' + more_instructions
+        temperature = assistant.get_temperature()
         thread = self
         thread_id = thread.thread_id
         encoding = tiktoken.get_encoding("cl100k_base")
@@ -1626,6 +1620,8 @@ class Thread(models.Model) :
             }
             if model_supports_reasoning(model):
                 create_kwargs['reasoning'] = reasoning
+            elif temperature is not None:
+                create_kwargs['temperature'] = temperature
             try :
                 if vss :
                     try :

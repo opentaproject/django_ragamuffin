@@ -270,33 +270,42 @@ def print_my_stack():
 
 
 
-def get_assistant( name , quser ):
-    #print(f"GET_ASSISTANT NAM={name} QUSER={quser}")
-    assistants = Assistant.objects.filter(name=name).all();
-    #print(f"GET_ASSISTANT assistants = {assistants}")
-    model = settings.AI_MODEL
-    if not assistants and not quser.is_staff :
+def normalize_assistant_name(name):
+    """Return the dotted Assistant name represented by a URL path or name."""
+    segments = [segment.strip() for segment in re.split(r"[/.]+", name or "") if segment.strip()]
+    return ".".join(segments)
+
+
+def get_assistant(name, quser):
+    """Resolve an Assistant hierarchy, creating missing nodes for staff.
+
+    Paths such as ``base/sub1/sub2`` and names such as ``base.sub1.sub2``
+    identify the same hierarchy. Non-staff users inherit the closest existing
+    Assistant, walking from the leaf toward the base. Staff users materialize
+    every missing node from ``base`` through the requested leaf, using
+    only model defaults so field inheritance remains branch-local.
+    """
+    name = normalize_assistant_name(name)
+    if not name:
         return None
-    if assistants :
-        return  assistants[0]
-    base = '.'.join(name.split('.')[:-1])
-    #print(f"BASE = {base}")
-    if base == '' :
-        return None
-    subdir = name.split('.')[-1];
-    base_assistant = get_assistant( base,quser);
-    #print("BASE_ASSISTANT = ", base_assistant)
-    if base_assistant :
-        assistant = base_assistant.clone_stub( name )
-    else :
-        assistant = Assistant(name=name);
-        #vs = VectorStore(name=name);
-        #vs.save();
-        assistant.save();
-        #assistant.vector_stores.set([vs.pk])
-        #assistant.save();
-        #assistant = Assistant.objects.get(name=name,model=model)
-    return assistant 
+
+    segments = name.split(".")
+    prefixes = [".".join(segments[:index]) for index in range(1, len(segments) + 1)]
+    existing = {
+        assistant.name: assistant
+        for assistant in Assistant.objects.filter(name__in=prefixes)
+    }
+
+    if not quser.is_staff:
+        return next(
+            (existing[prefix] for prefix in reversed(prefixes) if prefix in existing),
+            None,
+        )
+
+    assistant = None
+    for branch_name in prefixes:
+        assistant, _ = Assistant.objects.get_or_create(name=branch_name)
+    return assistant
 
 def messages_to_pdf( assistant , messages, prints ):
     iprints = [int(i) for i in prints ];

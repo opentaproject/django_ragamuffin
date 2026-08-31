@@ -99,8 +99,7 @@ PGDATABASE = os.environ.get('PGDATABASE', 'postgres')
 PGDATABASE_NAME = os.environ.get('PGDATABASE_NAME','default')
 
 
-#DJANGO_RAGAMUFFIN_DB = os.environ.get("DJANGO_RAGAMUFFIN_DB",None) 
-DJANGO_RAGAMUFFIN_DB = 'rsaasdfsdsf39'
+DJANGO_RAGAMUFFIN_DB = os.environ.get("DJANGO_RAGAMUFFIN_DB", None)
 
 
 DATABASES = {
