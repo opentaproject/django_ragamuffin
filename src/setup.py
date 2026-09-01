@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 setup(
     name='django_ragamuffin',  
-    version='v20260824',
+    version='3.60.0.1',
     packages=find_packages(),
     include_package_data=True,  # Important for static files/migrations
     license='MIT License',  # Choose your license
@@ -51,7 +51,7 @@ setup(
         "mdurl>=0.1.2",
         "more-itertools>=10.8.0",
         "nh3>=0.3.0",
-        "openai>=1.107.1",
+        "openai>=2.53.0",
         "packaging>=25.0",
         "pip-autoremove>=0.10.0",
         "pluggy>=1.6.0",
