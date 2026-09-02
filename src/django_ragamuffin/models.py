@@ -1020,6 +1020,22 @@ def model_supports_reasoning(model):
     return model.startswith('gpt-5') or re.match(r"^o\d", model) is not None
 
 
+def get_reasoning_effort():
+    """Return the request effort, preferring the process environment."""
+    environment_effort = (os.environ.get("EFFORT") or "").strip()
+    if environment_effort:
+        return environment_effort
+    django_effort = getattr(settings, "EFFORT", None)
+    if django_effort is not None and str(django_effort).strip():
+        return str(django_effort).strip()
+    return "medium"
+
+
+def get_reasoning_options():
+    """Build the reasoning object passed to OpenAI Responses requests."""
+    return {"effort": get_reasoning_effort(), "summary": "auto"}
+
+
 DEFAULT_INSTRUCTIONS = """Answer only questions about the enclosed document. 
     Do not offer helpful answers to questions that do not refer to the document. 
     Be concise. 
@@ -1602,15 +1618,14 @@ class Thread(models.Model) :
             clear = context['clear']
             subdomain = context['subdomain']
             previous_response_id = context.get('previous_response_id',None)
-            effort = settings.EFFORT
             msg = ''
             #print(f"REMOTE QUERY\nvvvvvvvvvvvvvvvvvvvvvvv\n{instructions}\n^^^^^^^^^^^^^^^^^^^^^^\n")
             #print(f"VSS = {vss}")
-            reasoning={"effort": effort ,'summary': 'auto'}
+            reasoning = get_reasoning_options()
             #print(f"REMOTE QUERY\n^^^^^^^^^^^^^^^^^^^^^^^\n")
             #print(f"REASONING = {reasoning}")
             #print(f"MAXWAIT = {settings.MAXWAIT}")
-            #print(f"EFFORT = {settings.EFFORT}")
+            #print(f"EFFORT = {reasoning['effort']}")
             timeout = settings.MAXWAIT
             create_kwargs = {
                 'model': model,

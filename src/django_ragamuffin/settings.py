@@ -99,10 +99,11 @@ DEFAULT_TEMPERATURE = 0.2;
 LAST_MESSAGES = 99
 MAX_NUM_RESULTS = None
 MAX_TOKENS = 8000 # NOT IMPLMENTED AS OF openai==1.173.0 
-if hasattr(settings,'EFFORT' ) :
-    EFFORT = settings.EFFORT
-else :
-    EFFORT = 'medium'
+EFFORT = (
+    (os.environ.get('EFFORT') or '').strip()
+    or getattr(settings, 'EFFORT', None)
+    or 'medium'
+)
 if not RUNTESTS and DJANGO_RAGAMUFFIN_DB:
     settings.DATABASES.update({
         'django_ragamuffin': {
@@ -120,3 +121,4 @@ settings.INSTALLED_APPS.append('django.contrib.humanize')
 print(f"PGHOST = {PGHOST}")
 print(f"DJANGO_RAGAMUFFIN_DB = {DJANGO_RAGAMUFFIN_DB or '<not set>'}")
 print(f"AI_MODEL = {AI_MODEL or '<not set>'}")
+print(f"EFFORT = {EFFORT}")
