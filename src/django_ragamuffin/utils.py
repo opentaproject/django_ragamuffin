@@ -15,6 +15,18 @@ import logging
 from typing import Tuple, Dict
 logger = logging.getLogger(__name__)
 
+_QUERY_COST_MARKER = re.compile(r"\n?<!-- openta-query-cost:([^ ]+) -->")
+
+
+def response_with_query_cost(response, cost):
+    response = _QUERY_COST_MARKER.sub("", response)
+    return f"{response}\n<!-- openta-query-cost:{cost:.12g} -->"
+
+
+def query_cost_from_response(response):
+    match = _QUERY_COST_MARKER.search(response or "")
+    return float(match.group(1)) if match else None
+
 head = " \
 \\documentclass{article}\n\
 \\usepackage{amsmath} \n\

@@ -69,7 +69,7 @@
 						[<span class="innerChoice" id="choice-{{m.pk}}">{{m.choice}}</span>] 
 						<span class="message-metadata"> [ {{ m.username | username_from_email }} ] [ {{m.date|humanize_datetime}}]  </span>
                                             <div class="innerDiv is-hidden"> {{m.response | safe }}
-					    <div class='verbatim'> date={{m.date|localtime_no_microseconds }} tokens={{m.ntokens}} model={{ m.model }} dt={{ m.time_spent }}s saved_messages={{ m.last_messages }} chunks={{ m.max_num_results }}  {{ m.username }}</div>
+					    <div class='verbatim'> date={{m.date|localtime_no_microseconds }} tokens={{m.ntokens}} cost={{m.cost|default_if_none:"Null"|floatformat:6}} model={{ m.model }} dt={{ m.time_spent }}s saved_messages={{ m.last_messages }} chunks={{ m.max_num_results }}  {{ m.username }}</div>
 						{% if user.is_staff %}
 						<div class='wrap-summary'> {{ m.summary | safe }} </div> 
 						{% endif %}
@@ -133,7 +133,7 @@
                     <div id='response-block'>
                         <div class="response-panel">
                             <div id='response' class='wrap-text' > {{ response| safe }}
-			    <div class='verbatim'> date={{date|localtime_no_microseconds}} ntokens={{ntokens}} model={{ model }} dt={{ time_spent }}s saved_messages={{ last_messages }} chunks={{ max_num_results }}  </div>
+			    <div class='verbatim'> date={{date|localtime_no_microseconds}} ntokens={{ntokens}} cost={{cost|default_if_none:"Null"|floatformat:6}} model={{ model }} dt={{ time_spent }}s saved_messages={{ last_messages }} chunks={{ max_num_results }}  </div>
 				{% if user.is_staff %}
 	<div class='wrap-summary'> {{ summary | safe }} </div> 
 				{% endif %}

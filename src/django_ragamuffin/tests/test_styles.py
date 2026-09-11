@@ -6,6 +6,7 @@ from django.template.loader import get_template
 from django.test import SimpleTestCase
 
 from django_ragamuffin.views import AssistantEditForm
+from django_ragamuffin.utils import query_cost_from_response, response_with_query_cost
 
 
 class TemplateStylesTests(SimpleTestCase):
@@ -24,6 +25,21 @@ class TemplateStylesTests(SimpleTestCase):
 
         self.assertIn(".query-page .form-row", stylesheet)
         self.assertNotIn("\n.form-row {", stylesheet)
+
+    def test_query_metadata_places_cost_after_tokens(self):
+        source = get_template(
+            "django_ragamuffin/query_form.html"
+        ).template.source
+
+        self.assertIn("tokens={{m.ntokens}} cost={{m.cost", source)
+        self.assertIn("ntokens={{ntokens}} cost={{cost", source)
+
+    def test_query_cost_marker_requires_no_model_field(self):
+        response = response_with_query_cost("The response", 0.089316)
+
+        self.assertEqual(query_cost_from_response(response), 0.089316)
+        self.assertEqual(query_cost_from_response("Historical response"), None)
+        self.assertIn("<!-- openta-query-cost:0.089316 -->", response)
 
     def test_local_file_spacing_follows_the_list(self):
         source = get_template(

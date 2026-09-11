@@ -14,7 +14,7 @@ import re
 import uuid
 
 from .forms import QueryForm
-from .utils import doarchive, CHOICES, get_assistant, mathfix, messages_to_pdf
+from .utils import doarchive, CHOICES, get_assistant, mathfix, messages_to_pdf, query_cost_from_response
 from .models import create_or_retrieve_thread, QUser, get_current_model, ModeChoice
 from django_ragamuffin.models import Assistant, Thread, Assistant, Message
 logger = logging.getLogger(__name__)
@@ -371,6 +371,7 @@ def query_view(request,subpath):
             m["username"] = _mm.username()
             m["pk"] = _mm.pk
             m["date"] = str( _mm.date)
+            m["cost"] = query_cost_from_response(m["response"])
             if m['choice'] == None :
                 m['choice'] = 0;
             messages.append(m)
@@ -391,6 +392,7 @@ def query_view(request,subpath):
     time_spent = 0;
     now = time.time();
     ntokens = 0;
+    cost = None
     if request.method == 'POST':
         form = QueryForm(request.POST)
         if form.is_valid():
@@ -404,6 +406,7 @@ def query_view(request,subpath):
                     choice = message.get('choice','0')
                     mindex = message['pk'];
                     ntokens = message.get('ntokens')
+                    cost = message.get('cost')
                     date = message.get('date',None)
                     break
             if txt is None:
@@ -426,6 +429,7 @@ def query_view(request,subpath):
        'response' : mark_safe( mathfix(item['response'] ) ).strip(),
        'username' : item.get('username',''),
        'ntokens' : item['ntokens'],
+       'cost' : item.get('cost'),
        'comment' : item.get('comment','').strip() ,
        'choice' : item.get('choice',0),
        'model' : item.get('model', model) ,  
@@ -459,6 +463,7 @@ def query_view(request,subpath):
         'choices' : choices ,
         'choice' : 0,
         'ntokens' : ntokens,
+        'cost' : cost,
         'summary' : summary,
         'keeps' : keeps,
         'date' : date,
