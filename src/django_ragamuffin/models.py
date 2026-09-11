@@ -470,6 +470,24 @@ class _FakeOpenAIModels:
         return SimpleNamespace(data=[SimpleNamespace(id=getattr(settings, "AI_MODEL", None))])
 
 
+class _FakeOpenAIUsage:
+    def __init__(self, input_tokens, output_tokens):
+        self.total_tokens = input_tokens + output_tokens
+        self._data = {
+            "input_tokens": input_tokens,
+            "input_tokens_details": {"cache_write_tokens": 0, "cached_tokens": 0},
+            "output_tokens": output_tokens,
+            "output_tokens_details": {"reasoning_tokens": 0},
+            "total_tokens": self.total_tokens,
+            "compute_units": None,
+        }
+
+    def model_dump(self, exclude_none=False):
+        if exclude_none:
+            return {key: value for key, value in self._data.items() if value is not None}
+        return self._data.copy()
+
+
 class _FakeOpenAIResponses:
     def create(self, input, tools=None, **kwargs):
         response_id = _fake_openai_id("resp", "response_counter")
@@ -480,7 +498,7 @@ class _FakeOpenAIResponses:
         return SimpleNamespace(
             id=response_id,
             output=output,
-            usage=SimpleNamespace(total_tokens=len(input.split()) + len(text.split())),
+            usage=_FakeOpenAIUsage(len(input.split()), len(text.split())),
         )
 
     def _corpus_for_tools(self, tools):
@@ -1701,7 +1719,8 @@ class Thread(models.Model) :
             output = RESPONSE.output
             response_id = RESPONSE.id
             summary = 'Null'
-            ntokens = RESPONSE.usage.total_tokens
+            usage = RESPONSE.usage.model_dump(exclude_none=True)
+            ntokens = usage['total_tokens']
             txt = ''
             summary = 'no summary available'
             for o in output :
@@ -1733,6 +1752,7 @@ class Thread(models.Model) :
             query = tagline + "\n" + re.sub( r"BEGIN_SUBMISSION.*?END_SUBMISSION", "", query , flags=re.DOTALL)
             msg =  {'user' : query.strip() , 'assistant' : txt.strip() ,
                 'ntokens' : ntokens ,
+                'usage' : usage,
                 'model' : model,
                 'time_spent' : time_spent ,
                 'last_messages' : last_messages,

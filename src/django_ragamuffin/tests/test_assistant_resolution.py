@@ -4,7 +4,7 @@ import uuid
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
-from django_ragamuffin.models import Assistant, QUser, VectorStore
+from django_ragamuffin.models import Assistant, QUser, Thread, VectorStore
 from django_ragamuffin.utils import get_assistant, normalize_assistant_name
 
 
@@ -100,6 +100,25 @@ class AssistantResolutionTests(TestCase):
     def test_non_staff_does_not_create_missing_assistant(self):
         self.assertIsNone(get_assistant("base/sub1/sub2", self.student))
         self.assertFalse(Assistant.objects.exists())
+
+    def test_query_result_includes_usage_dump(self):
+        assistant = Assistant.objects.create(name="usage-test")
+        thread = Thread(name="usage-test", assistant=assistant, user=self.student)
+        thread.save()
+
+        result = thread.run_query(query="hello student")
+
+        self.assertEqual(
+            result["usage"],
+            {
+                "input_tokens": 2,
+                "input_tokens_details": {"cache_write_tokens": 0, "cached_tokens": 0},
+                "output_tokens": 0,
+                "output_tokens_details": {"reasoning_tokens": 0},
+                "total_tokens": 2,
+            },
+        )
+        self.assertEqual(result["ntokens"], result["usage"]["total_tokens"])
 
     def test_assistant_upload_uses_the_path_returned_by_storage(self):
         unique = uuid.uuid4().hex
