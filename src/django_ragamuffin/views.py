@@ -354,7 +354,7 @@ def query_view(request,subpath):
         dmessages = Message.objects.filter(pk__in=deletes);
         #print(f"DMESSAGES = {dmessages}")
         dmessages.delete();
-        response = redirect(f"/django_ragamuffin/query/{assistant.name}/")
+        return redirect(f"/django_ragamuffin/query/{assistant.name}/")
     elif 'filter' in request.POST.getlist('action' ) :
         response = redirect(f"/django_ragamuffin/query/{assistant.name}/")
     d = {'status' : 'pending' , 'result' : 'RESULT' }
