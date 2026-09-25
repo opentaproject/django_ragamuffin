@@ -4,7 +4,7 @@ import uuid
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
-from django_ragamuffin.models import Assistant, QUser, Thread, VectorStore
+from django_ragamuffin.models import Assistant, Mode, ModeChoice, QUser, Thread, VectorStore
 from django_ragamuffin.utils import get_assistant, normalize_assistant_name
 
 
@@ -102,11 +102,17 @@ class AssistantResolutionTests(TestCase):
         self.assertFalse(Assistant.objects.exists())
 
     def test_query_result_includes_usage_dump(self):
-        assistant = Assistant.objects.create(name="usage-test")
+        assessment = ModeChoice.objects.create(key="assessment-test", label="Assessment test")
+        Mode.objects.create(choice=assessment, text="ASSESSMENT MODE PROLOG")
+        assistant = Assistant.objects.create(name="usage-test", mode_choice=assessment)
         thread = Thread(name="usage-test", assistant=assistant, user=self.student)
         thread.save()
 
-        result = thread.run_query(query="hello student")
+        with self.assertLogs("django_ragamuffin.models", level="ERROR") as logs:
+            result = thread.run_query(
+                query="hello student",
+                instructions="QUESTION XML INSTRUCTIONS",
+            )
 
         self.assertEqual(
             result["usage"],
@@ -119,6 +125,12 @@ class AssistantResolutionTests(TestCase):
             },
         )
         self.assertEqual(result["ntokens"], result["usage"]["total_tokens"])
+        self.assertEqual(
+            result["instructions"],
+            "ASSESSMENT MODE PROLOG\nQUESTION XML INSTRUCTIONS",
+        )
+        logged_instructions = "\n".join(logs.output)
+        self.assertIn(result["instructions"], logged_instructions)
 
     def test_assistant_upload_uses_the_path_returned_by_storage(self):
         unique = uuid.uuid4().hex

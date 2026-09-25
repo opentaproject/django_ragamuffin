@@ -1,3 +1,5 @@
+#!/bin/bash
+source ../env/bin/activate
 echo fix setup.py
 rm -rf build/ dist/ *.egg-info
 python -m build

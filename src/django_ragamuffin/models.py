@@ -1675,6 +1675,14 @@ class Thread(models.Model) :
         vector_stores = assistant.get_vector_stores()
         vss = [ item.vsid for item in vector_stores ]
         instructions = assistant.get_instructions() + '\n' + more_instructions
+        logger.error(
+            "OPENAI INSTRUCTIONS BEGIN subdomain=%s thread=%s assistant=%s\n%s\n"
+            "OPENAI INSTRUCTIONS END",
+            subdomain,
+            self.pk,
+            assistant.name,
+            instructions,
+        )
         temperature = assistant.get_temperature()
         thread = self
         thread_id = thread.thread_id
