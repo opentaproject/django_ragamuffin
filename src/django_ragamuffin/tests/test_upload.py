@@ -57,6 +57,29 @@ class UploadPageTests(SimpleTestCase):
         self.assertIn("stage=failed", output)
         self.assertIn("large.pdf", output)
 
+    def test_client_upload_failure_is_logged(self):
+        with self.assertLogs("django_ragamuffin.views", level="ERROR") as logs:
+            response = self.client.post(
+                reverse("upload", kwargs={"pk": 7}),
+                {
+                    "upload_client_failure": "1",
+                    "upload_id": "upload-123",
+                    "http_status": "413",
+                    "status_text": "Content Too Large",
+                    "error": "upload failed with status 413",
+                    "files": '[{"name":"large.pdf","size":123456,"type":"application/pdf"}]',
+                    "response": "request body exceeded the configured limit",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"reported": True})
+        output = "\n".join(logs.output)
+        self.assertIn("stage=client_failed", output)
+        self.assertIn("http_status=413", output)
+        self.assertIn("large.pdf", output)
+        self.assertIn("request body exceeded", output)
+
 
 class EmptyAssistantForm:
     custom_data = []

@@ -31,6 +31,38 @@ function setupBatchProgress(options) {
 
     const statusUrl = `${window.location.pathname}${options.statusPath}/${operationId}/`;
     let polling = false;
+    let failureResponse = {};
+
+    async function reportFailure(error) {
+      if (!options.failureReportField) {
+        return;
+      }
+      const csrfToken = form.querySelector('[name="csrfmiddlewaretoken"]');
+      const report = new URLSearchParams({
+        [options.failureReportField]: "1",
+        upload_id: operationId,
+        http_status: String(failureResponse.status || ""),
+        status_text: failureResponse.statusText || "",
+        response: failureResponse.body || "",
+        error: String(error),
+        files: JSON.stringify(
+          items.map((item) => ({ name: item.name, size: item.size, type: item.type }))
+        ),
+      });
+      if (csrfToken) {
+        report.append("csrfmiddlewaretoken", csrfToken.value);
+      }
+      try {
+        await fetch(form.action || window.location.href, {
+          method: "POST",
+          body: report,
+          credentials: "same-origin",
+          keepalive: true,
+        });
+      } catch (reportError) {
+        console.error("Could not report upload failure", reportError);
+      }
+    }
 
     async function updateProgress() {
       if (polling) {
@@ -63,6 +95,11 @@ function setupBatchProgress(options) {
         credentials: "same-origin",
       });
       if (!response.ok) {
+        failureResponse = {
+          status: response.status,
+          statusText: response.statusText,
+          body: (await response.text()).slice(0, 2000),
+        };
         throw new Error(`${options.operationName} failed with status ${response.status}`);
       }
 
@@ -72,6 +109,7 @@ function setupBatchProgress(options) {
       progressText.textContent = `${progress.value}/${total} completed — ${options.operationName} failed`;
       controls.forEach((control) => (control.disabled = false));
       console.error(error);
+      await reportFailure(error);
     } finally {
       window.clearInterval(intervalId);
     }
