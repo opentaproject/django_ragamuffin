@@ -155,7 +155,14 @@ def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=None):
         file_list = client.vector_stores.files.list(vector_store_id=vector_store_id)
         #print(f"FILE_LIST = {file_list}")
         statuses = [file.status for file in file_list.data]
-        print(f"WAIT FOR REMOTE_VECTOR_STORES I={i} IMAX={imax} {statuses} ")
+        logger.error(
+            "RAGAMUFFIN_UPLOAD stage=vector_indexing vector_store_id=%s "
+            "poll=%s max_polls=%s statuses=%s",
+            vector_store_id,
+            i,
+            imax,
+            statuses,
+        )
         if all(status == "completed" for status in statuses):
             return
         elif any(status == "failed" for status in statuses):
@@ -743,14 +750,36 @@ class OpenAIFile(models.Model) :
         name =  f"{self.file}".split('/')[-1]
         super().save(*args, **kwargs)  # Save first, so file is processed
         if ( is_new and self.file ):
+            started = time.monotonic()
             fn = self.file.name 
             self.name = self.file.name.split('/')[-1]
             src = self.file.path
             extension = src.split('.')[-1].lower();
+            logger.error(
+                "RAGAMUFFIN_UPLOAD stage=prepare_start openai_file=%s filename=%r "
+                "extension=%s bytes=%s",
+                self.pk,
+                self.name,
+                extension,
+                os.path.getsize(src),
+            )
             if extension in ['json', 'jsonl']:
                 chunks = None
             elif extension == 'pdf' :
+                logger.error(
+                    "RAGAMUFFIN_UPLOAD stage=mathpix_start openai_file=%s filename=%r",
+                    self.pk,
+                    self.name,
+                )
                 txt = mathpix( src ,format_out='mmd')
+                logger.error(
+                    "RAGAMUFFIN_UPLOAD stage=mathpix_completed openai_file=%s "
+                    "filename=%r output_characters=%s elapsed_seconds=%.3f",
+                    self.pk,
+                    self.name,
+                    len(txt),
+                    time.monotonic() - started,
+                )
                 chunks = chunk_mmd(txt)
             else :
                 txt = ( open(src,'rb').read() ).decode('utf-8')
@@ -765,8 +794,23 @@ class OpenAIFile(models.Model) :
                 open( dst, "wb").write( chunks)
             data = self.file.read()
             self.checksum = hashlib.md5(data).hexdigest()
+            logger.error(
+                "RAGAMUFFIN_UPLOAD stage=openai_file_upload_start openai_file=%s "
+                "filename=%r prepared_bytes=%s",
+                self.pk,
+                self.name,
+                os.path.getsize(dst),
+            )
             uploaded_file = client.files.create( file=open( dst, "rb"), purpose="assistants"  )
             self.file_ids = [uploaded_file.id ]
+            logger.error(
+                "RAGAMUFFIN_UPLOAD stage=openai_file_upload_completed openai_file=%s "
+                "filename=%r remote_file_id=%s elapsed_seconds=%.3f",
+                self.pk,
+                self.name,
+                uploaded_file.id,
+                time.monotonic() - started,
+            )
             self.path = os.path.dirname( self.file.path )
 
             def get_ntokens( file_path):
@@ -787,6 +831,14 @@ class OpenAIFile(models.Model) :
             self.ntokens = get_ntokens( dst )
             self.name = name
             super().save(*args, **kwargs) # Then update with true hashed path
+            logger.error(
+                "RAGAMUFFIN_UPLOAD stage=prepared openai_file=%s filename=%r "
+                "tokens=%s elapsed_seconds=%.3f",
+                self.pk,
+                self.name,
+                self.ntokens,
+                time.monotonic() - started,
+            )
 
 
 
@@ -1144,6 +1196,7 @@ class Assistant( models.Model ):
     def add_file(self,  filename, uploaded_file ):
         #name = '.'.join( filename.split('.')[:-1])
         #name = name.upper()
+        started = time.monotonic()
         content = uploaded_file.read();
         upload_dir = self.upload_dir_for_content(filename, content, "SRC1")
         name = os.path.basename(upload_dir)
@@ -1161,8 +1214,34 @@ class Assistant( models.Model ):
         # FileSystemStorage.url() already includes MEDIA_URL; avoid double-prefixing.
         file_url = upload_storage.url(saved_name)
         src = upload_storage.path(saved_name)
+        logger.error(
+            "RAGAMUFFIN_UPLOAD stage=stored assistant=%s filename=%r "
+            "stored_name=%r bytes=%s elapsed_seconds=%.3f",
+            self.pk,
+            ofilename,
+            saved_name,
+            os.path.getsize(src),
+            time.monotonic() - started,
+        )
         t1 = upload_or_retrieve_openai_file( upload_dir, src )
+        logger.error(
+            "RAGAMUFFIN_UPLOAD stage=vector_attach_start assistant=%s filename=%r "
+            "openai_file=%s remote_file_ids=%s elapsed_seconds=%.3f",
+            self.pk,
+            ofilename,
+            t1.pk,
+            t1.file_ids,
+            time.monotonic() - started,
+        )
         self.add_raw_file( t1 )
+        logger.error(
+            "RAGAMUFFIN_UPLOAD stage=vector_attach_completed assistant=%s filename=%r "
+            "openai_file=%s elapsed_seconds=%.3f",
+            self.pk,
+            ofilename,
+            t1.pk,
+            time.monotonic() - started,
+        )
         #print(f"T1PK = {t1.pk}")
         if opkd and not t1.pk  == opkd :
             self.delete_file( opkd )

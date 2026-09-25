@@ -117,9 +117,43 @@ def deletion_status_view(request, pk, deletion_id):
 def upload_file_view(request,pk):
     if request.method == 'POST' and request.FILES.get('myfile'):
         files = request.FILES.getlist('myfile')
-        progress_key = _operation_progress_key("upload", request.POST.get("upload_id"))
+        upload_id = request.POST.get("upload_id")
+        progress_key = _operation_progress_key("upload", upload_id)
         assistant = Assistant.objects.get(pk=pk)
-        _process_with_progress(files, progress_key, lambda f: assistant.add_file(f.name, f))
+
+        def upload_file(uploaded_file):
+            started = time.monotonic()
+            logger.error(
+                "RAGAMUFFIN_UPLOAD stage=received upload_id=%s assistant=%s "
+                "filename=%r bytes=%s content_type=%s",
+                upload_id,
+                pk,
+                uploaded_file.name,
+                uploaded_file.size,
+                uploaded_file.content_type,
+            )
+            try:
+                assistant.add_file(uploaded_file.name, uploaded_file)
+            except Exception:
+                logger.exception(
+                    "RAGAMUFFIN_UPLOAD stage=failed upload_id=%s assistant=%s "
+                    "filename=%r elapsed_seconds=%.3f",
+                    upload_id,
+                    pk,
+                    uploaded_file.name,
+                    time.monotonic() - started,
+                )
+                raise
+            logger.error(
+                "RAGAMUFFIN_UPLOAD stage=completed upload_id=%s assistant=%s "
+                "filename=%r elapsed_seconds=%.3f",
+                upload_id,
+                pk,
+                uploaded_file.name,
+                time.monotonic() - started,
+            )
+
+        _process_with_progress(files, progress_key, upload_file)
         return redirect(f"/django_ragamuffin/assistant/{pk}/edit/")
 
     return render(request, 'django_ragamuffin/upload.html')

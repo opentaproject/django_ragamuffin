@@ -178,11 +178,13 @@ async def convert_pdf_file(pdf_path, format_out='mmd'):
                     _json_details(submission),
                 )
                 raise RuntimeError("Mathpix PDF submission returned no pdf_id.")
-            logger.info(
-                "Mathpix PDF submitted: job_id=%s filename=%s request_id=%s",
+            logger.error(
+                "RAGAMUFFIN_UPLOAD stage=mathpix_submitted job_id=%s filename=%r "
+                "request_id=%s bytes=%s",
                 job_id,
                 filename,
                 _request_id(response),
+                os.path.getsize(pdf_path),
             )
 
             # PDF jobs are polled at /v3/pdf/{pdf_id}.  /v3/converter/{pdf_id}
@@ -208,8 +210,8 @@ async def convert_pdf_file(pdf_path, format_out='mmd'):
 
                 poll_result = _json_response(poll, "status poll", job_id)
                 status = poll_result.get("status")
-                logger.info(
-                    "Mathpix PDF status: job_id=%s status=%s percent_done=%s "
+                logger.error(
+                    "RAGAMUFFIN_UPLOAD stage=mathpix_poll job_id=%s status=%s percent_done=%s "
                     "pages_completed=%s pages_total=%s request_id=%s",
                     job_id,
                     status or "missing",
@@ -263,8 +265,9 @@ async def convert_pdf_file(pdf_path, format_out='mmd'):
                     f"format={format_out}, HTTP {result.status_code}, "
                     f"request_id={_request_id(result)})."
                 )
-            logger.info(
-                "Mathpix result downloaded: job_id=%s format=%s bytes=%s request_id=%s",
+            logger.error(
+                "RAGAMUFFIN_UPLOAD stage=mathpix_result_downloaded job_id=%s "
+                "format=%s bytes=%s request_id=%s",
                 job_id,
                 format_out,
                 len(result.content),

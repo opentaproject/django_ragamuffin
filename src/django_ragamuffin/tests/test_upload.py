@@ -37,6 +37,26 @@ class UploadPageTests(SimpleTestCase):
         status = self.client.get(reverse("upload_status", kwargs={"pk": 1, "upload_id": upload_id}))
         self.assertEqual(status.json(), {"completed": 2, "total": 2})
 
+    @patch("django_ragamuffin.views.Assistant.objects.get")
+    def test_upload_logs_failed_file_with_traceback(self, get_assistant):
+        upload_id = uuid.uuid4()
+        get_assistant.return_value.add_file.side_effect = RuntimeError("upload broke")
+
+        with self.assertLogs("django_ragamuffin.views", level="ERROR") as logs:
+            with self.assertRaises(RuntimeError):
+                self.client.post(
+                    reverse("upload", kwargs={"pk": 1}),
+                    {
+                        "upload_id": str(upload_id),
+                        "myfile": SimpleUploadedFile("large.pdf", b"%PDF-test"),
+                    },
+                )
+
+        output = "\n".join(logs.output)
+        self.assertIn("stage=received", output)
+        self.assertIn("stage=failed", output)
+        self.assertIn("large.pdf", output)
+
 
 class EmptyAssistantForm:
     custom_data = []
