@@ -115,10 +115,12 @@ def deletion_status_view(request, pk, deletion_id):
 
 
 def upload_file_view(request,pk):
-    if request.method == "POST" and request.POST.get("upload_client_failure"):
+    if request.method == "POST" and request.POST.get("upload_client_event"):
+        client_stage = "failed" if request.POST.get("client_stage") == "failed" else "started"
         logger.error(
-            "RAGAMUFFIN_UPLOAD stage=client_failed assistant=%s upload_id=%s "
+            "RAGAMUFFIN_UPLOAD stage=client_%s assistant=%s upload_id=%s "
             "http_status=%s status_text=%r error=%r files=%s response=%r",
+            client_stage,
             pk,
             request.POST.get("upload_id", ""),
             request.POST.get("http_status", ""),

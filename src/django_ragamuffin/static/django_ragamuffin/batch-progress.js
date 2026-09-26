@@ -33,21 +33,19 @@ function setupBatchProgress(options) {
     let polling = false;
     let failureResponse = {};
 
-    async function reportFailure(error) {
+    async function reportClientEvent(clientStage, details = {}) {
       if (!options.failureReportField) {
         return;
       }
       const csrfToken = form.querySelector('[name="csrfmiddlewaretoken"]');
       const report = new URLSearchParams({
         [options.failureReportField]: "1",
+        client_stage: clientStage,
         upload_id: operationId,
-        http_status: String(failureResponse.status || ""),
-        status_text: failureResponse.statusText || "",
-        response: failureResponse.body || "",
-        error: String(error),
         files: JSON.stringify(
           items.map((item) => ({ name: item.name, size: item.size, type: item.type }))
         ),
+        ...details,
       });
       if (csrfToken) {
         report.append("csrfmiddlewaretoken", csrfToken.value);
@@ -62,6 +60,15 @@ function setupBatchProgress(options) {
       } catch (reportError) {
         console.error("Could not report upload failure", reportError);
       }
+    }
+
+    async function reportFailure(error) {
+      await reportClientEvent("failed", {
+        http_status: String(failureResponse.status || ""),
+        status_text: failureResponse.statusText || "",
+        response: failureResponse.body || "",
+        error: String(error),
+      });
     }
 
     async function updateProgress() {
@@ -87,6 +94,7 @@ function setupBatchProgress(options) {
       }
     }
 
+    await reportClientEvent("started");
     const intervalId = window.setInterval(updateProgress, 1000);
     try {
       const response = await fetch(form.action || window.location.href, {

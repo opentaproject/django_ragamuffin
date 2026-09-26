@@ -62,7 +62,8 @@ class UploadPageTests(SimpleTestCase):
             response = self.client.post(
                 reverse("upload", kwargs={"pk": 7}),
                 {
-                    "upload_client_failure": "1",
+                    "upload_client_event": "1",
+                    "client_stage": "failed",
                     "upload_id": "upload-123",
                     "http_status": "413",
                     "status_text": "Content Too Large",
@@ -79,6 +80,23 @@ class UploadPageTests(SimpleTestCase):
         self.assertIn("http_status=413", output)
         self.assertIn("large.pdf", output)
         self.assertIn("request body exceeded", output)
+
+    def test_client_upload_start_is_logged_before_file_transfer(self):
+        with self.assertLogs("django_ragamuffin.views", level="ERROR") as logs:
+            response = self.client.post(
+                reverse("upload", kwargs={"pk": 7}),
+                {
+                    "upload_client_event": "1",
+                    "client_stage": "started",
+                    "upload_id": "upload-124",
+                    "files": '[{"name":"stuck.pdf","size":654321,"type":"application/pdf"}]',
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        output = "\n".join(logs.output)
+        self.assertIn("stage=client_started", output)
+        self.assertIn("stuck.pdf", output)
 
 
 class EmptyAssistantForm:
