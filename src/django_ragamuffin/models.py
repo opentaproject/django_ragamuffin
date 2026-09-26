@@ -2,6 +2,8 @@ from django.utils import timezone
 from django.db import models
 from openai import OpenAI
 from pathlib import Path
+import base64
+import mimetypes
 from django.db import transaction
 import random, string
 from django.core.exceptions import ValidationError
@@ -27,6 +29,42 @@ import re
 
 import os
 logger = logging.getLogger(__name__)
+
+VISION_IMAGE_MIME_TYPES = {
+    "image/gif",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+}
+
+
+def build_responses_input(query, image_paths=None):
+    """Build a Responses API input containing text and local image files."""
+    image_paths = image_paths or []
+    content = [{"type": "input_text", "text": query}]
+
+    for image_path in image_paths:
+        path = Path(image_path)
+        mime_type, _ = mimetypes.guess_type(path.name)
+        if mime_type not in VISION_IMAGE_MIME_TYPES:
+            logger.warning("Skipping unsupported vision image %s", path)
+            continue
+        try:
+            encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+        except OSError:
+            logger.warning("Could not read vision image %s", path, exc_info=True)
+            continue
+        content.append(
+            {
+                "type": "input_image",
+                "image_url": f"data:{mime_type};base64,{encoded}",
+                "detail": "auto",
+            }
+        )
+
+    if len(content) == 1:
+        return query
+    return [{"role": "user", "content": content}]
 
 # Use the default FileSystemStorage, which reads location/base_url from
 # settings.MEDIA_ROOT and settings.MEDIA_URL. This keeps the storage path
@@ -500,13 +538,24 @@ class _FakeOpenAIResponses:
         response_id = _fake_openai_id("resp", "response_counter")
         corpus = self._corpus_for_tools(tools or [])
         text = self._answer(input, corpus)
+        input_text = self._input_text(input)
         content = [SimpleNamespace(text=text)]
         output = [SimpleNamespace(content=content)]
         return SimpleNamespace(
             id=response_id,
             output=output,
-            usage=_FakeOpenAIUsage(len(input.split()), len(text.split())),
+            usage=_FakeOpenAIUsage(len(input_text.split()), len(text.split())),
         )
+
+    def _input_text(self, input):
+        if isinstance(input, str):
+            return input
+        parts = []
+        for item in input:
+            for content in item.get("content", []):
+                if content.get("type") == "input_text":
+                    parts.append(content.get("text", ""))
+        return "\n".join(parts)
 
     def _corpus_for_tools(self, tools):
         file_ids = set()
@@ -529,7 +578,7 @@ class _FakeOpenAIResponses:
         return "\n".join(chunks).lower()
 
     def _answer(self, query, corpus):
-        q = query.lower()
+        q = self._input_text(query).lower()
         if "first query" in q:
             return "cat"
         if "repeat" in q and "first request" in q:
@@ -1305,6 +1354,35 @@ class Assistant( models.Model ):
         file_url = upload_storage.url(relpath)
         return file_url
 
+    def sync_local_files(self, full_paths):
+        """Make this assistant's local files match the supplied filesystem paths.
+
+        Inherited vector-store files are left untouched. A row lock serializes
+        synchronization across workers or containers sharing the same database.
+        """
+        desired_paths = {}
+        for full_path in full_paths:
+            resolved = os.path.abspath(os.fspath(full_path))
+            if not os.path.isfile(resolved):
+                raise FileNotFoundError(f"File not found: {resolved}")
+            filename = os.path.basename(resolved)
+            previous = desired_paths.get(filename)
+            if previous and previous != resolved:
+                raise ValueError(f"Multiple files are named {filename!r}")
+            desired_paths[filename] = resolved
+
+        with transaction.atomic():
+            assistant = Assistant.objects.select_for_update().get(pk=self.pk)
+            local_files = assistant.local_files()
+            desired_names = set(desired_paths)
+            for file_pk, filename, _checksum, _path in local_files:
+                if filename not in desired_names:
+                    assistant.delete_file(file_pk)
+            for filename in sorted(desired_paths, key=str.casefold):
+                assistant.add_file_by_name(desired_paths[filename])
+
+        return assistant.local_files()
+
     def add_raw_files(self,  t1 ):
         vss = self.vector_stores.all();
         if len( vss ) == 0 :
@@ -1653,6 +1731,7 @@ class Thread(models.Model) :
         more_instructions = kwargs.get('instructions', '')
         last_messages = kwargs.get('last_messages',settings.LAST_MESSAGES)
         max_num_results = kwargs.get('max_num_results',settings.MAX_NUM_RESULTS)
+        image_paths = kwargs.get('image_paths', [])
         query= kwargs['query']
         if len( query.strip() )  == 0 :
             msg =  {'user' : query, 'assistant' : 'blank!',
@@ -1709,7 +1788,8 @@ class Thread(models.Model) :
         context = {'client' : client, 'instructions' : instructions, 'model' : model, 
                     'thread_id': thread_id, 'assistant_id' : assistant_id, 'query': query, 
                     'last_messages' : last_messages, 'max_num_results' : max_num_results, 
-                   'previous_response_id' : previous_response_id ,'vss' : vss , 'clear' : clear ,'subdomain' : subdomain}
+                   'previous_response_id' : previous_response_id ,'vss' : vss , 'clear' : clear ,'subdomain' : subdomain,
+                   'image_paths': image_paths}
 
         def my_run_remote_query( context ) :
             now = time.time();
@@ -1723,6 +1803,7 @@ class Thread(models.Model) :
             model = context['model']
             clear = context['clear']
             subdomain = context['subdomain']
+            image_paths = context['image_paths']
             previous_response_id = context.get('previous_response_id',None)
             msg = ''
             #print(f"REMOTE QUERY\nvvvvvvvvvvvvvvvvvvvvvvv\n{instructions}\n^^^^^^^^^^^^^^^^^^^^^^\n")
@@ -1735,7 +1816,7 @@ class Thread(models.Model) :
             timeout = settings.MAXWAIT
             create_kwargs = {
                 'model': model,
-                'input': query,
+                'input': build_responses_input(query, image_paths),
                 'instructions': instructions,
                 'timeout': timeout,
             }

@@ -1,8 +1,10 @@
 import os
 import uuid
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from django_ragamuffin.models import Assistant, Mode, ModeChoice, QUser, Thread, VectorStore
 from django_ragamuffin.utils import get_assistant, normalize_assistant_name
@@ -142,3 +144,30 @@ class AssistantResolutionTests(TestCase):
         stored_file = assistant.get_vector_stores()[0].files.get()
         self.assertTrue(os.path.isfile(stored_file.file.path))
         self.assertTrue(os.path.isdir(os.path.join(os.path.dirname(stored_file.file.path), "chunks")))
+
+    @override_settings(AI_KEY="test-key")
+    def test_sync_local_files_replaces_only_leaf_files(self):
+        root = Assistant.objects.create(name="sync-root")
+        leaf = Assistant.objects.create(name="sync-root.leaf")
+        root.add_file(
+            "inherited.txt",
+            SimpleUploadedFile("inherited.txt", b"inherited", content_type="text/plain"),
+        )
+        leaf.add_file(
+            "stale.txt",
+            SimpleUploadedFile("stale.txt", b"stale", content_type="text/plain"),
+        )
+
+        with TemporaryDirectory() as directory:
+            desired = Path(directory) / "exercise.txt"
+            desired.write_text("exercise material")
+            leaf.sync_local_files([desired])
+
+        self.assertEqual(
+            [row[1] for row in leaf.local_files()],
+            ["exercise.txt"],
+        )
+        self.assertEqual(
+            set(leaf.file_names()),
+            {"exercise.txt", "inherited.txt"},
+        )
