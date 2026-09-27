@@ -288,14 +288,14 @@ def normalize_assistant_name(name):
     return ".".join(segments)
 
 
-def get_assistant(name, quser):
-    """Resolve an Assistant hierarchy, creating missing nodes for staff.
+def get_assistant(name, quser, create=True):
+    """Resolve an Assistant hierarchy, optionally creating missing nodes for staff.
 
     Paths such as ``base/sub1/sub2`` and names such as ``base.sub1.sub2``
     identify the same hierarchy. Non-staff users inherit the closest existing
     Assistant, walking from the leaf toward the base. Staff users materialize
-    every missing node from ``base`` through the requested leaf, using
-    only model defaults so field inheritance remains branch-local.
+    every missing node from ``base`` through the requested leaf when ``create``
+    is true, using only model defaults so field inheritance remains branch-local.
     """
     name = normalize_assistant_name(name)
     if not name:
@@ -308,7 +308,7 @@ def get_assistant(name, quser):
         for assistant in Assistant.objects.filter(name__in=prefixes)
     }
 
-    if not quser.is_staff:
+    if not quser.is_staff or not create:
         return next(
             (existing[prefix] for prefix in reversed(prefixes) if prefix in existing),
             None,

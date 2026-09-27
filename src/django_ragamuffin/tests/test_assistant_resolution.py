@@ -103,6 +103,18 @@ class AssistantResolutionTests(TestCase):
         self.assertIsNone(get_assistant("base/sub1/sub2", self.student))
         self.assertFalse(Assistant.objects.exists())
 
+    def test_non_creating_lookup_does_not_create_missing_assistant_for_staff(self):
+        parent = Assistant.objects.create(name="base.sub1")
+
+        self.assertEqual(
+            get_assistant("base/sub1/sub2", self.staff, create=False),
+            parent,
+        )
+        self.assertEqual(
+            list(Assistant.objects.values_list("name", flat=True)),
+            ["base.sub1"],
+        )
+
     def test_query_result_includes_usage_dump(self):
         assessment = ModeChoice.objects.create(key="assessment-test", label="Assessment test")
         Mode.objects.create(choice=assessment, text="ASSESSMENT MODE PROLOG")
