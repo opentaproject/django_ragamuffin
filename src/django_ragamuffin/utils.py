@@ -102,8 +102,13 @@ def tokenize_math_dollars(text: str) -> Tuple[str, Dict[str, dict]]:
         mapping[token] = {"content": inside, "delimleft": delimleft, "delimright" : delimright}
         counter += 1
         return token
-    text = text.replace(r'\\[',r'$$ ')
-    text = text.replace(r'\\]',r' $$')
+    # OpenAI normally emits LaTeX using \(...\) and \[...\]. Convert those
+    # delimiters before Markdown sees the text so underscores and asterisks
+    # inside expressions cannot be interpreted as emphasis.
+    text = text.replace(r'\[', '$$')
+    text = text.replace(r'\]', '$$')
+    text = text.replace(r'\(', '$')
+    text = text.replace(r'\)', '$')
 
     new_text = _MATH_RE.sub(_repl, text)
     return new_text, mapping
@@ -193,7 +198,7 @@ def mathfix( txt ):
     #txt = re.sub(r"\&",r' AMPERSAND ',txt)
     txt,mapping = tokenize_math_dollars(txt)
     #print(f"MAPPING = {mapping}")
-    txt = markdown2.markdown(txt )
+    txt = markdown2.markdown(txt, extras=["fenced-code-blocks"])
     txt = fix_media_links(txt)
     #print(f"TXT3_AFTER_MARKDOWN\n{txt}")
     #txt = re.sub(r" AMPERSAND ",r'&',txt)
