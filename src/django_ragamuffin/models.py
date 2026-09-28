@@ -4,7 +4,7 @@ from openai import OpenAI
 from pathlib import Path
 import base64
 import mimetypes
-from django.db import transaction
+from django.db import router, transaction
 import random, string
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
@@ -1317,7 +1317,7 @@ class Assistant( models.Model ):
         #print(f"FILES = {self.files()}")
 
         def delete_old_files_with_same_name( filename ):
-            for o in self.files() :
+            for o in self.local_files() :
                 #print(f"O1 = {o}")
                 (opk,oname,ocksum,odir) = o
                 if oname == filename :
@@ -1337,7 +1337,7 @@ class Assistant( models.Model ):
         #print(f"NAME = {name}")
         #print(f"STEM = {stem} BASE={base} relpath={relpath} ")
         dst = os.path.join(settings.OPENAI_UPLOAD_STORAGE, relpath)
-        oldcksums = [ i[2] for i in self.files() ]
+        oldcksums = [ i[2] for i in self.local_files() ]
         #print(f"OLDCKSUMS = {oldcksums}")
         if not name in oldcksums :
             os.makedirs(os.path.dirname(dst), exist_ok=True)
@@ -1371,15 +1371,28 @@ class Assistant( models.Model ):
                 raise ValueError(f"Multiple files are named {filename!r}")
             desired_paths[filename] = resolved
 
-        with transaction.atomic():
-            assistant = Assistant.objects.select_for_update().get(pk=self.pk)
+        db = self._state.db or router.db_for_write(Assistant, instance=self)
+        with transaction.atomic(using=db):
+            assistant = (
+                Assistant.objects.using(db)
+                .select_for_update()
+                .get(pk=self.pk)
+            )
             local_files = assistant.local_files()
+            local_checksums = {
+                filename: checksum
+                for _file_pk, filename, checksum, _path in local_files
+            }
             desired_names = set(desired_paths)
             for file_pk, filename, _checksum, _path in local_files:
                 if filename not in desired_names:
                     assistant.delete_file(file_pk)
             for filename in sorted(desired_paths, key=str.casefold):
-                assistant.add_file_by_name(desired_paths[filename])
+                full_path = desired_paths[filename]
+                checksum = hashlib.md5(Path(full_path).read_bytes()).hexdigest()
+                if local_checksums.get(filename) == checksum:
+                    continue
+                assistant.add_file_by_name(full_path)
 
         return assistant.local_files()
 

@@ -1,13 +1,64 @@
+import hashlib
 import os
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
+from unittest.mock import patch
 
+import django_ragamuffin.models as models_module
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 
 from django_ragamuffin.models import Assistant, Mode, ModeChoice, QUser, Thread, VectorStore
 from django_ragamuffin.utils import get_assistant, normalize_assistant_name
+
+
+def test_sync_local_files_locks_on_assistant_database(monkeypatch):
+    events = []
+
+    @contextmanager
+    def atomic(*, using):
+        events.append(("atomic-enter", using))
+        try:
+            yield
+        finally:
+            events.append(("atomic-exit", using))
+
+    class QuerySet:
+        def using(self, alias):
+            events.append(("using", alias))
+            return self
+
+        def select_for_update(self):
+            events.append(("select-for-update",))
+            return self
+
+        def get(self, *, pk):
+            events.append(("get", pk))
+            return SimpleNamespace(local_files=lambda: [])
+
+    sync_local_files = Assistant.sync_local_files
+    assistant = SimpleNamespace(
+        pk=17,
+        _state=SimpleNamespace(db="django_ragamuffin"),
+    )
+    monkeypatch.setattr(models_module.transaction, "atomic", atomic)
+    monkeypatch.setattr(
+        models_module,
+        "Assistant",
+        SimpleNamespace(objects=QuerySet()),
+    )
+
+    assert sync_local_files(assistant, []) == []
+    assert events == [
+        ("atomic-enter", "django_ragamuffin"),
+        ("using", "django_ragamuffin"),
+        ("select-for-update",),
+        ("get", 17),
+        ("atomic-exit", "django_ragamuffin"),
+    ]
 
 
 class AssistantResolutionTests(TestCase):
@@ -182,4 +233,82 @@ class AssistantResolutionTests(TestCase):
         self.assertEqual(
             set(leaf.file_names()),
             {"exercise.txt", "inherited.txt"},
+        )
+
+    @override_settings(AI_KEY="test-key")
+    def test_sync_local_files_skips_unchanged_file(self):
+        assistant = Assistant.objects.create(name="sync-unchanged")
+
+        with TemporaryDirectory() as directory:
+            desired = Path(directory) / "exercise.txt"
+            desired.write_text("unchanged exercise material")
+            assistant.sync_local_files([desired])
+            original = assistant.vector_stores.get().files.get()
+            original_file_ids = list(original.file_ids)
+
+            with patch.object(Assistant, "add_file_by_name") as add_file_by_name:
+                assistant.sync_local_files([desired])
+
+        current = assistant.vector_stores.get().files.get()
+        add_file_by_name.assert_not_called()
+        self.assertEqual(current.pk, original.pk)
+        self.assertEqual(current.file_ids, original_file_ids)
+
+    @override_settings(AI_KEY="test-key")
+    def test_sync_local_files_uploads_changed_content_with_same_name(self):
+        assistant = Assistant.objects.create(name="sync-same-name")
+
+        with TemporaryDirectory() as directory:
+            desired = Path(directory) / "exercise.txt"
+            desired.write_text("original exercise material")
+            assistant.sync_local_files([desired])
+            vector_store = assistant.vector_stores.get()
+            original = vector_store.files.get()
+            original_file_ids = set(original.file_ids)
+
+            desired.write_text("updated exercise material")
+            with self.assertLogs("django_ragamuffin.models", level="ERROR") as logs:
+                assistant.sync_local_files([desired])
+
+        vector_store.refresh_from_db()
+        current = vector_store.files.get()
+        current_file_ids = set(current.file_ids)
+        self.assertEqual(current.name, "exercise.txt")
+        self.assertEqual(
+            current.checksum,
+            hashlib.md5(b"updated exercise material").hexdigest(),
+        )
+        self.assertNotEqual(current.pk, original.pk)
+        self.assertTrue(current_file_ids)
+        self.assertTrue(current_file_ids.isdisjoint(original_file_ids))
+        self.assertTrue(vector_store.files_ok())
+        self.assertIn("stage=openai_file_upload_start", "\n".join(logs.output))
+
+    @override_settings(AI_KEY="test-key")
+    def test_same_name_replacement_does_not_remove_inherited_file(self):
+        root = Assistant.objects.create(name="sync-shared-name")
+        leaf = Assistant.objects.create(name="sync-shared-name.leaf")
+        root.add_file(
+            "exercise.txt",
+            SimpleUploadedFile("exercise.txt", b"inherited material", content_type="text/plain"),
+        )
+        leaf.add_file(
+            "exercise.txt",
+            SimpleUploadedFile("exercise.txt", b"old local material", content_type="text/plain"),
+        )
+        inherited_pk = root.vector_stores.get().files.get().pk
+
+        with TemporaryDirectory() as directory:
+            desired = Path(directory) / "exercise.txt"
+            desired.write_text("new local material")
+            leaf.sync_local_files([desired])
+
+        self.assertEqual(root.vector_stores.get().files.get().pk, inherited_pk)
+        self.assertEqual(
+            leaf.vector_stores.get().files.get().checksum,
+            hashlib.md5(b"new local material").hexdigest(),
+        )
+        self.assertEqual(
+            {row[0] for row in leaf.files()},
+            {inherited_pk, leaf.vector_stores.get().files.get().pk},
         )
