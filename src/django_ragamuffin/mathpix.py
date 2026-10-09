@@ -1,10 +1,14 @@
 import asyncio
+import io
 import json
 import logging
 import mimetypes
 import os
 import re
+import shutil
 import time
+import zipfile
+from pathlib import Path, PurePosixPath
 
 import httpx
 from django.conf import settings
@@ -14,6 +18,9 @@ logger = logging.getLogger(__name__)
 
 MATHPIX_API_ROOT = "https://api.mathpix.com/v3"
 MAX_LOGGED_RESPONSE_LENGTH = 4000
+MAX_ARCHIVE_MEMBERS = 1000
+MAX_ARCHIVE_BYTES = 500 * 1024 * 1024
+IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 
 preamble = "\\documentclass{article} \n \
     \\usepackage{amsmath}  \n \
@@ -122,6 +129,80 @@ def _normalise_mmd(text):
     return re.sub(r'\\\)', '$', text)
 
 
+def _safe_archive_name(member):
+    name = PurePosixPath(member.filename)
+    if member.filename.startswith(("/", "\\")) or "\\" in member.filename:
+        return None
+    if not name.parts or any(part in ("", ".", "..") for part in name.parts):
+        return None
+    if member.is_dir():
+        return name if name.parts == ("images",) else None
+    if len(name.parts) == 1 and name.suffix.lower() == ".mmd":
+        return name
+    if (
+        len(name.parts) == 2
+        and name.parts[0] == "images"
+        and name.suffix.lower() in IMAGE_SUFFIXES
+    ):
+        return name
+    return None
+
+
+def _extract_mmd_zip(zip_bytes, pdf_path):
+    destination = Path(pdf_path).parent / "mmd"
+    destination.mkdir(exist_ok=True)
+    images_directory = destination / "images"
+    images_directory.mkdir(exist_ok=True)
+
+    try:
+        archive = zipfile.ZipFile(io.BytesIO(zip_bytes))
+    except zipfile.BadZipFile as exc:
+        raise RuntimeError("Mathpix returned an invalid MMD ZIP archive.") from exc
+
+    with archive:
+        members = archive.infolist()
+        if len(members) > MAX_ARCHIVE_MEMBERS:
+            raise RuntimeError("Mathpix MMD ZIP archive contains too many files.")
+        if sum(member.file_size for member in members) > MAX_ARCHIVE_BYTES:
+            raise RuntimeError("Mathpix MMD ZIP archive is too large.")
+
+        mmd_members = []
+        safe_members = []
+        for member in members:
+            safe_name = _safe_archive_name(member)
+            if safe_name is None:
+                raise RuntimeError(
+                    f"Unsafe or unexpected Mathpix archive member: {member.filename}"
+                )
+            mode = member.external_attr >> 16
+            if mode and (mode & 0o170000) == 0o120000:
+                raise RuntimeError(
+                    f"Mathpix MMD ZIP archive contains a symlink: {member.filename}"
+                )
+            if member.is_dir():
+                continue
+            safe_members.append((member, safe_name))
+            if safe_name.suffix.lower() == ".mmd":
+                mmd_members.append(member)
+
+        if len(mmd_members) != 1:
+            raise RuntimeError(
+                "Mathpix MMD ZIP archive must contain exactly one MMD file."
+            )
+
+        mmd_target = destination / f"{Path(pdf_path).stem}.mmd"
+        for member, safe_name in safe_members:
+            target = (
+                mmd_target
+                if member is mmd_members[0]
+                else images_directory / safe_name.name
+            )
+            with archive.open(member) as source, open(target, "wb") as output:
+                shutil.copyfileobj(source, output)
+
+    return mmd_target.read_text(encoding="utf-8", errors="replace")
+
+
 async def convert_pdf_file(pdf_path, format_out='mmd'):
     app_id, app_key = get_mathpix_credentials()
     headers = {
@@ -139,15 +220,18 @@ async def convert_pdf_file(pdf_path, format_out='mmd'):
     try:
         async with httpx.AsyncClient(timeout=http_timeout) as client:
             with open(pdf_path, 'rb') as pdf_file:
+                options = {
+                    "ocr": ["math", "text"],
+                    "formats": ["latex_styled", "latex_simplified", "mmd"],
+                    "include_image_data": True,
+                }
+                if format_out == "mmd":
+                    options["conversion_formats"] = {"mmd.zip": True}
                 files = {
                     'file': (filename, pdf_file, 'application/pdf'),
                     'options_json': (
                         None,
-                        json.dumps({
-                            "ocr": ["math", "text"],
-                            "formats": ["latex_styled", "latex_simplified", "mmd"],
-                            "include_image_data": True,
-                        }),
+                        json.dumps(options),
                         'application/json'
                     )
                 }
@@ -247,29 +331,63 @@ async def convert_pdf_file(pdf_path, format_out='mmd'):
                     )
                 await asyncio.sleep(poll_interval)
 
+            if format_out == "mmd":
+                current_operation = "MMD ZIP status poll"
+                current_url = f"{MATHPIX_API_ROOT}/converter/{job_id}"
+                while True:
+                    conversion = await client.get(current_url, headers=headers)
+                    if conversion.status_code != 200:
+                        raise RuntimeError(
+                            f"Mathpix MMD ZIP status poll failed (job_id={job_id}, "
+                            f"HTTP {conversion.status_code}, "
+                            f"request_id={_request_id(conversion)})."
+                        )
+                    conversion_result = _json_response(
+                        conversion, "MMD ZIP status poll", job_id
+                    )
+                    mmd_status = conversion_result.get("conversion_status", {}).get(
+                        "mmd.zip", {}
+                    )
+                    status = mmd_status.get("status")
+                    if status == "completed":
+                        break
+                    if status == "error":
+                        raise RuntimeError(
+                            f"Mathpix MMD ZIP conversion failed (job_id={job_id}): "
+                            f"{_json_details(mmd_status)}"
+                        )
+                    if time.monotonic() >= deadline:
+                        raise RuntimeError(
+                            f"Mathpix MMD ZIP conversion timed out after "
+                            f"{poll_timeout:g} seconds (job_id={job_id}, "
+                            f"last_status={status or 'missing'})."
+                        )
+                    await asyncio.sleep(poll_interval)
+
             current_operation = "result download"
-            current_url = f"{MATHPIX_API_ROOT}/pdf/{job_id}.{format_out}"
+            result_format = "mmd.zip" if format_out == "mmd" else format_out
+            current_url = f"{MATHPIX_API_ROOT}/pdf/{job_id}.{result_format}"
             result = await client.get(current_url, headers=headers)
             if result.status_code != 200:
                 logger.error(
                     "Mathpix result download failed: job_id=%s format=%s http_status=%s "
                     "request_id=%s response=%r",
                     job_id,
-                    format_out,
+                    result_format,
                     result.status_code,
                     _request_id(result),
                     _response_text(result),
                 )
                 raise RuntimeError(
                     f"Mathpix result download failed (job_id={job_id}, "
-                    f"format={format_out}, HTTP {result.status_code}, "
+                    f"format={result_format}, HTTP {result.status_code}, "
                     f"request_id={_request_id(result)})."
                 )
             logger.error(
                 "RAGAMUFFIN_UPLOAD stage=mathpix_result_downloaded job_id=%s "
                 "format=%s bytes=%s request_id=%s",
                 job_id,
-                format_out,
+                result_format,
                 len(result.content),
                 _request_id(result),
             )
@@ -289,7 +407,10 @@ async def convert_pdf_file(pdf_path, format_out='mmd'):
             f"(job_id={job_id or 'not-assigned'}): {exc}"
         ) from exc
 
-    s = _normalise_mmd(result.content.decode('utf-8', errors='replace'))
+    if format_out == "mmd":
+        s = _normalise_mmd(_extract_mmd_zip(result.content, pdf_path))
+    else:
+        s = _normalise_mmd(result.content.decode('utf-8', errors='replace'))
     if format_out == 'tex':
         _, m, r = s.partition(r'\begin{document')
         s = m + r

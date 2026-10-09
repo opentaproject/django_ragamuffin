@@ -1,11 +1,23 @@
 import asyncio
+import io
 import json
 import logging
+import zipfile
 
 import pytest
 from django.test import override_settings
 
 from django_ragamuffin import mathpix
+
+
+def mmd_zip(mmd, images=None):
+    output = io.BytesIO()
+    with zipfile.ZipFile(output, "w") as archive:
+        archive.writestr("answer.mmd", mmd)
+        archive.writestr("images/", b"")
+        for name, content in (images or {}).items():
+            archive.writestr(f"images/{name}", content)
+    return output.getvalue()
 
 
 class FakeResponse:
@@ -66,7 +78,17 @@ def test_convert_pdf_polls_pdf_status_endpoint(monkeypatch, tmp_path, caplog):
             "num_pages": 2,
         }, request_id="poll-request-1"),
         FakeResponse(200, {"status": "completed"}, request_id="poll-request-2"),
-        FakeResponse(200, content=b"Result \\(x\\)", request_id="download-request"),
+        FakeResponse(200, {
+            "conversion_status": {"mmd.zip": {"status": "completed"}},
+        }),
+        FakeResponse(
+            200,
+            content=mmd_zip(
+                "Result \\(x\\)",
+                {"figure-1.jpg": b"JPEG image data"},
+            ),
+            request_id="download-request",
+        ),
     ])
     monkeypatch.setattr(mathpix.httpx, "AsyncClient", client.factory)
 
@@ -79,9 +101,15 @@ def test_convert_pdf_polls_pdf_status_endpoint(monkeypatch, tmp_path, caplog):
         ("POST", "https://api.mathpix.com/v3/pdf"),
         ("GET", "https://api.mathpix.com/v3/pdf/job-123"),
         ("GET", "https://api.mathpix.com/v3/pdf/job-123"),
-        ("GET", "https://api.mathpix.com/v3/pdf/job-123.mmd"),
+        ("GET", "https://api.mathpix.com/v3/converter/job-123"),
+        ("GET", "https://api.mathpix.com/v3/pdf/job-123.mmd.zip"),
     ]
-    assert "/converter/" not in " ".join(url for _, url in client.calls)
+    options = json.loads(client.post_kwargs["files"]["options_json"][1])
+    assert options["conversion_formats"] == {"mmd.zip": True}
+    assert (tmp_path / "mmd" / "answer.mmd").read_text() == "Result \\(x\\)"
+    assert (
+        tmp_path / "mmd" / "images" / "figure-1.jpg"
+    ).read_bytes() == b"JPEG image data"
     assert "job_id=job-123 status=processing" in caplog.text
     assert "percent_done=50" in caplog.text
 
