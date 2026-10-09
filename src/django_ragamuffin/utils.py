@@ -8,6 +8,7 @@ from django.conf import settings
 import os
 import string
 import random
+from urllib.parse import quote, urlsplit
 from django_ragamuffin.models import VectorStore, Assistant, Mode, ModeChoice, Thread, CHOICES
 from django.utils.safestring import mark_safe
 from django.http import FileResponse
@@ -164,6 +165,38 @@ def fix_media_links(html):
         return f'{attr}={quote}{value}{quote}'
 
     return re.sub(r'\b(href|src)=(["\'])(.*?)\2', clean_attr, html)
+
+
+MMD_IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+
+
+def rewrite_query_image_links(html, assistant_name):
+    """Point Mathpix image references at the authenticated query image view."""
+    assistant_path = quote(assistant_name.replace(".", "/"), safe="/")
+    route_prefix = f"/django_ragamuffin/query/{assistant_path}/images/"
+
+    def rewrite_attr(match):
+        attr, quote_char, value = match.groups()
+        path = urlsplit(value).path
+        prefixes = (
+            "/django_ragamuffin/query/images/",
+            "./images/",
+            "images/",
+        )
+        prefix = next((item for item in prefixes if path.startswith(item)), None)
+        if prefix is None:
+            return match.group(0)
+        filename = path[len(prefix):]
+        if (
+            not filename
+            or "/" in filename
+            or Path(filename).name != filename
+            or Path(filename).suffix.lower() not in MMD_IMAGE_SUFFIXES
+        ):
+            return match.group(0)
+        return f"{attr}={quote_char}{route_prefix}{quote(filename)}{quote_char}"
+
+    return re.sub(r'\b(href|src)=(["\'])(.*?)\2', rewrite_attr, html)
 
 
 def mathfix( txt ):

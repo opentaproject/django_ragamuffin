@@ -37,10 +37,16 @@ VISION_IMAGE_MIME_TYPES = {
     "image/webp",
 }
 
+MMD_IMAGE_REFERENCE = re.compile(
+    r"(?:\./)?images/(?P<filename>[A-Za-z0-9][A-Za-z0-9_.-]*\.(?:gif|jpe?g|png|webp))",
+    re.IGNORECASE,
+)
 
-def build_responses_input(query, image_paths=None):
+
+def build_responses_input(query, image_paths=None, image_references=None):
     """Build a Responses API input containing text and local image files."""
     image_paths = image_paths or []
+    image_references = image_references or {}
     content = [{"type": "input_text", "text": query}]
 
     for image_path in image_paths:
@@ -54,6 +60,18 @@ def build_responses_input(query, image_paths=None):
         except OSError:
             logger.warning("Could not read vision image %s", path, exc_info=True)
             continue
+        reference = image_references.get(str(path))
+        if reference:
+            content.append(
+                {
+                    "type": "input_text",
+                    "text": (
+                        f"The next input is the original source image referenced as "
+                        f"{reference}. If the user asks to show this image, emit the "
+                        f"exact Markdown image reference ![]({reference})."
+                    ),
+                }
+            )
         content.append(
             {
                 "type": "input_image",
@@ -65,6 +83,53 @@ def build_responses_input(query, image_paths=None):
     if len(content) == 1:
         return query
     return [{"role": "user", "content": content}]
+
+
+def retrieved_mmd_images(client, vector_stores, query, max_num_results):
+    """Resolve Mathpix images referenced by vector-search results."""
+    try:
+        result_limit = max(1, min(50, int(max_num_results)))
+    except (TypeError, ValueError):
+        result_limit = 10
+
+    resolved = {}
+    for vector_store in vector_stores:
+        available = {}
+        for uploaded_file in vector_store.files.all():
+            if not uploaded_file.path:
+                continue
+            image_directory = Path(uploaded_file.path) / "mmd" / "images"
+            if not image_directory.is_dir():
+                continue
+            for image_path in image_directory.iterdir():
+                mime_type, _ = mimetypes.guess_type(image_path.name)
+                if image_path.is_file() and mime_type in VISION_IMAGE_MIME_TYPES:
+                    available[image_path.name] = image_path
+        if not available:
+            continue
+
+        try:
+            results = client.vector_stores.search(
+                vector_store_id=vector_store.vsid,
+                query=query,
+                max_num_results=result_limit,
+            )
+        except Exception:
+            logger.warning(
+                "Could not search vector store %s for Mathpix image references",
+                vector_store.vsid,
+                exc_info=True,
+            )
+            continue
+
+        for result in getattr(results, "data", results):
+            for part in result.content:
+                for match in MMD_IMAGE_REFERENCE.finditer(part.text):
+                    filename = match.group("filename")
+                    image_path = available.get(filename)
+                    if image_path is not None:
+                        resolved[str(image_path)] = f"./images/{filename}"
+    return resolved
 
 # Use the default FileSystemStorage, which reads location/base_url from
 # settings.MEDIA_ROOT and settings.MEDIA_URL. This keeps the storage path
@@ -1745,6 +1810,7 @@ class Thread(models.Model) :
         last_messages = kwargs.get('last_messages',settings.LAST_MESSAGES)
         max_num_results = kwargs.get('max_num_results',settings.MAX_NUM_RESULTS)
         image_paths = kwargs.get('image_paths', [])
+        image_references = kwargs.get('image_references', {})
         query= kwargs['query']
         if len( query.strip() )  == 0 :
             msg =  {'user' : query, 'assistant' : 'blank!',
@@ -1798,11 +1864,19 @@ class Thread(models.Model) :
         user = self.user
         model = get_current_model(self.user)
         client = OpenAIClient()
+        if not image_paths:
+            image_references = retrieved_mmd_images(
+                client,
+                vector_stores,
+                query,
+                max_num_results,
+            )
+            image_paths = list(image_references)
         context = {'client' : client, 'instructions' : instructions, 'model' : model, 
                     'thread_id': thread_id, 'assistant_id' : assistant_id, 'query': query, 
                     'last_messages' : last_messages, 'max_num_results' : max_num_results, 
                    'previous_response_id' : previous_response_id ,'vss' : vss , 'clear' : clear ,'subdomain' : subdomain,
-                   'image_paths': image_paths}
+                   'image_paths': image_paths, 'image_references': image_references}
 
         def my_run_remote_query( context ) :
             now = time.time();
@@ -1817,6 +1891,7 @@ class Thread(models.Model) :
             clear = context['clear']
             subdomain = context['subdomain']
             image_paths = context['image_paths']
+            image_references = context['image_references']
             previous_response_id = context.get('previous_response_id',None)
             msg = ''
             #print(f"REMOTE QUERY\nvvvvvvvvvvvvvvvvvvvvvvv\n{instructions}\n^^^^^^^^^^^^^^^^^^^^^^\n")
@@ -1829,7 +1904,7 @@ class Thread(models.Model) :
             timeout = settings.MAXWAIT
             create_kwargs = {
                 'model': model,
-                'input': build_responses_input(query, image_paths),
+                'input': build_responses_input(query, image_paths, image_references),
                 'instructions': instructions,
                 'timeout': timeout,
             }

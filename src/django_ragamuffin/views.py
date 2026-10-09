@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.forms.models import model_to_dict
 from django.utils import timezone 
 import logging
-from django.http import HttpResponseForbidden, JsonResponse
+from django.http import FileResponse, Http404, HttpResponseForbidden, JsonResponse
 from django.conf import settings
 from django.core.cache import cache
 from django import forms
@@ -12,9 +12,20 @@ from django.contrib.auth.decorators import login_required
 import time
 import re
 import uuid
+import mimetypes
+from pathlib import Path
 
 from .forms import QueryForm
-from .utils import doarchive, CHOICES, get_assistant, mathfix, messages_to_pdf, query_cost_from_response
+from .utils import (
+    CHOICES,
+    MMD_IMAGE_SUFFIXES,
+    doarchive,
+    get_assistant,
+    mathfix,
+    messages_to_pdf,
+    query_cost_from_response,
+    rewrite_query_image_links,
+)
 from .models import create_or_retrieve_thread, QUser, get_current_model, ModeChoice
 from django_ragamuffin.models import Assistant, Thread, Assistant, Message
 logger = logging.getLogger(__name__)
@@ -369,16 +380,50 @@ def feedback_view(request,subpath):
 
 
 FILENAME = "../README.md"
+
+
+def _request_subdomain(request):
+    return request.META.get("HTTP_HOST", "").split(".")[0].split(":")[0]
+
+
+@login_required
+def query_image_view(request, subpath, filename):
+    if (
+        Path(filename).name != filename
+        or Path(filename).suffix.lower() not in MMD_IMAGE_SUFFIXES
+    ):
+        raise Http404
+
+    quser = QUser.objects.filter(
+        username=request.user.username,
+        subdomain=_request_subdomain(request),
+    ).first()
+    if quser is None:
+        raise Http404
+    assistant = get_assistant(subpath, quser, create=False)
+    if assistant is None:
+        raise Http404
+
+    for vector_store in assistant.get_vector_stores():
+        for uploaded_file in vector_store.files.all():
+            if not uploaded_file.path:
+                continue
+            image_path = Path(uploaded_file.path) / "mmd" / "images" / filename
+            if image_path.is_file():
+                content_type = mimetypes.guess_type(image_path.name)[0]
+                return FileResponse(
+                    image_path.open("rb"),
+                    content_type=content_type or "application/octet-stream",
+                )
+    raise Http404
+
+
 @csrf_exempt
 @login_required
 def query_view(request,subpath):
     subpath_ = re.sub( r"\.","_",subpath )
     segments = subpath_.split('/')
-    subdomain = request.META["HTTP_HOST"].split(".")[0].split(":")
-    if subdomain  :
-       subdomain = subdomain[0]
-    else :
-       subdomain = ''
+    subdomain = _request_subdomain(request)
     #print(f"SUBDOMAIN = {subdomain}")
     last_messages = settings.LAST_MESSAGES;
     max_num_results = settings.MAX_NUM_RESULTS;
@@ -465,7 +510,7 @@ def query_view(request,subpath):
                 summary = msg.get('summary','NONE3')
                 ntokens = msg['ntokens']
                 mindex = msg['pk']
-            txt = mathfix(txt)
+            txt = rewrite_query_image_links(mathfix(txt), assistant.name)
             html = mark_safe(txt )
             response = f" <h4> Query: </h4>  {query}  <h4> Response: </h4> {html}  "
             response = f"{html}"
@@ -476,7 +521,9 @@ def query_view(request,subpath):
     keeps =  [ int(i) for i in keeps ]
     resolved_choices = [(i, choices[i]) for i in keeps]
     f_ = [ {  'user' : ( item['query'] ).strip() ,  'pk' : item['pk'] ,
-       'response' : mark_safe( mathfix(item['response'] ) ).strip(),
+       'response' : mark_safe(
+           rewrite_query_image_links(mathfix(item['response']), assistant.name)
+       ).strip(),
        'username' : item.get('username',''),
        'ntokens' : item['ntokens'],
        'cost' : item.get('cost'),

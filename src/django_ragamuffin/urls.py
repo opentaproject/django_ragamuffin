@@ -10,6 +10,11 @@ urlpatterns = [
         #path(r'^upload/<int:pk>/', views.upload_file_view, name='upload'),
         #path(r'^assistant/<int:pk>/delete/', views.delete_assistant, name='delete_assistant'),
         re_path(r'^feedback/(?P<subpath>.*)$', views.feedback_view, name='feedback'),
+        re_path(
+            r'^query/(?P<subpath>.+)/images/(?P<filename>[^/]+)$',
+            views.query_image_view,
+            name='query_image',
+        ),
         re_path(r'^query/(?P<subpath>.+)$', views.query_view, name='query'),
         re_path(r'^assistant/(?P<pk>\d+)/edit/$', views.edit_assistant, name='edit_assistant'),
         re_path(r'^upload/(?P<pk>\d+)/$', views.upload_file_view, name='upload'),
