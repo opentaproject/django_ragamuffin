@@ -199,6 +199,23 @@ class AssistantResolutionTests(TestCase):
         self.assertTrue(os.path.isfile(stored_file.file.path))
         self.assertTrue(os.path.isdir(os.path.join(os.path.dirname(stored_file.file.path), "chunks")))
 
+    def test_png_upload_is_converted_to_searchable_mathpix_chunks(self):
+        assistant = Assistant.objects.create(name=f"png-upload-{uuid.uuid4().hex}")
+        uploaded = SimpleUploadedFile(
+            "diagram.png",
+            b"\x89PNG\r\n\x1a\nimage-data",
+            content_type="image/png",
+        )
+
+        with patch.object(models_module, "mathpix", return_value="Diagram result \\(x\\)") as convert:
+            assistant.add_file("diagram.png", uploaded)
+
+        stored_file = assistant.get_vector_stores()[0].files.get()
+        chunk_file = Path(stored_file.file.path).parent / "chunks" / "diagram.json"
+        convert.assert_called_once_with(stored_file.file.path, format_out="mmd")
+        self.assertTrue(chunk_file.is_file())
+        self.assertIn("Diagram result", chunk_file.read_text())
+
     @override_settings(AI_KEY="test-key")
     def test_sync_local_files_replaces_only_leaf_files(self):
         root = Assistant.objects.create(name="sync-root")

@@ -11,7 +11,7 @@ from django.contrib.auth.models import User
 import shutil
 import json
 from types import SimpleNamespace
-from .mathpix import mathpix
+from .mathpix import IMAGE_SUFFIXES, mathpix
 from .remote_calls import run_remote_query
 
 import logging
@@ -41,6 +41,15 @@ MMD_IMAGE_REFERENCE = re.compile(
     r"(?:\./)?images/(?P<filename>[A-Za-z0-9][A-Za-z0-9_.-]*\.(?:gif|jpe?g|png|webp))",
     re.IGNORECASE,
 )
+MATHPIX_UPLOAD_SUFFIXES = {".pdf", *IMAGE_SUFFIXES}
+ALLOWED_UPLOAD_SUFFIXES = {
+    ".json",
+    ".jsonl",
+    ".md",
+    ".tex",
+    ".txt",
+    *MATHPIX_UPLOAD_SUFFIXES,
+}
 
 
 def build_responses_input(query, image_paths=None, image_references=None):
@@ -278,15 +287,15 @@ def remote_wait_for_vector_store_ready(client, vector_store_id, timeout=None):
 
 def validate_file_extension(value):
     ext = os.path.splitext(value.name)[-1].lower()
-    if ext not in ['.md','.txt','.pdf','.tex','.json','.jsonl']:
+    if ext not in ALLOWED_UPLOAD_SUFFIXES:
         raise ValidationError(f"Unsupported file extension '{ext}'.")
 
 def openai_upload_basename(src):
     srcbase = Path(os.path.basename(src))
-    extension = srcbase.suffix.lstrip('.').lower()
-    if extension in ['pdf', 'jsonl']:
+    extension = srcbase.suffix.lower()
+    if extension == '.jsonl' or extension in MATHPIX_UPLOAD_SUFFIXES:
         return srcbase.with_suffix('.json')
-    return srcbase.with_suffix('.' + extension)
+    return srcbase.with_suffix(extension)
 
 def upload_relative_dir(file_path):
     return os.path.relpath(os.path.dirname(file_path), settings.OPENAI_UPLOAD_STORAGE)
@@ -879,7 +888,7 @@ class OpenAIFile(models.Model) :
             )
             if extension in ['json', 'jsonl']:
                 chunks = None
-            elif extension == 'pdf' :
+            elif f'.{extension}' in MATHPIX_UPLOAD_SUFFIXES:
                 logger.error(
                     "RAGAMUFFIN_UPLOAD stage=mathpix_start openai_file=%s filename=%r",
                     self.pk,
