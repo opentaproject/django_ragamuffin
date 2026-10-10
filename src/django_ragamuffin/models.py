@@ -11,7 +11,7 @@ from django.contrib.auth.models import User
 import shutil
 import json
 from types import SimpleNamespace
-from .mathpix import IMAGE_SUFFIXES, mathpix
+from .mathpix import IMAGE_SUFFIXES, MathpixNoContentError, mathpix
 from .remote_calls import run_remote_query
 
 import logging
@@ -306,6 +306,15 @@ def upload_original_relative_path(file_path):
 def upload_processed_relative_path(file_path):
     processed_name = openai_upload_basename(file_path).name
     return os.path.join(upload_relative_dir(file_path), 'chunks', processed_name)
+
+
+def preserve_uploaded_image(src):
+    image_directory = Path(src).parent / "mmd" / "images"
+    image_directory.mkdir(parents=True, exist_ok=True)
+    destination = image_directory / Path(src).name
+    if Path(src).resolve() != destination.resolve():
+        shutil.copy2(src, destination)
+    return f"./images/{destination.name}"
 
 def hashed_upload_to(instance, filename):
     #dirname = '.'.join( instance.file.name.split('.')[:-1] ).upper()
@@ -894,7 +903,19 @@ class OpenAIFile(models.Model) :
                     self.pk,
                     self.name,
                 )
-                txt = mathpix( src ,format_out='mmd')
+                try:
+                    txt = mathpix(src, format_out='mmd')
+                except MathpixNoContentError:
+                    if f'.{extension}' not in IMAGE_SUFFIXES:
+                        raise
+                    logger.info(
+                        "Mathpix found no text in image; preserving it for vision: %s",
+                        self.name,
+                    )
+                    txt = f"Uploaded image {self.name}."
+                if f'.{extension}' in IMAGE_SUFFIXES:
+                    image_reference = preserve_uploaded_image(src)
+                    txt = f"{txt.rstrip()}\nImage reference: ![]({image_reference})"
                 logger.error(
                     "RAGAMUFFIN_UPLOAD stage=mathpix_completed openai_file=%s "
                     "filename=%r output_characters=%s elapsed_seconds=%.3f",

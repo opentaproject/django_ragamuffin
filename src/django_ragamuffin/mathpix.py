@@ -22,6 +22,10 @@ MAX_ARCHIVE_MEMBERS = 1000
 MAX_ARCHIVE_BYTES = 500 * 1024 * 1024
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 
+
+class MathpixNoContentError(RuntimeError):
+    """Mathpix found no text or math content in an otherwise valid image."""
+
 preamble = "\\documentclass{article} \n \
     \\usepackage{amsmath}  \n \
     \\usepackage[utf8]{inputenc}  \n  \
@@ -498,7 +502,13 @@ async def convert_image_file(image_path, format_out='mmd'):
             request_id,
             details,
         )
-        raise RuntimeError(
+        error_class = (
+            MathpixNoContentError
+            if isinstance(error_info, dict)
+            and error_info.get("id") == "image_no_content"
+            else RuntimeError
+        )
+        raise error_class(
             f"Mathpix image processing failed for {filename} "
             f"(request_id={request_id}): {details}"
         )

@@ -205,6 +205,25 @@ def test_mathpix_sends_png_to_synchronous_image_endpoint(monkeypatch, tmp_path, 
 
 
 @override_settings(APP_ID="test-app-id", APP_KEY="test-app-key")
+def test_mathpix_reports_image_without_extractable_content(monkeypatch, tmp_path):
+    source = tmp_path / "figure.jpg"
+    source.write_bytes(b"\xff\xd8\xff" + b"figure data")
+    client = FakeAsyncClient([
+        FakeResponse(200, {
+            "request_id": "no-content-request",
+            "error_info": {
+                "id": "image_no_content",
+                "message": "Content not found",
+            },
+        }),
+    ])
+    monkeypatch.setattr(mathpix.httpx, "AsyncClient", client.factory)
+
+    with pytest.raises(mathpix.MathpixNoContentError, match="Content not found"):
+        mathpix.mathpix(str(source))
+
+
+@override_settings(APP_ID="test-app-id", APP_KEY="test-app-key")
 def test_mathpix_rejects_unsupported_input_before_api_call(monkeypatch, tmp_path):
     source = tmp_path / "answer.txt"
     source.write_text("not an image or PDF")

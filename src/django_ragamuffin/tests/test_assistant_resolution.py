@@ -212,9 +212,33 @@ class AssistantResolutionTests(TestCase):
 
         stored_file = assistant.get_vector_stores()[0].files.get()
         chunk_file = Path(stored_file.file.path).parent / "chunks" / "diagram.json"
+        vision_file = Path(stored_file.file.path).parent / "mmd" / "images" / "diagram.png"
         convert.assert_called_once_with(stored_file.file.path, format_out="mmd")
         self.assertTrue(chunk_file.is_file())
         self.assertIn("Diagram result", chunk_file.read_text())
+        self.assertIn("./images/diagram.png", chunk_file.read_text())
+        self.assertEqual(vision_file.read_bytes(), b"\x89PNG\r\n\x1a\nimage-data")
+
+    def test_image_without_mathpix_content_is_preserved_for_vision(self):
+        assistant = Assistant.objects.create(name=f"figure-upload-{uuid.uuid4().hex}")
+        uploaded = SimpleUploadedFile(
+            "figure.jpg",
+            b"\xff\xd8\xfffigure-data",
+            content_type="image/jpeg",
+        )
+
+        with patch.object(
+            models_module,
+            "mathpix",
+            side_effect=models_module.MathpixNoContentError("Content not found"),
+        ):
+            assistant.add_file("figure.jpg", uploaded)
+
+        stored_file = assistant.get_vector_stores()[0].files.get()
+        chunk_file = Path(stored_file.file.path).parent / "chunks" / "figure.json"
+        vision_file = Path(stored_file.file.path).parent / "mmd" / "images" / "figure.jpg"
+        self.assertIn("./images/figure.jpg", chunk_file.read_text())
+        self.assertEqual(vision_file.read_bytes(), b"\xff\xd8\xfffigure-data")
 
     @override_settings(AI_KEY="test-key")
     def test_sync_local_files_replaces_only_leaf_files(self):
