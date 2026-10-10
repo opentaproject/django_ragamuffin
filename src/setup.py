@@ -4,8 +4,9 @@ setup(
     version='3.6.0.9',
     packages=find_packages(),
     include_package_data=True,  # Important for static files/migrations
-    license='MIT License',  # Choose your license
-    description='A Django app for ...',
+    license='MIT License',
+    license_files=['LICENSE'],
+    description='OpenAI-backed document retrieval and conversational querying for Django',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     url='https://github.com/opentaproject/django_ragamuffin',
@@ -51,7 +52,7 @@ setup(
         "mdurl>=0.1.2",
         "more-itertools>=10.8.0",
         "nh3>=0.3.0",
-        "openai>=2.53.0",
+        "openai>=3.6.0",
         "packaging>=25.0",
         "pip-autoremove>=0.10.0",
         "pluggy>=1.6.0",
@@ -79,5 +80,5 @@ setup(
         "urllib3>=2.5.0",
         "zipp>=3.23.0",
     ],
-    python_requires='>=3.11',  # Adjust as needed
+    python_requires='>=3.11',
 )
