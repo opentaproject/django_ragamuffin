@@ -65,14 +65,13 @@ class AssistantEditForm(forms.ModelForm):
 
     class Meta:
         model = Assistant
-        fields = ['mode_choice','actual_instructions', 'instructions', 'temperature','directory_name']
+        fields = ['mode_choice','actual_instructions', 'instructions','directory_name']
         widgets = {
             "mode_choice": forms.RadioSelect(attrs={"class": "mode-choice-options"}),
             "instructions": forms.Textarea(attrs={"rows": 5}),
         }
         help_texts = {
             'directory_name' : "Only the last directory can be renmamed; all children will be renamed",
-            'temperature': f"<p/>Default temperature = {settings.DEFAULT_TEMPERATURE}",
             'instructions' : f"Leave or make blank to inherit default; <br> Start the field with 'append: XXX...' to append 'XXX...' to default; <br>Any other non-blank string completely replaces the default instructions.'<br> The entire instructions used by the assistant is shown below <br> It is the result of merging or replacing the mode based instructions with additional instructions.",
             'actual_instructions' : 'This is the final instructions to the assistant which results from merging the mode based instructions with Additional Instructions'
         }
@@ -295,17 +294,6 @@ def edit_assistant(request, pk):
         else :
             assistant.mode_choice = None
             assistant.save(update_fields=['mode_choice'] )
-        if 'temperature' in post :
-            temperature = post.getlist('temperature')
-            logger.info(f"TEMPERATUR OBTAINED = {temperature}")
-            if temperature == [] :
-                temperature = settings.DEFAULT_TEMPERATURE
-            else :
-                temperature = temperature[0]
-            assistant.temperature = temperature
-        if not assistant.temperature :
-            assistant.temperature = settings.DEFAULT_TEMPERATURE
-
         assistant.save()
         #form = AssistantEditForm(request.POST, instance=assistant )
         #if form.is_valid():

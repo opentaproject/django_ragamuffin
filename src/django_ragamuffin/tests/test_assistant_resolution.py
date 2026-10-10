@@ -118,15 +118,6 @@ class AssistantResolutionTests(TestCase):
             {"base", "base.sub1", "base.sub1.sub2"},
         )
 
-    def test_temperature_comes_from_closest_ancestor(self):
-        root = Assistant.objects.create(name="base.sub1", temperature=0.2)
-        child = Assistant.objects.create(name="base.sub1.sub2", temperature=0.4)
-        leaf = Assistant.objects.create(name="base.sub1.sub2.leaf")
-
-        self.assertEqual(root.get_temperature(), 0.2)
-        self.assertEqual(child.get_temperature(), 0.4)
-        self.assertEqual(leaf.get_temperature(), 0.4)
-
     def test_instructions_and_documents_accumulate_down_branch(self):
         root = Assistant.objects.create(name="base.sub1", instructions="base instructions")
         child = Assistant.objects.create(name="base.sub1.sub2", instructions="child instructions")

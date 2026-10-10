@@ -89,7 +89,6 @@ class TemplateStylesTests(SimpleTestCase):
                 "mode_choice",
                 "actual_instructions",
                 "instructions",
-                "temperature",
                 "directory_name",
             ],
         )

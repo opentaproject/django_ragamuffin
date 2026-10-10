@@ -1,6 +1,5 @@
 from django.contrib import admin
 from django.db.models import Count, OuterRef, Subquery
-from django.conf import settings
 from django import forms
 from django.utils.encoding import filepath_to_uri
 from django.utils.html import format_html
@@ -108,11 +107,9 @@ class AssistantForm(forms.ModelForm):
             'vector_stores',
             'assistant_id',
             'json_field',
-            'temperature',
             'actual_instructions',
         ]
         help_texts = {
-            'temperature': f"Default temperature = {settings.DEFAULT_TEMPERATURE}",
             'instructions': (
                 "Leave blank for default; start with 'append: XXX...' to append 'XXX...' "
                 "to default; Any other non-blank string completely replaces the default instructions.'"

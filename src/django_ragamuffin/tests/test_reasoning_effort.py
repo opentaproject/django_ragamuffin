@@ -1,6 +1,14 @@
 from django.test import override_settings
 
-from django_ragamuffin.models import get_reasoning_effort, get_reasoning_options
+from django_ragamuffin.models import (
+    get_reasoning_effort,
+    get_reasoning_options,
+    model_supports_reasoning,
+)
+
+
+def test_gpt_6_supports_reasoning():
+    assert model_supports_reasoning("gpt-6.1-sol")
 
 
 @override_settings(EFFORT="low")

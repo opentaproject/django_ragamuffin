@@ -38,8 +38,7 @@
 }
 
 .assistant-editor-page .instructions,
-.assistant-editor-page .actual_instructions,
-.assistant-editor-page .temperature {
+.assistant-editor-page .actual_instructions {
   display: block;
   clear: both;
   float: none;

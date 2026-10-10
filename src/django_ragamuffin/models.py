@@ -1201,7 +1201,7 @@ def get_current_model( user=None ):
 
 
 def model_supports_reasoning(model):
-    return model.startswith('gpt-5') or re.match(r"^o\d", model) is not None
+    return model.startswith(('gpt-5', 'gpt-6')) or re.match(r"^o\d", model) is not None
 
 
 def get_reasoning_effort():
@@ -1527,15 +1527,6 @@ class Assistant( models.Model ):
         else :
             return None
 
-    def get_temperature(self):
-        """Return the closest temperature set on this Assistant's path."""
-        assistant = self
-        while assistant is not None:
-            if assistant.temperature is not None:
-                return assistant.temperature
-            assistant = assistant.parent()
-        return settings.DEFAULT_TEMPERATURE
-
     def children( self ):
         name  = self.name;
         pattern = r'^%s\.[^.]+$' % name
@@ -1616,7 +1607,6 @@ class Assistant( models.Model ):
         assistant = Assistant(name=newname)
         #assistant.instructions = self.instructions;
         assistant.json_field = self.json_field;
-        assistant.temperature = self.temperature;
         assistant.save();
         #assistant.vector_stores.set([vnew.pk])
         #assistant.save();
@@ -1641,7 +1631,6 @@ class Assistant( models.Model ):
         assistant = Assistant(name=newname)
         assistant.instructions = self.instructions;
         assistant.json_field = self.json_field;
-        assistant.temperature = self.temperature;
         assistant.save();
         assistant.vector_stores.set([vnew.pk])
         assistant.save();
@@ -1841,7 +1830,6 @@ class Thread(models.Model) :
             assistant.name,
             instructions,
         )
-        temperature = assistant.get_temperature()
         thread = self
         thread_id = thread.thread_id
         encoding = tiktoken.get_encoding("cl100k_base")
@@ -1910,8 +1898,6 @@ class Thread(models.Model) :
             }
             if model_supports_reasoning(model):
                 create_kwargs['reasoning'] = reasoning
-            elif temperature is not None:
-                create_kwargs['temperature'] = temperature
             try :
                 if vss :
                     try :

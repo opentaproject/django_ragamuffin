@@ -51,7 +51,6 @@ PGPASSWORD = d.get('PASSWORD','postgres')
 if not hasattr(settings, 'SUBDOMAIN' ):
     SUBDOMAIN = (getattr(settings, 'SUBDOMAIN', None) or os.environ.get('SUBDOMAIN','query'))
 MAXWAIT = 480 ; # WAIT MAX 120 seconds
-DEFAULT_TEMPERATURE = 0.2;
 LAST_MESSAGES = 99
 MAX_NUM_RESULTS = None
 MAX_TOKENS = 8000 # NOT IMPLMENTED AS OF openai==1.173.0 
@@ -95,7 +94,6 @@ USE_MATHPIX = ((getattr(settings, 'USE_MATHPIX', None) or os.environ.get('USE_MA
 if APP_KEY == None or APP_ID == None :
     USE_MATHPIX = False
 
-DEFAULT_TEMPERATURE = 0.2;
 LAST_MESSAGES = 99
 MAX_NUM_RESULTS = None
 MAX_TOKENS = 8000 # NOT IMPLMENTED AS OF openai==1.173.0 
