@@ -100,7 +100,8 @@ class TemplateStylesTests(SimpleTestCase):
             AssistantEditForm.base_fields["instructions"].widget.attrs["rows"],
             5,
         )
-        self.assertIn("fitActualInstructions", source)
+        self.assertIn('<pre class="actual-instructions-text">', source)
+        self.assertNotIn("fitActualInstructions", source)
         self.assertIn("submit-assistant-button", source)
         self.assertEqual(source.count("assistant-action-button"), 3)
 
@@ -108,6 +109,8 @@ class TemplateStylesTests(SimpleTestCase):
             finders.find("django_ragamuffin/styles.css")
         ).read_text()
         self.assertIn(".assistant-editor-page > .container", stylesheet)
+        self.assertIn(".assistant-editor-page .actual-instructions-text", stylesheet)
+        self.assertIn("white-space: pre-wrap", stylesheet)
         self.assertIn("width: 95%", stylesheet)
         self.assertIn("align-items: flex-start", stylesheet)
         self.assertIn("font-size: 0.7rem", stylesheet)

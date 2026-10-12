@@ -15,6 +15,7 @@ from django.test import TestCase, override_settings
 
 from django_ragamuffin.models import Assistant, Mode, ModeChoice, QUser, Thread, VectorStore
 from django_ragamuffin.utils import get_assistant, normalize_assistant_name
+from django_ragamuffin.views import AssistantEditForm
 
 
 def test_sync_local_files_locks_on_assistant_database(monkeypatch):
@@ -69,6 +70,19 @@ class AssistantResolutionTests(TestCase):
     def setUp(self):
         self.staff = QUser.objects.create(username="staff", subdomain="base", is_staff=True)
         self.student = QUser.objects.create(username="student", subdomain="base", is_staff=False)
+
+    def test_assistant_edit_form_preserves_instruction_newlines(self):
+        assistant = Assistant.objects.create(
+            name=f"instruction-format-{uuid.uuid4().hex}",
+            instructions="First paragraph.\n\nSecond paragraph.\n  Indented line.",
+        )
+
+        form = AssistantEditForm(instance=assistant)
+
+        self.assertEqual(
+            form.fields["actual_instructions"].initial,
+            "First paragraph.\n\nSecond paragraph.\n  Indented line.",
+        )
 
     def test_file_rows_are_sorted_case_insensitively(self):
         rows = [(1, "zeta.txt"), (2, "Alpha.txt"), (3, "beta.txt")]

@@ -54,7 +54,7 @@ class AssistantEditForm(forms.ModelForm):
         #self.fields['actual_instructions'].initial = instance.get_instructions() + ' '.join( DEFAULT_INSTRUCTIONS.split() )  if self.instance.pk else "N/A"
         instructions = ''
         if self.instance.pk :
-            instructions = ' '.join( instance.get_instructions().split() );
+            instructions = instance.get_instructions()
             directory_name = instance.name.split('.')[-1];
         self.fields['directory_name'].initial = instance.name.split('.')[-1];
         self.fields['actual_instructions'].initial = instructions if self.instance.pk else "N/A"

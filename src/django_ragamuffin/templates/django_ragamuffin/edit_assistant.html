@@ -87,7 +87,11 @@
             <div class="{{ field.name}}" >
               <h4> {{ field.label_tag}} </h4>
               <div class="{{ field.name}}">
-                {{ field }}
+                {% if field.name == "actual_instructions" %}
+                  <pre class="actual-instructions-text">{{ field.value|default_if_none:"" }}</pre>
+                {% else %}
+                  {{ field }}
+                {% endif %}
               </div>
               {% if field.help_text %}
                 {{ field.help_text | safe }}
@@ -105,16 +109,6 @@
     </div>
 	<script src="{% static 'django_ragamuffin/batch-progress.js' %}"></script>
 	<script>
-	  function fitActualInstructions() {
-	    const textarea = document.getElementById("id_actual_instructions");
-	    if (!textarea) return;
-	    textarea.style.height = "auto";
-	    textarea.style.height = `${textarea.scrollHeight}px`;
-	  }
-
-	  window.addEventListener("load", fitActualInstructions);
-	  window.addEventListener("resize", fitActualInstructions);
-
 	  setupBatchProgress({
 	    formId: "deletion-form",
 	    itemType: "checked",
