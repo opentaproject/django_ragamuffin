@@ -376,15 +376,17 @@ def upload_or_retrieve_openai_file(name, src):
     #print(f"UPLOAD NAME = {name}")
     #print(f"UPLOAD_OR_RETRIEVE {name} {src} {dst} ")
     p = os.path.dirname(dst)
-    ts = OpenAIFile.objects.filter(path=p)
-    if not ts :
+    existing = OpenAIFile.objects.filter(path=p).order_by("-pk").first()
+    requires_mmd = Path(src).suffix.lower() in MATHPIX_UPLOAD_SUFFIXES
+    has_cached_mmd = os.path.isdir(os.path.join(p, "mmd"))
+    if existing is None or (requires_mmd and not has_cached_mmd):
         if os.path.abspath(src) != os.path.abspath(dst):
             shutil.copy2(src, dst)
         t1 = OpenAIFile(file=dst)
         t1.name = file_name
         t1.save();
     else :
-        t1 = ts[0]
+        t1 = existing
     #print(f"T1 = {t1}  path={t1.path} t1.file.path =  {t1.file.path}")
     return t1
 

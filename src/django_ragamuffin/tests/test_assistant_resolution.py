@@ -219,6 +219,39 @@ class AssistantResolutionTests(TestCase):
         self.assertIn("./images/diagram.png", chunk_file.read_text())
         self.assertEqual(vision_file.read_bytes(), b"\x89PNG\r\n\x1a\nimage-data")
 
+    def test_pdf_upload_is_reprocessed_when_cached_mmd_directory_is_missing(self):
+        assistant = Assistant.objects.create(name=f"pdf-repair-{uuid.uuid4().hex}")
+        pdf_content = b"%PDF-1.4\nidentical-pdf"
+
+        def convert_pdf(src, format_out):
+            (Path(src).parent / "mmd").mkdir(exist_ok=True)
+            return "# Converted"
+
+        with patch.object(models_module, "mathpix", side_effect=convert_pdf) as convert:
+            assistant.add_file(
+                "document.pdf",
+                SimpleUploadedFile("document.pdf", pdf_content, content_type="application/pdf"),
+            )
+            original = assistant.vector_stores.get().files.get()
+            mmd_directory = Path(original.file.path).parent / "mmd"
+            for child in mmd_directory.rglob("*"):
+                if child.is_file():
+                    child.unlink()
+            for child in sorted(mmd_directory.rglob("*"), reverse=True):
+                if child.is_dir():
+                    child.rmdir()
+            mmd_directory.rmdir()
+
+            assistant.add_file(
+                "document.pdf",
+                SimpleUploadedFile("document.pdf", pdf_content, content_type="application/pdf"),
+            )
+
+        repaired = assistant.vector_stores.get().files.get()
+        self.assertNotEqual(repaired.pk, original.pk)
+        self.assertTrue((Path(repaired.file.path).parent / "mmd").is_dir())
+        self.assertEqual(convert.call_count, 2)
+
     def test_image_without_mathpix_content_is_preserved_for_vision(self):
         assistant = Assistant.objects.create(name=f"figure-upload-{uuid.uuid4().hex}")
         uploaded = SimpleUploadedFile(
