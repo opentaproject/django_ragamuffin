@@ -50,7 +50,16 @@ class OpenaiConfig(AppConfig):
     def ready(self):
         from django.conf import settings
         from django.core.management import call_command
-        if any(cmd in sys.argv for cmd in ["migrate", "makemigrations", "collectstatic", "test"]):
+        if any(
+            cmd in sys.argv
+            for cmd in [
+                "migrate",
+                "makemigrations",
+                "collectstatic",
+                "test",
+                "backfill_ragamuffin_mmd",
+            ]
+        ):
             return
 
         def migrate_all():
