@@ -2,6 +2,7 @@ import hashlib
 import os
 import uuid
 from contextlib import contextmanager
+from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
@@ -9,6 +10,7 @@ from unittest.mock import patch
 
 import django_ragamuffin.models as models_module
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
 from django.test import TestCase, override_settings
 
 from django_ragamuffin.models import Assistant, Mode, ModeChoice, QUser, Thread, VectorStore
@@ -251,6 +253,42 @@ class AssistantResolutionTests(TestCase):
         self.assertNotEqual(repaired.pk, original.pk)
         self.assertTrue((Path(repaired.file.path).parent / "mmd").is_dir())
         self.assertEqual(convert.call_count, 2)
+
+    def test_backfill_command_dry_runs_then_repairs_missing_mmd(self):
+        assistant = Assistant.objects.create(name=f"pdf-backfill-{uuid.uuid4().hex}")
+        pdf_content = b"%PDF-1.4\nbackfill-pdf"
+
+        def convert_pdf(src, format_out):
+            (Path(src).parent / "mmd").mkdir(exist_ok=True)
+            return "# Converted"
+
+        with patch.object(models_module, "mathpix", side_effect=convert_pdf):
+            assistant.add_file(
+                "backfill.pdf",
+                SimpleUploadedFile("backfill.pdf", pdf_content, content_type="application/pdf"),
+            )
+
+        original = assistant.vector_stores.get().files.get()
+        mmd_directory = Path(original.file.path).parent / "mmd"
+        mmd_directory.rmdir()
+
+        dry_run_output = StringIO()
+        with patch.object(models_module, "mathpix") as convert:
+            call_command("backfill_ragamuffin_mmd", dry_run=True, stdout=dry_run_output)
+        convert.assert_not_called()
+        self.assertFalse(mmd_directory.exists())
+        self.assertIn("WOULD REPROCESS", dry_run_output.getvalue())
+
+        output = StringIO()
+        with patch.object(models_module, "mathpix", side_effect=convert_pdf) as convert:
+            call_command("backfill_ragamuffin_mmd", stdout=output)
+
+        convert.assert_called_once()
+        self.assertTrue(mmd_directory.is_dir())
+        command_output = output.getvalue()
+        self.assertIn("PROCESSING [1/1] file=backfill.pdf", command_output)
+        self.assertIn("DONE [1/1] file=backfill.pdf", command_output)
+        self.assertLess(command_output.index("PROCESSING"), command_output.index("DONE"))
 
     def test_image_without_mathpix_content_is_preserved_for_vision(self):
         assistant = Assistant.objects.create(name=f"figure-upload-{uuid.uuid4().hex}")
