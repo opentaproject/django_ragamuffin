@@ -2,6 +2,7 @@ import asyncio
 import io
 import json
 import logging
+import shutil
 import zipfile
 
 import pytest
@@ -112,6 +113,40 @@ def test_convert_pdf_polls_pdf_status_endpoint(monkeypatch, tmp_path, caplog):
     ).read_bytes() == b"JPEG image data"
     assert "job_id=job-123 status=processing" in caplog.text
     assert "percent_done=50" in caplog.text
+
+
+def test_extract_mmd_zip_validates_member_limit_before_creating_output(
+    monkeypatch, tmp_path
+):
+    source = tmp_path / "answer.pdf"
+    source.write_bytes(b"%PDF test")
+    archive = mmd_zip("Result", {"one.png": b"1"})
+    monkeypatch.setattr(mathpix, "MAX_ARCHIVE_MEMBERS", 2)
+
+    with pytest.raises(RuntimeError, match=r"3; maximum 2"):
+        mathpix._extract_mmd_zip(archive, source)
+
+    assert not (tmp_path / "mmd").exists()
+    assert not list(tmp_path.glob(".mmd-*"))
+
+
+def test_extract_mmd_zip_removes_partial_staging_output_on_failure(
+    monkeypatch, tmp_path
+):
+    source = tmp_path / "answer.pdf"
+    source.write_bytes(b"%PDF test")
+    archive = mmd_zip("Result", {"one.png": b"1"})
+
+    def fail_during_extraction(*args, **kwargs):
+        raise OSError("simulated extraction failure")
+
+    monkeypatch.setattr(shutil, "copyfileobj", fail_during_extraction)
+
+    with pytest.raises(OSError, match="simulated extraction failure"):
+        mathpix._extract_mmd_zip(archive, source)
+
+    assert not (tmp_path / "mmd").exists()
+    assert not list(tmp_path.glob(".mmd-*"))
 
 
 @override_settings(

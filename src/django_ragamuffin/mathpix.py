@@ -6,6 +6,7 @@ import mimetypes
 import os
 import re
 import shutil
+import tempfile
 import time
 import zipfile
 from pathlib import Path, PurePosixPath
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 MATHPIX_API_ROOT = "https://api.mathpix.com/v3"
 MAX_LOGGED_RESPONSE_LENGTH = 4000
-MAX_ARCHIVE_MEMBERS = 1000
+MAX_ARCHIVE_MEMBERS = 10_000
 MAX_ARCHIVE_BYTES = 500 * 1024 * 1024
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
 
@@ -154,9 +155,7 @@ def _safe_archive_name(member):
 
 def _extract_mmd_zip(zip_bytes, pdf_path):
     destination = Path(pdf_path).parent / "mmd"
-    destination.mkdir(exist_ok=True)
-    images_directory = destination / "images"
-    images_directory.mkdir(exist_ok=True)
+    staging_directory = None
 
     try:
         archive = zipfile.ZipFile(io.BytesIO(zip_bytes))
@@ -166,7 +165,10 @@ def _extract_mmd_zip(zip_bytes, pdf_path):
     with archive:
         members = archive.infolist()
         if len(members) > MAX_ARCHIVE_MEMBERS:
-            raise RuntimeError("Mathpix MMD ZIP archive contains too many files.")
+            raise RuntimeError(
+                "Mathpix MMD ZIP archive contains too many files "
+                f"({len(members)}; maximum {MAX_ARCHIVE_MEMBERS})."
+            )
         if sum(member.file_size for member in members) > MAX_ARCHIVE_BYTES:
             raise RuntimeError("Mathpix MMD ZIP archive is too large.")
 
@@ -194,17 +196,31 @@ def _extract_mmd_zip(zip_bytes, pdf_path):
                 "Mathpix MMD ZIP archive must contain exactly one MMD file."
             )
 
-        mmd_target = destination / f"{Path(pdf_path).stem}.mmd"
-        for member, safe_name in safe_members:
-            target = (
-                mmd_target
-                if member is mmd_members[0]
-                else images_directory / safe_name.name
+        try:
+            staging_directory = Path(
+                tempfile.mkdtemp(prefix=".mmd-", dir=destination.parent)
             )
-            with archive.open(member) as source, open(target, "wb") as output:
-                shutil.copyfileobj(source, output)
+            images_directory = staging_directory / "images"
+            images_directory.mkdir()
+            mmd_target = staging_directory / f"{Path(pdf_path).stem}.mmd"
+            for member, safe_name in safe_members:
+                target = (
+                    mmd_target
+                    if member is mmd_members[0]
+                    else images_directory / safe_name.name
+                )
+                with archive.open(member) as source, open(target, "wb") as output:
+                    shutil.copyfileobj(source, output)
 
-    return mmd_target.read_text(encoding="utf-8", errors="replace")
+            text = mmd_target.read_text(encoding="utf-8", errors="replace")
+            if destination.exists():
+                shutil.rmtree(destination)
+            staging_directory.replace(destination)
+            staging_directory = None
+            return text
+        finally:
+            if staging_directory is not None:
+                shutil.rmtree(staging_directory, ignore_errors=True)
 
 
 async def convert_pdf_file(pdf_path, format_out='mmd'):
